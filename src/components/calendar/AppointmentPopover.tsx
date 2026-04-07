@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { format, parseISO, differenceInMinutes } from 'date-fns';
-import { X, Phone, Edit, Trash2, Send, Loader2 } from 'lucide-react';
+import { X, Phone, Edit, Trash2, Loader2 } from 'lucide-react';
 import { useCalendar } from '../../contexts/CalendarContext';
 import { demoDoctors, demoPatients, demoRooms } from '../../data/demo';
 import { APPOINTMENT_STATUS_LABELS, APPOINTMENT_STATUS_COLORS, type AppointmentStatus, type Appointment } from '../../types';

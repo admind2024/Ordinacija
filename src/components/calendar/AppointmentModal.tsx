@@ -136,7 +136,7 @@ export default function AppointmentModal({
         pocetak: pocetak.toISOString(),
         kraj: kraj.toISOString(),
         status: 'zakazan' as const,
-        napomena: napomena || null,
+        napomena: napomena || undefined,
         services: selectedServices,
       };
       const created = await createAppointment(newAppointment);

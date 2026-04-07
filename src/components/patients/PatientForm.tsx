@@ -62,20 +62,25 @@ export default function PatientForm({ isOpen, onClose, editPatient }: PatientFor
     e.preventDefault();
     if (!form.ime || !form.prezime || !form.telefon) return;
 
+    // Clean empty strings to null for Supabase
+    const cleaned: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(form)) {
+      if (value === '' || value === undefined) {
+        cleaned[key] = null;
+      } else {
+        cleaned[key] = value;
+      }
+    }
+    // Ensure required fields are strings
+    cleaned.ime = form.ime;
+    cleaned.prezime = form.prezime;
+    cleaned.telefon = form.telefon;
+    cleaned.saldo = form.pocetno_stanje || 0;
+
     if (isEdit && editPatient) {
-      updatePatient(editPatient.id, {
-        ...form,
-        pol: (form.pol as Patient['pol']) || undefined,
-      });
+      updatePatient(editPatient.id, cleaned as Partial<Patient>);
     } else {
-      const newPatient: Patient = {
-        id: `pat-${Date.now()}`,
-        ...form,
-        pol: (form.pol as Patient['pol']) || undefined,
-        saldo: form.pocetno_stanje,
-        created_at: new Date().toISOString(),
-      };
-      createPatient(newPatient);
+      createPatient(cleaned as Omit<Patient, 'id' | 'created_at'>);
     }
     onClose();
   }

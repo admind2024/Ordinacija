@@ -129,22 +129,20 @@ export default function AppointmentModal({
         services: selectedServices,
       });
     } else {
-      const newAppointment: Appointment = {
-        id: `apt-${Date.now()}`,
+      const newAppointment = {
         patient_id: selectedPatientId,
         doctor_id: doctorId,
         room_id: roomId,
         pocetak: pocetak.toISOString(),
         kraj: kraj.toISOString(),
-        status: 'zakazan',
-        napomena,
-        created_at: new Date().toISOString(),
+        status: 'zakazan' as const,
+        napomena: napomena || null,
         services: selectedServices,
       };
-      createAppointment(newAppointment);
+      const created = await createAppointment(newAppointment);
 
       // SMS potvrda
-      if (posaljiSms && isSmsConfigured() && selectedPatient?.telefon) {
+      if (created && posaljiSms && isSmsConfigured() && selectedPatient?.telefon) {
         const doctor = doctors.find((d) => d.id === doctorId);
         const doctorName = doctor ? `${doctor.titula || ''} ${doctor.ime} ${doctor.prezime}`.trim() : undefined;
         const text = smsPotvrda({

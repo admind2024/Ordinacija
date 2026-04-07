@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { PatientsProvider, usePatients } from '../contexts/PatientsContext';
+import { usePatients } from '../contexts/PatientsContext';
 import PatientList from '../components/patients/PatientList';
 import PatientForm from '../components/patients/PatientForm';
 import PatientCard from '../components/patients/PatientCard';
@@ -76,9 +76,5 @@ function PatientsContent() {
 }
 
 export default function Patients() {
-  return (
-    <PatientsProvider>
-      <PatientsContent />
-    </PatientsProvider>
-  );
+  return <PatientsContent />;
 }

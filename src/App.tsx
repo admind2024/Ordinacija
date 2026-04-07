@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { CalendarProvider } from './contexts/CalendarContext';
+import { PatientsProvider } from './contexts/PatientsContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import Layout from './components/layout/Layout';
 import Login from './pages/Login';
@@ -93,7 +94,9 @@ export default function App() {
     <BrowserRouter>
       <AuthProvider>
         <CalendarProvider>
-          <AppRoutes />
+          <PatientsProvider>
+            <AppRoutes />
+          </PatientsProvider>
         </CalendarProvider>
       </AuthProvider>
     </BrowserRouter>

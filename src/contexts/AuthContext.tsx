@@ -17,13 +17,16 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 // Demo korisnik za razvoj dok Supabase nije konfigurisan
 const DEMO_USER: User = {
   id: 'demo-admin-001',
-  email: 'admin@ordinacija.me',
+  email: 'moa@mail.com',
   ime: 'Admin',
-  prezime: 'Demo',
+  prezime: 'MOA',
   uloga: 'admin',
   aktivan: true,
   created_at: new Date().toISOString(),
 };
+
+const DEMO_EMAIL = 'moa@mail.com';
+const DEMO_PASSWORD = 'moa2026';
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
@@ -81,8 +84,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   async function signIn(email: string, password: string) {
     if (!isSupabaseConfigured) {
-      // Demo mod — prihvati bilo koji login
-      setUser({ ...DEMO_USER, email });
+      if (email !== DEMO_EMAIL || password !== DEMO_PASSWORD) {
+        return { error: 'Pogresni kredencijali' };
+      }
+      setUser(DEMO_USER);
       return { error: null };
     }
 

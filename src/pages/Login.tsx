@@ -37,13 +37,6 @@ export default function Login() {
           <p className="text-sm text-gray-500 mt-1">Prijavite se na svoj nalog</p>
         </div>
 
-        {/* Demo info */}
-        <div className="bg-primary-50 border border-primary-200 rounded-lg p-3 mb-6">
-          <p className="text-xs text-primary-700">
-            <strong>Demo mod:</strong> Supabase nije konfigurisan. Unesite bilo koji email za prijavu.
-          </p>
-        </div>
-
         {/* Forma */}
         <form onSubmit={handleSubmit} className="bg-surface rounded-xl border border-border shadow-sm p-6 space-y-4">
           <Input

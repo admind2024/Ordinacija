@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { CalendarProvider, useCalendar } from '../contexts/CalendarContext';
+import { useCalendar } from '../contexts/CalendarContext';
 import CalendarToolbar from '../components/calendar/CalendarToolbar';
 import FilterPanel from '../components/calendar/FilterPanel';
 import WeekView from '../components/calendar/WeekView';
@@ -110,9 +110,5 @@ function CalendarContent() {
 }
 
 export default function Calendar() {
-  return (
-    <CalendarProvider>
-      <CalendarContent />
-    </CalendarProvider>
-  );
+  return <CalendarContent />;
 }

@@ -1,11 +1,9 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import { supabase } from '../lib/supabase';
 import type { User, UserRole } from '../types';
-import type { Session } from '@supabase/supabase-js';
 
 interface AuthContextType {
   user: User | null;
-  session: Session | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
@@ -14,94 +12,53 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Demo korisnik za razvoj dok Supabase nije konfigurisan
-const DEMO_USER: User = {
-  id: 'demo-admin-001',
-  email: 'moa@mail.com',
-  ime: 'Admin',
-  prezime: 'MOA',
-  uloga: 'admin',
-  aktivan: true,
-  created_at: new Date().toISOString(),
-};
-
-const DEMO_EMAIL = 'moa@mail.com';
 const DEMO_PASSWORD = 'moa2026';
+const LS_USER_KEY = 'moa_current_user';
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const isSupabaseConfigured =
-    import.meta.env.VITE_SUPABASE_URL &&
-    import.meta.env.VITE_SUPABASE_URL !== 'https://your-project.supabase.co';
-
+  // Restore session from localStorage
   useEffect(() => {
-    if (!isSupabaseConfigured) {
-      setUser(DEMO_USER);
-      setLoading(false);
-      return;
+    const saved = localStorage.getItem(LS_USER_KEY);
+    if (saved) {
+      try {
+        setUser(JSON.parse(saved));
+      } catch {}
     }
-
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      if (session?.user) {
-        fetchUserProfile(session.user.id);
-      } else {
-        setLoading(false);
-      }
-    });
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-      if (session?.user) {
-        fetchUserProfile(session.user.id);
-      } else {
-        setUser(null);
-        setLoading(false);
-      }
-    });
-
-    return () => subscription.unsubscribe();
+    setLoading(false);
   }, []);
 
-  async function fetchUserProfile(userId: string) {
+  async function signIn(email: string, password: string) {
+    if (password !== DEMO_PASSWORD) {
+      return { error: 'Pogresna sifra' };
+    }
+
+    // Look up user in Supabase users table
     const { data, error } = await supabase
       .from('users')
       .select('*')
-      .eq('id', userId)
+      .eq('email', email)
       .single();
 
-    if (error) {
-      console.error('Greska pri ucitavanju profila:', error);
-      setUser(null);
-    } else {
-      setUser(data as User);
-    }
-    setLoading(false);
-  }
-
-  async function signIn(email: string, password: string) {
-    if (!isSupabaseConfigured) {
-      if (email !== DEMO_EMAIL || password !== DEMO_PASSWORD) {
-        return { error: 'Pogresni kredencijali' };
-      }
-      setUser(DEMO_USER);
-      return { error: null };
+    if (error || !data) {
+      return { error: 'Korisnik nije pronadjen' };
     }
 
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    return { error: error?.message || null };
+    const userData = data as User;
+    if (!userData.aktivan) {
+      return { error: 'Nalog je deaktiviran' };
+    }
+
+    setUser(userData);
+    localStorage.setItem(LS_USER_KEY, JSON.stringify(userData));
+    return { error: null };
   }
 
   async function signOut() {
-    if (!isSupabaseConfigured) {
-      setUser(null);
-      return;
-    }
-    await supabase.auth.signOut();
     setUser(null);
+    localStorage.removeItem(LS_USER_KEY);
   }
 
   function hasRole(roles: UserRole | UserRole[]) {
@@ -111,7 +68,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, session, loading, signIn, signOut, hasRole }}>
+    <AuthContext.Provider value={{ user, loading, signIn, signOut, hasRole }}>
       {children}
     </AuthContext.Provider>
   );

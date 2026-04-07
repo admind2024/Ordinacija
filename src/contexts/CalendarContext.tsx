@@ -3,6 +3,17 @@ import { addDays, addWeeks, addMonths, isWithinInterval, parseISO } from 'date-f
 import type { Appointment, AppointmentStatus } from '../types';
 import { generateDemoAppointments, demoDoctors, demoRooms } from '../data/demo';
 
+export interface SmsLogEntry {
+  id: string;
+  patient: string;
+  phone: string;
+  text: string;
+  status: 'sent' | 'failed';
+  error?: string;
+  datum: string;
+  tip: 'potvrda' | 'podsjetnik' | 'otkazivanje' | 'potvrdjivanje';
+}
+
 export type CalendarView = 'day' | 'week' | 'month' | 'agenda';
 export type ColorSource = 'doctor' | 'status' | 'room';
 
@@ -42,6 +53,10 @@ interface CalendarContextType {
   // Helperi
   getFilteredAppointments: (start: Date, end: Date) => Appointment[];
   getAppointmentColor: (appointment: Appointment) => string;
+
+  // SMS Log
+  smsLog: SmsLogEntry[];
+  addSmsLog: (entry: SmsLogEntry) => void;
 }
 
 const CalendarContext = createContext<CalendarContextType | undefined>(undefined);
@@ -50,6 +65,7 @@ export function CalendarProvider({ children }: { children: ReactNode }) {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [view, setView] = useState<CalendarView>('week');
   const [appointments, setAppointments] = useState<Appointment[]>(generateDemoAppointments);
+  const [smsLog, setSmsLog] = useState<SmsLogEntry[]>([]);
   const [filters, setFilters] = useState<CalendarFilters>({
     doctorIds: demoDoctors.map((d) => d.id),
     roomIds: demoRooms.map((r) => r.id),
@@ -130,6 +146,10 @@ export function CalendarProvider({ children }: { children: ReactNode }) {
     );
   }, []);
 
+  const addSmsLog = useCallback((entry: SmsLogEntry) => {
+    setSmsLog((prev) => [entry, ...prev]);
+  }, []);
+
   const getFilteredAppointments = useCallback(
     (start: Date, end: Date) => {
       return appointments.filter((apt) => {
@@ -178,6 +198,7 @@ export function CalendarProvider({ children }: { children: ReactNode }) {
         selectAllDoctors, deselectAllDoctors,
         createAppointment, updateAppointment, deleteAppointment, updateAppointmentStatus,
         getFilteredAppointments, getAppointmentColor,
+        smsLog, addSmsLog,
       }}
     >
       {children}

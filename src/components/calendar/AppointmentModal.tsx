@@ -6,6 +6,8 @@ import Input from '../ui/Input';
 import { useCalendar } from '../../contexts/CalendarContext';
 import { demoDoctors, demoPatients, demoRooms, demoServices, demoServiceCategories } from '../../data/demo';
 import type { Appointment, AppointmentService } from '../../types';
+import { sendSms, isSmsConfigured } from '../../lib/smsService';
+import { smsPotvrda } from '../../lib/smsTemplates';
 
 interface AppointmentModalProps {
   isOpen: boolean;
@@ -24,7 +26,7 @@ export default function AppointmentModal({
   defaultDate,
   defaultTime,
 }: AppointmentModalProps) {
-  const { createAppointment, updateAppointment } = useCalendar();
+  const { createAppointment, updateAppointment, addSmsLog } = useCalendar();
   const isEdit = !!editAppointment;
 
   const [patientSearch, setPatientSearch] = useState('');
@@ -57,6 +59,8 @@ export default function AppointmentModal({
   );
   const [napomena, setNapomena] = useState(editAppointment?.napomena || '');
   const [showPatientList, setShowPatientList] = useState(false);
+  const [posaljiSms, setPosaljiSms] = useState(true);
+  const [smsStatus, setSmsStatus] = useState<string | null>(null);
 
   const filteredPatients = useMemo(() => {
     if (!patientSearch) return demoPatients.slice(0, 5);
@@ -106,7 +110,7 @@ export default function AppointmentModal({
     setSelectedServices((prev) => prev.filter((s) => s.service_id !== serviceId));
   }
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!selectedPatientId || !doctorId || !roomId) return;
 
@@ -137,6 +141,32 @@ export default function AppointmentModal({
         services: selectedServices,
       };
       createAppointment(newAppointment);
+
+      // SMS potvrda
+      if (posaljiSms && isSmsConfigured() && selectedPatient?.telefon) {
+        const doctor = demoDoctors.find((d) => d.id === doctorId);
+        const doctorName = doctor ? `${doctor.titula || ''} ${doctor.ime} ${doctor.prezime}`.trim() : undefined;
+        const text = smsPotvrda({
+          imeIPrezime: `${selectedPatient.ime} ${selectedPatient.prezime}`,
+          datum: pocetak.toISOString(),
+          doctor: doctorName,
+        });
+
+        const result = await sendSms(selectedPatient.telefon, text);
+        addSmsLog({
+          id: `sms-${Date.now()}`,
+          patient: `${selectedPatient.ime} ${selectedPatient.prezime}`,
+          phone: selectedPatient.telefon,
+          text,
+          status: result.success ? 'sent' : 'failed',
+          error: result.error,
+          datum: new Date().toISOString(),
+          tip: 'potvrda',
+        });
+
+        setSmsStatus(result.success ? 'SMS potvrda poslana!' : `SMS greska: ${result.error}`);
+        setTimeout(() => setSmsStatus(null), 4000);
+      }
     }
     onClose();
   }
@@ -325,6 +355,25 @@ export default function AppointmentModal({
             placeholder="Interna biljeska..."
           />
         </div>
+
+        {/* SMS potvrda */}
+        {!isEdit && isSmsConfigured() && (
+          <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={posaljiSms}
+              onChange={(e) => setPosaljiSms(e.target.checked)}
+              className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+            />
+            Posalji SMS potvrdu pacijentu
+          </label>
+        )}
+
+        {smsStatus && (
+          <p className={`text-sm ${smsStatus.includes('greska') ? 'text-red-600' : 'text-green-600'}`}>
+            {smsStatus}
+          </p>
+        )}
 
         {/* Dugmad */}
         <div className="flex justify-end gap-2 pt-2">

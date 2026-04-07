@@ -1,9 +1,12 @@
+import { useState } from 'react';
 import { format, parseISO, differenceInMinutes } from 'date-fns';
-import { X, Phone, Edit, Trash2 } from 'lucide-react';
+import { X, Phone, Edit, Trash2, Send, Loader2 } from 'lucide-react';
 import { useCalendar } from '../../contexts/CalendarContext';
 import { demoDoctors, demoPatients, demoRooms } from '../../data/demo';
 import { APPOINTMENT_STATUS_LABELS, APPOINTMENT_STATUS_COLORS, type AppointmentStatus, type Appointment } from '../../types';
 import Button from '../ui/Button';
+import { sendSms, isSmsConfigured } from '../../lib/smsService';
+import { smsOtkazivanje, smsPotvrdjivanje } from '../../lib/smsTemplates';
 
 interface AppointmentPopoverProps {
   appointment: Appointment;
@@ -17,11 +20,46 @@ const statusOptions: AppointmentStatus[] = [
 ];
 
 export default function AppointmentPopover({ appointment, onClose, onEdit, position }: AppointmentPopoverProps) {
-  const { updateAppointmentStatus, deleteAppointment } = useCalendar();
+  const { updateAppointmentStatus, deleteAppointment, addSmsLog } = useCalendar();
   const patient = demoPatients.find((p) => p.id === appointment.patient_id);
   const doctor = demoDoctors.find((d) => d.id === appointment.doctor_id);
   const room = demoRooms.find((r) => r.id === appointment.room_id);
   const duration = differenceInMinutes(parseISO(appointment.kraj), parseISO(appointment.pocetak));
+
+  const [sendingSms, setSendingSms] = useState(false);
+  const [smsResult, setSmsResult] = useState<string | null>(null);
+
+  async function handleStatusChange(newStatus: AppointmentStatus) {
+    updateAppointmentStatus(appointment.id, newStatus);
+
+    if (!isSmsConfigured() || !patient?.telefon) return;
+
+    const shouldSendSms = newStatus === 'otkazan' || newStatus === 'potvrdjen';
+    if (!shouldSendSms) return;
+
+    const doctorName = doctor ? `${doctor.titula || ''} ${doctor.ime} ${doctor.prezime}`.trim() : undefined;
+    const imeIPrezime = `${patient.ime} ${patient.prezime}`;
+
+    const text = newStatus === 'otkazan'
+      ? smsOtkazivanje({ imeIPrezime, datum: appointment.pocetak })
+      : smsPotvrdjivanje({ imeIPrezime, datum: appointment.pocetak, doctor: doctorName });
+
+    setSendingSms(true);
+    const result = await sendSms(patient.telefon, text);
+    addSmsLog({
+      id: `sms-${Date.now()}`,
+      patient: imeIPrezime,
+      phone: patient.telefon,
+      text,
+      status: result.success ? 'sent' : 'failed',
+      error: result.error,
+      datum: new Date().toISOString(),
+      tip: newStatus === 'otkazan' ? 'otkazivanje' : 'potvrdjivanje',
+    });
+    setSendingSms(false);
+    setSmsResult(result.success ? 'SMS poslan!' : `SMS greska: ${result.error}`);
+    setTimeout(() => setSmsResult(null), 3000);
+  }
 
   return (
     <div className="fixed inset-0 z-50" onClick={onClose}>
@@ -125,7 +163,8 @@ export default function AppointmentPopover({ appointment, onClose, onEdit, posit
               {statusOptions.map((s) => (
                 <button
                   key={s}
-                  onClick={() => updateAppointmentStatus(appointment.id, s)}
+                  onClick={() => handleStatusChange(s)}
+                  disabled={sendingSms}
                   className={`px-2 py-1 text-xs rounded-full transition-colors
                     ${appointment.status === s
                       ? 'text-white'
@@ -141,6 +180,16 @@ export default function AppointmentPopover({ appointment, onClose, onEdit, posit
                 </button>
               ))}
             </div>
+            {sendingSms && (
+              <div className="flex items-center gap-1 mt-2 text-xs text-blue-600">
+                <Loader2 size={12} className="animate-spin" /> Saljem SMS...
+              </div>
+            )}
+            {smsResult && (
+              <p className={`mt-2 text-xs ${smsResult.includes('greska') ? 'text-red-600' : 'text-green-600'}`}>
+                {smsResult}
+              </p>
+            )}
           </div>
         </div>
 

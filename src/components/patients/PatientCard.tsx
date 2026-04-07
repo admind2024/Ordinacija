@@ -6,7 +6,7 @@ import {
 import Button from '../ui/Button';
 import Card from '../ui/Card';
 import type { Patient, Appointment } from '../../types';
-import { demoDoctors, demoRooms } from '../../data/demo';
+import { useCalendar } from '../../contexts/CalendarContext';
 import { APPOINTMENT_STATUS_LABELS, APPOINTMENT_STATUS_COLORS } from '../../types';
 
 interface PatientCardProps {
@@ -18,6 +18,7 @@ interface PatientCardProps {
 }
 
 export default function PatientCard({ patient, appointments, onBack, onEdit, onDelete }: PatientCardProps) {
+  const { doctors, rooms } = useCalendar();
   const patientAppointments = appointments
     .filter((a) => a.patient_id === patient.id)
     .sort((a, b) => parseISO(b.pocetak).getTime() - parseISO(a.pocetak).getTime());
@@ -185,8 +186,8 @@ export default function PatientCard({ patient, appointments, onBack, onEdit, onD
                 <p className="px-6 py-8 text-sm text-gray-400 text-center">Nema termina</p>
               ) : (
                 patientAppointments.map((apt) => {
-                  const doctor = demoDoctors.find((d) => d.id === apt.doctor_id);
-                  const room = demoRooms.find((r) => r.id === apt.room_id);
+                  const doctor = doctors.find((d) => d.id === apt.doctor_id);
+                  const room = rooms.find((r) => r.id === apt.room_id);
                   return (
                     <div key={apt.id} className="px-6 py-3">
                       <div className="flex items-center justify-between">

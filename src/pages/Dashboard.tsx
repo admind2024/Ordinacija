@@ -2,35 +2,37 @@ import { useMemo } from 'react';
 import { format, parseISO, isToday } from 'date-fns';
 import { CalendarDays, Users, CreditCard, TrendingUp } from 'lucide-react';
 import Card from '../components/ui/Card';
-import { generateDemoAppointments, demoDoctors, demoPatients } from '../data/demo';
+import { useCalendar } from '../contexts/CalendarContext';
+import { usePatients } from '../contexts/PatientsContext';
 import { APPOINTMENT_STATUS_COLORS, APPOINTMENT_STATUS_LABELS } from '../types';
 
-const allAppointments = generateDemoAppointments();
-
 export default function Dashboard() {
+  const { appointments, doctors } = useCalendar();
+  const { patients } = usePatients();
+
   const todayAppointments = useMemo(
-    () => allAppointments
+    () => appointments
       .filter((a) => isToday(parseISO(a.pocetak)))
       .sort((a, b) => parseISO(a.pocetak).getTime() - parseISO(b.pocetak).getTime()),
-    []
+    [appointments]
   );
 
   const completedRevenue = useMemo(
-    () => allAppointments
+    () => appointments
       .filter((a) => a.status === 'zavrsen')
       .reduce((sum, a) => sum + (a.services?.reduce((s, svc) => s + svc.ukupno, 0) || 0), 0),
-    []
+    [appointments]
   );
 
   const realizationRate = useMemo(() => {
-    const total = allAppointments.length;
-    const completed = allAppointments.filter((a) => a.status === 'zavrsen').length;
+    const total = appointments.length;
+    const completed = appointments.filter((a) => a.status === 'zavrsen').length;
     return total > 0 ? ((completed / total) * 100).toFixed(0) : '0';
-  }, []);
+  }, [appointments]);
 
   const stats = [
     { label: 'Termini danas', value: String(todayAppointments.length), icon: CalendarDays, color: 'text-primary-600 bg-primary-100' },
-    { label: 'Ukupno pacijenata', value: String(demoPatients.length), icon: Users, color: 'text-green-600 bg-green-100' },
+    { label: 'Ukupno pacijenata', value: String(patients.length), icon: Users, color: 'text-green-600 bg-green-100' },
     { label: 'Prihod (EUR)', value: completedRevenue.toFixed(0), icon: CreditCard, color: 'text-purple-600 bg-purple-100' },
     { label: 'Stopa realizacije', value: `${realizationRate}%`, icon: TrendingUp, color: 'text-orange-600 bg-orange-100' },
   ];
@@ -73,8 +75,8 @@ export default function Dashboard() {
               <p className="px-6 py-8 text-sm text-gray-400 text-center">Nema termina za danas</p>
             ) : (
               todayAppointments.map((apt) => {
-                const patient = demoPatients.find((p) => p.id === apt.patient_id);
-                const doctor = demoDoctors.find((d) => d.id === apt.doctor_id);
+                const patient = patients.find((p) => p.id === apt.patient_id);
+                const doctor = doctors.find((d) => d.id === apt.doctor_id);
                 return (
                   <div key={apt.id} className="px-6 py-3 flex items-center gap-3">
                     <div className="w-14 text-center shrink-0">
@@ -117,7 +119,7 @@ export default function Dashboard() {
             <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider">Ljekari — danas</h3>
           </div>
           <div className="divide-y divide-border">
-            {demoDoctors.map((doctor) => {
+            {doctors.map((doctor) => {
               const docApts = todayAppointments.filter((a) => a.doctor_id === doctor.id);
               return (
                 <div key={doctor.id} className="px-6 py-3 flex items-center gap-3">

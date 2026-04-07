@@ -4,7 +4,7 @@ import Modal from '../ui/Modal';
 import Button from '../ui/Button';
 import Input from '../ui/Input';
 import { useCalendar } from '../../contexts/CalendarContext';
-import { demoDoctors, demoPatients, demoRooms, demoServices, demoServiceCategories } from '../../data/demo';
+import { usePatients } from '../../contexts/PatientsContext';
 import type { Appointment, AppointmentService } from '../../types';
 import { sendSms, isSmsConfigured } from '../../lib/smsService';
 import { smsPotvrda } from '../../lib/smsTemplates';
@@ -26,13 +26,14 @@ export default function AppointmentModal({
   defaultDate,
   defaultTime,
 }: AppointmentModalProps) {
-  const { createAppointment, updateAppointment, addSmsLog } = useCalendar();
+  const { createAppointment, updateAppointment, addSmsLog, doctors, rooms, services, serviceCategories } = useCalendar();
+  const { patients } = usePatients();
   const isEdit = !!editAppointment;
 
   const [patientSearch, setPatientSearch] = useState('');
   const [selectedPatientId, setSelectedPatientId] = useState(editAppointment?.patient_id || '');
-  const [doctorId, setDoctorId] = useState(editAppointment?.doctor_id || demoDoctors[0].id);
-  const [roomId, setRoomId] = useState(editAppointment?.room_id || demoRooms[0].id);
+  const [doctorId, setDoctorId] = useState(editAppointment?.doctor_id || doctors[0]?.id || '');
+  const [roomId, setRoomId] = useState(editAppointment?.room_id || rooms[0]?.id || '');
   const [datum, setDatum] = useState(
     editAppointment
       ? format(parseISO(editAppointment.pocetak), 'yyyy-MM-dd')
@@ -63,29 +64,29 @@ export default function AppointmentModal({
   const [smsStatus, setSmsStatus] = useState<string | null>(null);
 
   const filteredPatients = useMemo(() => {
-    if (!patientSearch) return demoPatients.slice(0, 5);
+    if (!patientSearch) return patients.slice(0, 5);
     const q = patientSearch.toLowerCase();
-    return demoPatients.filter(
+    return patients.filter(
       (p) =>
         p.ime.toLowerCase().includes(q) ||
         p.prezime.toLowerCase().includes(q) ||
         p.telefon.includes(q)
     );
-  }, [patientSearch]);
+  }, [patientSearch, patients]);
 
-  const selectedPatient = demoPatients.find((p) => p.id === selectedPatientId);
+  const selectedPatient = patients.find((p) => p.id === selectedPatientId);
 
   const groupedServices = useMemo(() => {
-    return demoServiceCategories.map((cat) => ({
+    return serviceCategories.map((cat) => ({
       ...cat,
-      services: demoServices.filter((s) => s.kategorija_id === cat.id),
+      services: services.filter((s) => s.kategorija_id === cat.id),
     }));
-  }, []);
+  }, [serviceCategories, services]);
 
   const ukupnaCijena = selectedServices.reduce((sum, s) => sum + s.ukupno, 0);
 
   function addService(serviceId: string) {
-    const svc = demoServices.find((s) => s.id === serviceId);
+    const svc = services.find((s) => s.id === serviceId);
     if (!svc) return;
     const already = selectedServices.find((s) => s.service_id === serviceId);
     if (already) return;
@@ -144,7 +145,7 @@ export default function AppointmentModal({
 
       // SMS potvrda
       if (posaljiSms && isSmsConfigured() && selectedPatient?.telefon) {
-        const doctor = demoDoctors.find((d) => d.id === doctorId);
+        const doctor = doctors.find((d) => d.id === doctorId);
         const doctorName = doctor ? `${doctor.titula || ''} ${doctor.ime} ${doctor.prezime}`.trim() : undefined;
         const text = smsPotvrda({
           imeIPrezime: `${selectedPatient.ime} ${selectedPatient.prezime}`,
@@ -241,7 +242,7 @@ export default function AppointmentModal({
               onChange={(e) => setDoctorId(e.target.value)}
               className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
             >
-              {demoDoctors.map((d) => (
+              {doctors.map((d) => (
                 <option key={d.id} value={d.id}>
                   {d.titula} {d.ime} {d.prezime}
                 </option>
@@ -255,7 +256,7 @@ export default function AppointmentModal({
               onChange={(e) => setRoomId(e.target.value)}
               className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
             >
-              {demoRooms.map((r) => (
+              {rooms.map((r) => (
                 <option key={r.id} value={r.id}>
                   {r.naziv}
                 </option>

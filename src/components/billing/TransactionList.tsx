@@ -1,7 +1,7 @@
 import { format, parseISO } from 'date-fns';
 import { CreditCard, Banknote, Shield, Heart, Gift } from 'lucide-react';
 import { useBilling } from '../../contexts/BillingContext';
-import { demoPatients } from '../../data/demo';
+import { usePatients } from '../../contexts/PatientsContext';
 import Card from '../ui/Card';
 import type { PaymentMethod } from '../../types';
 
@@ -26,6 +26,7 @@ const methodLabels: Record<PaymentMethod, string> = {
 };
 
 export default function TransactionList() {
+  const { patients } = usePatients();
   const { getRecentPayments, getTotalRevenue, getRevenueByMethod } = useBilling();
   const recentPayments = getRecentPayments(30);
   const totalRevenue = getTotalRevenue();
@@ -80,7 +81,7 @@ export default function TransactionList() {
         <div className="divide-y divide-border">
           {recentPayments.map((payment) => {
             const patient = payment.appointment
-              ? demoPatients.find((p) => p.id === payment.appointment!.patient_id)
+              ? patients.find((p) => p.id === payment.appointment!.patient_id)
               : null;
             const Icon = methodIcons[payment.metoda] || CreditCard;
 

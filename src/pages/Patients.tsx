@@ -4,11 +4,10 @@ import PatientList from '../components/patients/PatientList';
 import PatientForm from '../components/patients/PatientForm';
 import PatientCard from '../components/patients/PatientCard';
 import type { Patient } from '../types';
-import { generateDemoAppointments } from '../data/demo';
-
-const demoAppointments = generateDemoAppointments();
+import { useCalendar } from '../contexts/CalendarContext';
 
 function PatientsContent() {
+  const { appointments } = useCalendar();
   const { deletePatient } = usePatients();
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
   const [formOpen, setFormOpen] = useState(false);
@@ -38,7 +37,7 @@ function PatientsContent() {
       <>
         <PatientCard
           patient={selectedPatient}
-          appointments={demoAppointments}
+          appointments={appointments}
           onBack={() => setSelectedPatient(null)}
           onEdit={handleEdit}
           onDelete={handleDelete}

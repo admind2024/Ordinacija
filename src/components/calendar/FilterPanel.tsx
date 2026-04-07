@@ -1,5 +1,4 @@
 import { useCalendar, type ColorSource } from '../../contexts/CalendarContext';
-import { demoDoctors, demoRooms } from '../../data/demo';
 
 const colorSourceLabels: Record<ColorSource, string> = {
   doctor: 'Po doktoru',
@@ -15,6 +14,8 @@ export default function FilterPanel() {
     setColorSource,
     selectAllDoctors,
     deselectAllDoctors,
+    doctors,
+    rooms,
   } = useCalendar();
 
   return (
@@ -63,7 +64,7 @@ export default function FilterPanel() {
           </div>
         </div>
         <div className="space-y-1">
-          {demoDoctors.map((doctor) => (
+          {doctors.map((doctor) => (
             <label
               key={doctor.id}
               className="flex items-center gap-2 cursor-pointer py-1 px-2 rounded hover:bg-gray-50"
@@ -93,7 +94,7 @@ export default function FilterPanel() {
           Ordinacije / Oprema
         </label>
         <div className="flex flex-wrap gap-1">
-          {demoRooms.map((room) => {
+          {rooms.map((room) => {
             const active = filters.roomIds.includes(room.id);
             return (
               <button

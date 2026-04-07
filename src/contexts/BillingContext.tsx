@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useCallback, type ReactNode } from 'react';
 import type { Payment, Appointment, PaymentMethod } from '../types';
-import { generateDemoAppointments } from '../data/demo';
+import { useCalendar } from './CalendarContext';
 
 interface BillingContextType {
   payments: Payment[];
@@ -38,7 +38,7 @@ function generateDemoPayments(appointments: Appointment[]): Payment[] {
 }
 
 export function BillingProvider({ children }: { children: ReactNode }) {
-  const [appointments] = useState<Appointment[]>(generateDemoAppointments);
+  const { appointments } = useCalendar();
   const [payments, setPayments] = useState<Payment[]>(() => generateDemoPayments(appointments));
 
   const addPayment = useCallback((payment: Payment) => {

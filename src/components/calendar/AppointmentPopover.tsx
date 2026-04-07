@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { format, parseISO, differenceInMinutes } from 'date-fns';
 import { X, Phone, Edit, Trash2, Loader2 } from 'lucide-react';
 import { useCalendar } from '../../contexts/CalendarContext';
-import { demoDoctors, demoPatients, demoRooms } from '../../data/demo';
+import { usePatients } from '../../contexts/PatientsContext';
 import { APPOINTMENT_STATUS_LABELS, APPOINTMENT_STATUS_COLORS, type AppointmentStatus, type Appointment } from '../../types';
 import Button from '../ui/Button';
 import { sendSms, isSmsConfigured } from '../../lib/smsService';
@@ -20,10 +20,11 @@ const statusOptions: AppointmentStatus[] = [
 ];
 
 export default function AppointmentPopover({ appointment, onClose, onEdit, position }: AppointmentPopoverProps) {
-  const { updateAppointmentStatus, deleteAppointment, addSmsLog } = useCalendar();
-  const patient = demoPatients.find((p) => p.id === appointment.patient_id);
-  const doctor = demoDoctors.find((d) => d.id === appointment.doctor_id);
-  const room = demoRooms.find((r) => r.id === appointment.room_id);
+  const { updateAppointmentStatus, deleteAppointment, addSmsLog, doctors, rooms } = useCalendar();
+  const { patients } = usePatients();
+  const patient = patients.find((p) => p.id === appointment.patient_id);
+  const doctor = doctors.find((d) => d.id === appointment.doctor_id);
+  const room = rooms.find((r) => r.id === appointment.room_id);
   const duration = differenceInMinutes(parseISO(appointment.kraj), parseISO(appointment.pocetak));
 
   const [sendingSms, setSendingSms] = useState(false);

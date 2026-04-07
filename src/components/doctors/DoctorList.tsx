@@ -1,5 +1,5 @@
 import { Stethoscope, Phone, Mail } from 'lucide-react';
-import { demoDoctors } from '../../data/demo';
+import { useCalendar } from '../../contexts/CalendarContext';
 import Card from '../ui/Card';
 import type { Doctor } from '../../types';
 
@@ -8,9 +8,11 @@ interface DoctorListProps {
 }
 
 export default function DoctorList({ onSelect }: DoctorListProps) {
+  const { doctors } = useCalendar();
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-      {demoDoctors.map((doctor) => (
+      {doctors.map((doctor) => (
         <Card key={doctor.id} className="hover:shadow-md transition-shadow cursor-pointer" padding={false}>
           <button onClick={() => onSelect(doctor)} className="w-full text-left p-6">
             <div className="flex items-start gap-4">

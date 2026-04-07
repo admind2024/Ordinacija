@@ -1,6 +1,5 @@
 import { parseISO, differenceInMinutes, isSameDay } from 'date-fns';
 import { useCalendar } from '../../contexts/CalendarContext';
-import { demoDoctors } from '../../data/demo';
 import AppointmentCard from './AppointmentCard';
 import type { Appointment } from '../../types';
 
@@ -16,9 +15,9 @@ interface DayViewProps {
 }
 
 export default function DayView({ onAppointmentClick, onSlotClick }: DayViewProps) {
-  const { selectedDate, getFilteredAppointments, filters } = useCalendar();
+  const { selectedDate, getFilteredAppointments, filters, doctors } = useCalendar();
 
-  const visibleDoctors = demoDoctors.filter((d) => filters.doctorIds.includes(d.id));
+  const visibleDoctors = doctors.filter((d) => filters.doctorIds.includes(d.id));
   const dayStart = new Date(selectedDate);
   dayStart.setHours(0, 0, 0, 0);
   const dayEnd = new Date(selectedDate);

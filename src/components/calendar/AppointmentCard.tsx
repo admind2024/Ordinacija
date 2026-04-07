@@ -1,6 +1,6 @@
 import { format, parseISO, differenceInMinutes } from 'date-fns';
 import { useCalendar } from '../../contexts/CalendarContext';
-import { demoDoctors, demoPatients } from '../../data/demo';
+import { usePatients } from '../../contexts/PatientsContext';
 import type { Appointment } from '../../types';
 
 interface AppointmentCardProps {
@@ -10,10 +10,11 @@ interface AppointmentCardProps {
 }
 
 export default function AppointmentCard({ appointment, onClick, compact = false }: AppointmentCardProps) {
-  const { getAppointmentColor } = useCalendar();
+  const { getAppointmentColor, doctors } = useCalendar();
+  const { patients } = usePatients();
   const color = getAppointmentColor(appointment);
-  const patient = demoPatients.find((p) => p.id === appointment.patient_id);
-  const doctor = demoDoctors.find((d) => d.id === appointment.doctor_id);
+  const patient = patients.find((p) => p.id === appointment.patient_id);
+  const doctor = doctors.find((d) => d.id === appointment.doctor_id);
   const duration = differenceInMinutes(parseISO(appointment.kraj), parseISO(appointment.pocetak));
   const timeStr = format(parseISO(appointment.pocetak), 'HH:mm');
   const serviceName = appointment.services?.[0]?.naziv || '';

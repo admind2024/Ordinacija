@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { ChevronDown, ChevronRight, Clock } from 'lucide-react';
-import { demoServices, demoServiceCategories } from '../../data/demo';
+import { useCalendar } from '../../contexts/CalendarContext';
 import Card from '../ui/Card';
 
 export default function ServiceCatalog() {
+  const { services, serviceCategories } = useCalendar();
   const [expandedCats, setExpandedCats] = useState<string[]>(
-    demoServiceCategories.map((c) => c.id)
+    serviceCategories.map((c) => c.id)
   );
 
   function toggleCategory(catId: string) {
@@ -14,16 +15,16 @@ export default function ServiceCatalog() {
     );
   }
 
-  const groupedServices = demoServiceCategories.map((cat) => ({
+  const groupedServices = serviceCategories.map((cat) => ({
     ...cat,
-    services: demoServices.filter((s) => s.kategorija_id === cat.id),
+    services: services.filter((s) => s.kategorija_id === cat.id),
   }));
 
   return (
     <Card padding={false}>
       <div className="px-6 py-4 border-b border-border flex items-center justify-between">
         <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider">Katalog usluga</h3>
-        <span className="text-xs text-gray-400">{demoServices.length} usluga</span>
+        <span className="text-xs text-gray-400">{services.length} usluga</span>
       </div>
 
       <div className="divide-y divide-border">

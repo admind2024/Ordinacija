@@ -1,8 +1,10 @@
 import { Building2, MapPin, Phone, Mail, Hash } from 'lucide-react';
 import Card from '../components/ui/Card';
-import { demoRooms } from '../data/demo';
+import { useCalendar } from '../contexts/CalendarContext';
 
 export default function Establishment() {
+  const { rooms } = useCalendar();
+
   return (
     <div>
       <div className="mb-6">
@@ -51,7 +53,7 @@ export default function Establishment() {
         <Card>
           <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">Ordinacije i oprema</h3>
           <div className="space-y-2">
-            {demoRooms.map((room) => (
+            {rooms.map((room) => (
               <div key={room.id} className="flex items-center justify-between py-2 border-b border-border last:border-0">
                 <div className="flex items-center gap-3">
                   <span className="w-3 h-3 rounded-full" style={{ backgroundColor: room.boja }} />

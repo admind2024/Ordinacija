@@ -2,7 +2,7 @@ import { format, startOfWeek, endOfWeek, addDays, parseISO, isSameDay, differenc
 import { sr } from 'date-fns/locale';
 import { MapPin, Stethoscope } from 'lucide-react';
 import { useCalendar } from '../../contexts/CalendarContext';
-import { demoDoctors, demoPatients, demoRooms } from '../../data/demo';
+import { usePatients } from '../../contexts/PatientsContext';
 import { APPOINTMENT_STATUS_LABELS, APPOINTMENT_STATUS_COLORS } from '../../types';
 import type { Appointment } from '../../types';
 
@@ -11,7 +11,8 @@ interface AgendaViewProps {
 }
 
 export default function AgendaView({ onAppointmentClick }: AgendaViewProps) {
-  const { selectedDate, getFilteredAppointments } = useCalendar();
+  const { selectedDate, getFilteredAppointments, doctors, rooms } = useCalendar();
+  const { patients } = usePatients();
 
   const weekStart = startOfWeek(selectedDate, { weekStartsOn: 1 });
   const weekEnd = endOfWeek(selectedDate, { weekStartsOn: 1 });
@@ -42,9 +43,9 @@ export default function AgendaView({ onAppointmentClick }: AgendaViewProps) {
             ) : (
               <div className="divide-y divide-border">
                 {dayApts.map((apt) => {
-                  const patient = demoPatients.find((p) => p.id === apt.patient_id);
-                  const doctor = demoDoctors.find((d) => d.id === apt.doctor_id);
-                  const room = demoRooms.find((r) => r.id === apt.room_id);
+                  const patient = patients.find((p) => p.id === apt.patient_id);
+                  const doctor = doctors.find((d) => d.id === apt.doctor_id);
+                  const room = rooms.find((r) => r.id === apt.room_id);
                   const duration = differenceInMinutes(parseISO(apt.kraj), parseISO(apt.pocetak));
 
                   return (

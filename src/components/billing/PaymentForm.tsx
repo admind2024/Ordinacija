@@ -4,7 +4,7 @@ import Button from '../ui/Button';
 import Input from '../ui/Input';
 import { useBilling } from '../../contexts/BillingContext';
 import type { Appointment, PaymentMethod } from '../../types';
-import { demoPatients } from '../../data/demo';
+import { usePatients } from '../../contexts/PatientsContext';
 
 interface PaymentFormProps {
   isOpen: boolean;
@@ -23,9 +23,10 @@ const methodLabels: Record<PaymentMethod, string> = {
 };
 
 export default function PaymentForm({ isOpen, onClose, appointment }: PaymentFormProps) {
+  const { patients } = usePatients();
   const { addPayment, getAppointmentBalance } = useBilling();
   const balance = getAppointmentBalance(appointment);
-  const patient = demoPatients.find((p) => p.id === appointment.patient_id);
+  const patient = patients.find((p) => p.id === appointment.patient_id);
 
   const [iznos, setIznos] = useState(balance.remaining > 0 ? balance.remaining : 0);
   const [metoda, setMetoda] = useState<PaymentMethod>('gotovina_fiskalni');

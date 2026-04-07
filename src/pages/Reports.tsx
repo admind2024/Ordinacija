@@ -1,12 +1,11 @@
 import { useState, useMemo } from 'react';
 import { BarChart3, TrendingUp, Users, Calendar } from 'lucide-react';
 import Card from '../components/ui/Card';
-import { demoDoctors, generateDemoAppointments } from '../data/demo';
+import { useCalendar } from '../contexts/CalendarContext';
 import { APPOINTMENT_STATUS_COLORS } from '../types';
 
-const appointments = generateDemoAppointments();
-
 export default function Reports() {
+  const { appointments, doctors } = useCalendar();
   const [selectedDoctor, setSelectedDoctor] = useState<string>('all');
 
   const stats = useMemo(() => {
@@ -25,11 +24,11 @@ export default function Reports() {
     const avgValue = completed > 0 ? (revenue / completed).toFixed(2) : '0';
 
     return { total, completed, cancelled, noShow, revenue, realizationRate, avgValue };
-  }, [selectedDoctor]);
+  }, [selectedDoctor, appointments]);
 
   // Per-doctor table data
   const doctorStats = useMemo(() => {
-    return demoDoctors.map((doctor) => {
+    return doctors.map((doctor) => {
       const docApts = appointments.filter((a) => a.doctor_id === doctor.id);
       const completed = docApts.filter((a) => a.status === 'zavrsen').length;
       const revenue = docApts
@@ -51,7 +50,7 @@ export default function Reports() {
         newPatients,
       };
     }).sort((a, b) => b.revenue - a.revenue);
-  }, []);
+  }, [doctors, appointments]);
 
   return (
     <div>
@@ -67,7 +66,7 @@ export default function Reports() {
             className="px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
           >
             <option value="all">Svi ljekari</option>
-            {demoDoctors.map((d) => (
+            {doctors.map((d) => (
               <option key={d.id} value={d.id}>{d.titula} {d.ime} {d.prezime}</option>
             ))}
           </select>

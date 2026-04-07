@@ -4,9 +4,10 @@ import DoctorList from '../components/doctors/DoctorList';
 import DoctorScheduleView from '../components/doctors/DoctorSchedule';
 import Card from '../components/ui/Card';
 import type { Doctor } from '../types';
-import { demoRooms } from '../data/demo';
+import { useCalendar } from '../contexts/CalendarContext';
 
 export default function Doctors() {
+  const { rooms } = useCalendar();
   const [selected, setSelected] = useState<Doctor | null>(null);
 
   if (selected) {
@@ -54,7 +55,7 @@ export default function Doctors() {
             <Card>
               <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">Ordinacije</h3>
               <div className="space-y-1">
-                {demoRooms.map((room) => (
+                {rooms.map((room) => (
                   <div key={room.id} className="flex items-center gap-2 text-sm text-gray-600">
                     <span className="w-2 h-2 rounded-full" style={{ backgroundColor: room.boja }} />
                     {room.naziv}

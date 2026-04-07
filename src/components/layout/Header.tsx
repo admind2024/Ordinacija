@@ -17,7 +17,7 @@ export default function Header() {
   return (
     <header className="h-16 bg-surface border-b border-border flex items-center justify-between px-6">
       <div>
-        <h1 className="text-lg font-semibold text-gray-900">Medicinska Platforma</h1>
+        <h1 className="text-lg font-semibold text-gray-900">Ministry of Aesthetics</h1>
       </div>
 
       <div className="flex items-center gap-4">

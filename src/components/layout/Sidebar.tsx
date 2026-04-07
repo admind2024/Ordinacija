@@ -44,11 +44,9 @@ export default function Sidebar() {
     >
       {/* Logo */}
       <div className="flex items-center gap-3 px-4 h-16 border-b border-white/10">
-        <div className="w-8 h-8 bg-primary-500 rounded-lg flex items-center justify-center font-bold text-sm shrink-0">
-          M
-        </div>
+        <img src="/logo.png" alt="MOA" className="w-8 h-8 shrink-0" />
         {!collapsed && (
-          <span className="font-semibold text-sm truncate">Med Platforma</span>
+          <span className="font-semibold text-sm truncate">MOA</span>
         )}
       </div>
 

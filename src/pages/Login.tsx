@@ -32,10 +32,8 @@ export default function Login() {
       <div className="w-full max-w-sm">
         {/* Logo */}
         <div className="text-center mb-8">
-          <div className="w-16 h-16 bg-primary-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
-            <span className="text-white text-2xl font-bold">M</span>
-          </div>
-          <h1 className="text-2xl font-bold text-gray-900">Medicinska Platforma</h1>
+          <img src="/logo.png" alt="Ministry of Aesthetics" className="w-24 h-24 mx-auto mb-4" />
+          <h1 className="text-2xl font-bold text-gray-900">Ministry of Aesthetics</h1>
           <p className="text-sm text-gray-500 mt-1">Prijavite se na svoj nalog</p>
         </div>
 
@@ -77,7 +75,7 @@ export default function Login() {
         </form>
 
         <p className="text-center text-xs text-gray-400 mt-6">
-          Medicinska Platforma v1.0 &mdash; Rakunat DOO
+          Ministry of Aesthetics v1.0
         </p>
       </div>
     </div>

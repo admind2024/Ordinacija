@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Plus, Edit, Trash2, Tag, Clock, Loader2, Save } from 'lucide-react';
+import { useState, useMemo } from 'react';
+import { Plus, Edit, Trash2, Tag, Clock, Loader2, Save, Search } from 'lucide-react';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
@@ -106,12 +106,20 @@ export default function Services() {
     await deleteServiceCategory(cat.id);
   }
 
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const filteredServices = useMemo(() => {
+    if (!searchQuery) return services;
+    const q = searchQuery.toLowerCase();
+    return services.filter((s) => s.naziv.toLowerCase().includes(q));
+  }, [services, searchQuery]);
+
   const grouped = serviceCategories.map((cat) => ({
     ...cat,
-    items: services.filter((s) => s.kategorija_id === cat.id),
-  }));
+    items: filteredServices.filter((s) => s.kategorija_id === cat.id),
+  })).filter((cat) => !searchQuery || cat.items.length > 0);
 
-  const uncategorized = services.filter((s) => !serviceCategories.find((c) => c.id === s.kategorija_id));
+  const uncategorized = filteredServices.filter((s) => !serviceCategories.find((c) => c.id === s.kategorija_id));
 
   return (
     <div>
@@ -128,6 +136,18 @@ export default function Services() {
             <Plus size={16} /> Nova usluga
           </Button>
         </div>
+      </div>
+
+      {/* Pretraga */}
+      <div className="relative max-w-md mb-6">
+        <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+        <input
+          type="text"
+          placeholder="Pretrazi usluge..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="w-full pl-10 pr-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+        />
       </div>
 
       {/* Statistika */}

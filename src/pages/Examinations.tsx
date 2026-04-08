@@ -1,11 +1,11 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { format, parseISO } from 'date-fns';
 import { ClipboardList, User, Clock, Printer, FileText } from 'lucide-react';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import ExaminationForm from '../components/examinations/ExaminationForm';
 import ExaminationHistory from '../components/examinations/ExaminationHistory';
-import PrintReport from '../components/examinations/PrintReport';
+import { openPrintReport } from '../components/examinations/PrintReport';
 import { useCalendar } from '../contexts/CalendarContext';
 import { supabase } from '../lib/supabase';
 import { APPOINTMENT_STATUS_COLORS, APPOINTMENT_STATUS_LABELS } from '../types';
@@ -20,8 +20,6 @@ export default function Examinations() {
   const [currentExam, setCurrentExam] = useState<Examination | null>(null);
   const [establishment, setEstablishment] = useState<Establishment | null>(null);
   const [saving, setSaving] = useState(false);
-  const [printExam, setPrintExam] = useState<Examination | null>(null);
-  const printRef = useRef<HTMLDivElement>(null);
 
   // Danasnji termini — svi osim otkazanih
   const today = new Date();
@@ -110,8 +108,8 @@ export default function Examinations() {
   }
 
   function handlePrint(exam: Examination) {
-    setPrintExam(exam);
-    setTimeout(() => window.print(), 200);
+    if (!patient || !selectedDoctor || !establishment) return;
+    openPrintReport({ examination: exam, patient, doctor: selectedDoctor, establishment });
   }
 
   const selectedDoctor = selectedAppointment
@@ -285,16 +283,6 @@ export default function Examinations() {
         </div>
       </div>
 
-      {/* Hidden print component */}
-      {printExam && patient && selectedDoctor && (
-        <PrintReport
-          ref={printRef}
-          examination={printExam}
-          patient={patient}
-          doctor={selectedDoctor}
-          establishment={establishment}
-        />
-      )}
     </div>
   );
 }

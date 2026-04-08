@@ -4,7 +4,7 @@ import { CalendarDays, Users, CreditCard, TrendingUp, Printer, Eye, FileText } f
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import Modal from '../components/ui/Modal';
-import PrintReport from '../components/examinations/PrintReport';
+import { openPrintReport } from '../components/examinations/PrintReport';
 import { useCalendar } from '../contexts/CalendarContext';
 import { usePatients } from '../contexts/PatientsContext';
 import { supabase } from '../lib/supabase';
@@ -77,9 +77,9 @@ export default function Dashboard() {
       .then(({ data }) => { if (data) setEstablishment(data as Establishment); });
   }, [patients, doctors]);
 
-  function handlePrintExam(exam: Examination & { patient?: Patient; doctor?: Doctor }) {
-    setPrintExam(exam);
-    setTimeout(() => window.print(), 200);
+  function handlePrintExam(exam: ExamWithDetails) {
+    if (!exam.patient || !exam.doctor) return;
+    openPrintReport({ examination: exam, patient: exam.patient, doctor: exam.doctor, establishment });
   }
 
   const stats = [
@@ -322,15 +322,6 @@ export default function Dashboard() {
         </Modal>
       )}
 
-      {/* Hidden print component */}
-      {printExam && printExam.patient && printExam.doctor && (
-        <PrintReport
-          examination={printExam}
-          patient={printExam.patient}
-          doctor={printExam.doctor}
-          establishment={establishment}
-        />
-      )}
     </div>
   );
 }

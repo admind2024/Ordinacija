@@ -1,5 +1,5 @@
 import { format, startOfWeek, endOfWeek, addDays, parseISO, isSameDay, differenceInMinutes } from 'date-fns';
-import { sr } from 'date-fns/locale';
+import { srLatn as sr } from 'date-fns/locale';
 import { MapPin, Stethoscope } from 'lucide-react';
 import { useCalendar } from '../../contexts/CalendarContext';
 import { usePatients } from '../../contexts/PatientsContext';

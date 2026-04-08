@@ -1,5 +1,5 @@
 import { format, startOfWeek, addDays, parseISO, differenceInMinutes, isSameDay } from 'date-fns';
-import { sr } from 'date-fns/locale';
+import { srLatn as sr } from 'date-fns/locale';
 import { useCalendar } from '../../contexts/CalendarContext';
 import AppointmentCard from './AppointmentCard';
 import type { Appointment } from '../../types';

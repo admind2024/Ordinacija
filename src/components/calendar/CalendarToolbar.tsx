@@ -1,5 +1,5 @@
 import { format } from 'date-fns';
-import { sr } from 'date-fns/locale';
+import { srLatn as sr } from 'date-fns/locale';
 import { ChevronLeft, ChevronRight, Plus, Filter } from 'lucide-react';
 import { useCalendar, type CalendarView } from '../../contexts/CalendarContext';
 import Button from '../ui/Button';

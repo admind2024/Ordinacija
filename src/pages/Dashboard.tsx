@@ -4,7 +4,7 @@ import { CalendarDays, Users, CreditCard, TrendingUp, Printer, Eye, FileText, Ba
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import Modal from '../components/ui/Modal';
-import { openPrintReport } from '../components/examinations/PrintReport';
+import { openPrintReport, type FiscalPrintData } from '../components/examinations/PrintReport';
 import { fiscalizeInvoice, loadTeconioCertificate, type FiscalItem, type FiscalResult } from '../lib/fiscalService';
 import { useCalendar } from '../contexts/CalendarContext';
 import { usePatients } from '../contexts/PatientsContext';
@@ -89,12 +89,30 @@ export default function Dashboard() {
 
   function handlePrintExam(exam: ExamWithDetails) {
     if (!exam.patient || !exam.doctor) return;
-    openPrintReport({ examination: exam, patient: exam.patient, doctor: exam.doctor, establishment });
+    const fd = fiscalData[exam.id];
+    const fiscal: FiscalPrintData | undefined = fd?.success ? {
+      fic: fd.fic,
+      iic: fd.iic,
+      invoiceNumber: fd.invoiceNumber,
+      qrCodeUrl: fd.qrCodeUrl,
+      totalWithoutVAT: fd.totals?.totalWithoutVAT,
+      totalVAT: fd.totals?.totalVAT,
+      totalPrice: fd.totals?.totalPrice,
+    } : undefined;
+    openPrintReport({
+      examination: exam,
+      patient: exam.patient,
+      doctor: exam.doctor,
+      establishment,
+      services: exam.appointmentServices as any,
+      fiscal,
+    });
   }
 
   // Fiskalizacija
   const [fiscalizing, setFiscalizing] = useState<string | null>(null);
   const [fiscalResult, setFiscalResult] = useState<{ id: string; result: FiscalResult } | null>(null);
+  const [fiscalData, setFiscalData] = useState<Record<string, FiscalResult>>({});
 
   async function handleFiscalize(exam: ExamWithDetails) {
     if (!exam.appointmentServices || exam.appointmentServices.length === 0) {
@@ -126,12 +144,7 @@ export default function Dashboard() {
     setFiscalizing(null);
 
     if (result.success) {
-      // Sacuvaj FIC u examination
-      if (exam.appointment_id) {
-        await supabase.from('appointments').update({
-          napomena: `${exam.razlog_dolaska || ''}\nFIC: ${result.fic}\nIIC: ${result.iic}`.trim(),
-        }).eq('id', exam.appointment_id);
-      }
+      setFiscalData((prev) => ({ ...prev, [exam.id]: result }));
     }
 
     setTimeout(() => setFiscalResult(null), 8000);

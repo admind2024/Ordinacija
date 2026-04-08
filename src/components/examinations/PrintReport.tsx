@@ -1,10 +1,22 @@
-import type { Examination, Doctor, Patient, Establishment } from '../../types';
+import type { Examination, Doctor, Patient, Establishment, AppointmentService } from '../../types';
+
+export interface FiscalPrintData {
+  fic?: string;
+  iic?: string;
+  invoiceNumber?: string;
+  qrCodeUrl?: string;
+  totalWithoutVAT?: number;
+  totalVAT?: number;
+  totalPrice?: number;
+}
 
 interface PrintReportProps {
   examination: Examination;
   patient: Patient;
   doctor: Doctor;
   establishment: Establishment | null;
+  services?: AppointmentService[];
+  fiscal?: FiscalPrintData;
 }
 
 function fmtDate(dateStr: string): string {
@@ -21,11 +33,7 @@ function esc(str: string): string {
   return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
-/**
- * Otvara print dijalog direktno bez novog prozora.
- * Koristi iframe koji se automatski uklanja nakon stampe.
- */
-export function openPrintReport({ examination, patient, doctor, establishment }: PrintReportProps) {
+export function openPrintReport({ examination, patient, doctor, establishment, services, fiscal }: PrintReportProps) {
   const datumStr = examination.datum ? fmtDate(examination.datum) : '';
   const datumRodjenja = patient.datum_rodjenja ? fmtDate(patient.datum_rodjenja) : '';
   const doctorFullName = `${doctor.titula || 'Dr'} ${doctor.ime} ${doctor.prezime}`.trim();
@@ -38,6 +46,7 @@ export function openPrintReport({ examination, patient, doctor, establishment }:
   const clinicPhone = establishment?.telefon || '+382 67/941-941';
   const clinicEmail = establishment?.email || 'info@moa.clinic';
 
+  // Sadrzaj pregleda
   const sections: string[] = [];
   if (examination.razlog_dolaska) {
     sections.push(`<p style="margin-bottom:12px;white-space:pre-wrap">${esc(examination.razlog_dolaska)}</p>`);
@@ -53,6 +62,72 @@ export function openPrintReport({ examination, patient, doctor, establishment }:
   }
   if (examination.kontrolni_pregled) {
     sections.push(`<p style="margin-bottom:12px">Kontrolni pregled: ${esc(examination.kontrolni_pregled)}</p>`);
+  }
+
+  // Tabela usluga
+  let servicesHtml = '';
+  if (services && services.length > 0) {
+    const total = services.reduce((s, svc) => s + svc.ukupno, 0);
+    servicesHtml = `
+      <div style="margin: 20px 0; border-top: 1px solid #ddd; padding-top: 15px;">
+        <p style="font-size:10px; font-weight:700; color:#1B6F6F; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:8px;">Izvrsene usluge</p>
+        <table style="width:100%; border-collapse:collapse; font-size:11px;">
+          <thead>
+            <tr style="border-bottom:1px solid #ddd;">
+              <th style="text-align:left; padding:6px 0; color:#555;">Usluga</th>
+              <th style="text-align:center; padding:6px 0; color:#555; width:50px;">Kol.</th>
+              <th style="text-align:right; padding:6px 0; color:#555; width:80px;">Cijena</th>
+              <th style="text-align:right; padding:6px 0; color:#555; width:80px;">Ukupno</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${services.map((svc) => `
+              <tr style="border-bottom:1px solid #eee;">
+                <td style="padding:5px 0;">${esc(svc.naziv)}</td>
+                <td style="text-align:center; padding:5px 0;">${svc.kolicina}</td>
+                <td style="text-align:right; padding:5px 0;">${svc.cijena.toFixed(2)}</td>
+                <td style="text-align:right; padding:5px 0; font-weight:600;">${svc.ukupno.toFixed(2)}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+          <tfoot>
+            <tr style="border-top:2px solid #1B6F6F;">
+              <td colspan="3" style="padding:8px 0; font-weight:700; color:#1B6F6F;">UKUPNO</td>
+              <td style="text-align:right; padding:8px 0; font-weight:700; font-size:13px; color:#1B6F6F;">${total.toFixed(2)} EUR</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>`;
+  }
+
+  // Fiskalni podaci
+  let fiscalHtml = '';
+  if (fiscal?.fic) {
+    fiscalHtml = `
+      <div style="margin-top:20px; border:1px solid #ddd; border-radius:6px; padding:12px; background:#fafafa; font-size:10px;">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+          <div>
+            <p style="font-weight:700; color:#1B6F6F; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px;">Fiskalni podaci</p>
+            ${fiscal.invoiceNumber ? `<p><span style="color:#666;">Broj racuna:</span> <strong>${esc(fiscal.invoiceNumber)}</strong></p>` : ''}
+            <p><span style="color:#666;">FIC:</span> <strong>${esc(fiscal.fic)}</strong></p>
+            ${fiscal.iic ? `<p><span style="color:#666;">IIC:</span> ${esc(fiscal.iic)}</p>` : ''}
+            ${fiscal.totalWithoutVAT != null ? `
+              <div style="margin-top:6px; padding-top:6px; border-top:1px solid #eee;">
+                <p><span style="color:#666;">Bez PDV:</span> ${fiscal.totalWithoutVAT.toFixed(2)} EUR</p>
+                <p><span style="color:#666;">PDV (21%):</span> ${(fiscal.totalVAT || 0).toFixed(2)} EUR</p>
+                <p style="font-weight:700;"><span style="color:#666;">Sa PDV:</span> ${(fiscal.totalPrice || 0).toFixed(2)} EUR</p>
+              </div>
+            ` : ''}
+          </div>
+          ${fiscal.qrCodeUrl ? `
+            <div style="text-align:center;">
+              <img src="https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent(fiscal.qrCodeUrl)}"
+                   style="width:90px;height:90px;" alt="QR" />
+              <p style="font-size:8px; color:#999; margin-top:2px;">Verifikacija</p>
+            </div>
+          ` : ''}
+        </div>
+      </div>`;
   }
 
   const html = `<!DOCTYPE html>
@@ -78,48 +153,25 @@ export function openPrintReport({ examination, patient, doctor, establishment }:
       border-bottom: 2px solid #2BA5A5;
       margin-bottom: 25px;
     }
-    .header img {
-      width: 70px;
-      height: 70px;
-      object-fit: contain;
-    }
-    .header-info {
-      text-align: right;
-      font-size: 10px;
-      line-height: 1.6;
-      color: #444;
-    }
-    .header-info .name {
-      font-size: 12px;
-      font-weight: 700;
-      color: #1B6F6F;
-      margin-bottom: 2px;
-    }
+    .header img { width: 70px; height: 70px; object-fit: contain; }
+    .header-info { text-align: right; font-size: 10px; line-height: 1.6; color: #444; }
+    .header-info .name { font-size: 12px; font-weight: 700; color: #1B6F6F; margin-bottom: 2px; }
     .patient-box {
-      background: #f7fafa;
-      border-left: 3px solid #2BA5A5;
-      padding: 12px 16px;
-      margin-bottom: 22px;
-      font-size: 12px;
-      line-height: 1.8;
+      background: #f7fafa; border-left: 3px solid #2BA5A5;
+      padding: 12px 16px; margin-bottom: 22px; font-size: 12px; line-height: 1.8;
     }
     .patient-box strong { color: #111; }
-    .content {
-      font-size: 12px;
-      line-height: 1.8;
-      color: #222;
-    }
-    .signature {
-      margin-top: 50px;
-      text-align: right;
-    }
-    .sig-line {
-      width: 180px;
-      border-top: 1px solid #bbb;
-      margin: 8px 0 6px auto;
-    }
+    .content { font-size: 12px; line-height: 1.8; color: #222; }
+    .signature { margin-top: 40px; text-align: right; }
+    .sig-line { width: 180px; border-top: 1px solid #bbb; margin: 8px 0 6px auto; }
     .sig-name { font-size: 12px; font-weight: 600; color: #1B6F6F; }
     .sig-spec { font-size: 10px; color: #666; }
+    table { display: table !important; }
+    tbody { display: table-row-group !important; }
+    thead { display: table-header-group !important; }
+    tfoot { display: table-footer-group !important; }
+    tr { display: table-row !important; }
+    td, th { display: table-cell !important; }
   </style>
 </head>
 <body>
@@ -144,16 +196,17 @@ export function openPrintReport({ examination, patient, doctor, establishment }:
     <div class="content">
       ${sections.join('\n      ')}
     </div>
+    ${servicesHtml}
     <div class="signature">
       <div class="sig-line"></div>
       <div class="sig-name">${esc(doctorFullName)}</div>
       ${spec ? `<div class="sig-spec">${esc(spec)}</div>` : ''}
     </div>
+    ${fiscalHtml}
   </div>
 </body>
 </html>`;
 
-  // Koristimo skriveni iframe umjesto novog prozora
   const iframe = document.createElement('iframe');
   iframe.style.position = 'fixed';
   iframe.style.right = '0';
@@ -168,7 +221,6 @@ export function openPrintReport({ examination, patient, doctor, establishment }:
     iframeDoc.open();
     iframeDoc.write(html);
     iframeDoc.close();
-
     iframe.onload = () => {
       setTimeout(() => {
         iframe.contentWindow?.print();

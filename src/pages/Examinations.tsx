@@ -109,7 +109,13 @@ export default function Examinations() {
 
   function handlePrint(exam: Examination) {
     if (!patient || !selectedDoctor || !establishment) return;
-    openPrintReport({ examination: exam, patient, doctor: selectedDoctor, establishment });
+    openPrintReport({
+      examination: exam,
+      patient,
+      doctor: selectedDoctor,
+      establishment,
+      services: aptServices.length > 0 ? aptServices : undefined,
+    });
   }
 
   const selectedDoctor = selectedAppointment

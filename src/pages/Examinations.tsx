@@ -33,24 +33,39 @@ export default function Examinations() {
   const [selectedMaterialId, setSelectedMaterialId] = useState('');
   const [materialQty, setMaterialQty] = useState('1');
 
-  // Danasnji termini — svi osim otkazanih
+  // Danasnji termini — sakrij one koji vec imaju zavrsen pregled
   const today = new Date();
   const todayStr = format(today, 'yyyy-MM-dd');
-  const todaysAppointments = appointments
-    .filter((apt) => {
-      const d = new Date(apt.pocetak);
-      const aptDateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-      return aptDateStr === todayStr && apt.status !== 'otkazan' && apt.status !== 'nije_dosao' && apt.status !== 'zavrsen';
-    })
-    .sort((a, b) => a.pocetak.localeCompare(b.pocetak));
+  const [completedExamAptIds, setCompletedExamAptIds] = useState<Set<string>>(new Set());
 
-  // Fetch establishment
+  // Fetch establishment + zavrseni pregledi
   useEffect(() => {
     supabase.from('establishments').select('*').limit(1).single()
       .then(({ data }) => {
         if (data) setEstablishment(data as Establishment);
       });
-  }, []);
+    // Dohvati appointment_id-jeve za zavrsene preglede danas
+    supabase.from('examinations')
+      .select('appointment_id')
+      .eq('status', 'zavrsen')
+      .eq('datum', todayStr)
+      .then(({ data }) => {
+        const ids = new Set((data || []).map((e: any) => e.appointment_id).filter(Boolean));
+        setCompletedExamAptIds(ids);
+      });
+  }, [todayStr]);
+
+  const todaysAppointments = appointments
+    .filter((apt) => {
+      const d = new Date(apt.pocetak);
+      const aptDateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      if (aptDateStr !== todayStr) return false;
+      if (apt.status === 'otkazan' || apt.status === 'nije_dosao') return false;
+      // Sakrij termine koji vec imaju zavrsen pregled
+      if (completedExamAptIds.has(apt.id)) return false;
+      return true;
+    })
+    .sort((a, b) => a.pocetak.localeCompare(b.pocetak));
 
   // Fetch patient data kad se odabere termin
   const loadPatientData = useCallback(async (apt: Appointment) => {

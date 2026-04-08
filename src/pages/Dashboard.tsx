@@ -39,7 +39,6 @@ export default function Dashboard() {
     [todayCompletedApts]
   );
 
-  const totalRevenue = useMemo(
     () => appointments
       .filter((a) => a.status === 'zavrsen')
       .reduce((sum, a) => sum + (a.services?.reduce((s, svc) => s + svc.ukupno, 0) || 0), 0),

@@ -17,8 +17,13 @@ function fmtDate(dateStr: string): string {
   }
 }
 
+function esc(str: string): string {
+  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
 /**
- * Otvara novi prozor sa profesionalnim izvjestajem i pokrece print.
+ * Otvara print dijalog direktno bez novog prozora.
+ * Koristi iframe koji se automatski uklanja nakon stampe.
  */
 export function openPrintReport({ examination, patient, doctor, establishment }: PrintReportProps) {
   const datumStr = examination.datum ? fmtDate(examination.datum) : '';
@@ -33,7 +38,6 @@ export function openPrintReport({ examination, patient, doctor, establishment }:
   const clinicPhone = establishment?.telefon || '+382 67/941-941';
   const clinicEmail = establishment?.email || 'info@moa.clinic';
 
-  // Sekcije pregleda
   const sections: string[] = [];
   if (examination.razlog_dolaska) {
     sections.push(`<p style="margin-bottom:12px;white-space:pre-wrap">${esc(examination.razlog_dolaska)}</p>`);
@@ -55,118 +59,75 @@ export function openPrintReport({ examination, patient, doctor, establishment }:
 <html>
 <head>
   <meta charset="utf-8">
-  <title>Nalaz — ${patient.ime} ${patient.prezime}</title>
+  <title>Nalaz</title>
   <style>
-    @page { size: A4; margin: 0; }
+    @page { size: A4; margin: 15mm; }
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
-      font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+      font-family: 'Segoe UI', Arial, sans-serif;
       color: #1a1a1a;
       -webkit-print-color-adjust: exact;
       print-color-adjust: exact;
     }
-    .page {
-      width: 210mm;
-      min-height: 297mm;
-      padding: 0;
-      position: relative;
-    }
-    /* Teal header bar */
-    .header-bar {
-      background: linear-gradient(135deg, #2BA5A5 0%, #1B6F6F 100%);
-      padding: 25px 35px;
+    .page { width: 100%; position: relative; }
+    .header {
       display: flex;
       align-items: center;
       justify-content: space-between;
+      padding-bottom: 15px;
+      border-bottom: 2px solid #2BA5A5;
+      margin-bottom: 25px;
     }
-    .header-bar img {
-      width: 80px;
-      height: 80px;
-      border-radius: 50%;
-      background: white;
-      padding: 5px;
+    .header img {
+      width: 70px;
+      height: 70px;
       object-fit: contain;
     }
     .header-info {
       text-align: right;
-      color: white;
-      font-size: 11px;
-      line-height: 1.7;
+      font-size: 10px;
+      line-height: 1.6;
+      color: #444;
     }
-    .header-info .clinic-name {
-      font-size: 14px;
+    .header-info .name {
+      font-size: 12px;
       font-weight: 700;
-      margin-bottom: 4px;
-      letter-spacing: 0.3px;
+      color: #1B6F6F;
+      margin-bottom: 2px;
     }
-    /* Gold accent line */
-    .accent-line {
-      height: 3px;
-      background: linear-gradient(90deg, #D4AA8C 0%, #C4956F 50%, #D4AA8C 100%);
+    .patient-box {
+      background: #f7fafa;
+      border-left: 3px solid #2BA5A5;
+      padding: 12px 16px;
+      margin-bottom: 22px;
+      font-size: 12px;
+      line-height: 1.8;
     }
-    /* Content */
+    .patient-box strong { color: #111; }
     .content {
-      padding: 30px 40px;
-    }
-    .patient-info {
-      background: #F8FAFA;
-      border-left: 4px solid #2BA5A5;
-      padding: 16px 20px;
-      margin-bottom: 28px;
-      border-radius: 0 8px 8px 0;
-    }
-    .patient-info p {
-      font-size: 13px;
+      font-size: 12px;
       line-height: 1.8;
-      color: #333;
+      color: #222;
     }
-    .patient-info strong {
-      color: #1a1a1a;
-    }
-    .exam-content {
-      font-size: 12.5px;
-      line-height: 1.8;
-      color: #2a2a2a;
-      padding: 0 5px;
-    }
-    /* Footer / doctor signature */
     .signature {
       margin-top: 50px;
       text-align: right;
-      padding-right: 10px;
     }
-    .signature .doctor-name {
-      font-size: 14px;
-      font-weight: 600;
-      color: #1B6F6F;
+    .sig-line {
+      width: 180px;
+      border-top: 1px solid #bbb;
+      margin: 8px 0 6px auto;
     }
-    .signature .doctor-spec {
-      font-size: 11px;
-      color: #666;
-      margin-top: 2px;
-    }
-    .signature .sig-line {
-      width: 200px;
-      border-top: 1px solid #ccc;
-      margin: 8px 0 8px auto;
-    }
-    /* Bottom accent */
-    .footer-bar {
-      position: absolute;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      height: 6px;
-      background: linear-gradient(90deg, #2BA5A5 0%, #D4AA8C 100%);
-    }
+    .sig-name { font-size: 12px; font-weight: 600; color: #1B6F6F; }
+    .sig-spec { font-size: 10px; color: #666; }
   </style>
 </head>
 <body>
   <div class="page">
-    <div class="header-bar">
+    <div class="header">
       <img src="/logo.png" alt="MOA" />
       <div class="header-info">
-        <div class="clinic-name">${esc(clinicName)}</div>
+        <div class="name">${esc(clinicName)}</div>
         <div>${esc(clinicAddress)}</div>
         <div>${esc(clinicCity)}</div>
         <div>PIB: ${esc(clinicPib)}</div>
@@ -175,48 +136,48 @@ export function openPrintReport({ examination, patient, doctor, establishment }:
         <div>www.moa.clinic</div>
       </div>
     </div>
-    <div class="accent-line"></div>
-    <div class="content">
-      <div class="patient-info">
-        <p>Ime i prezime: <strong>${esc(patient.ime)} ${esc(patient.prezime)}</strong></p>
-        <p>Datum: <strong>${datumStr}</strong></p>
-        ${datumRodjenja ? `<p>Datum rodjenja: <strong>${datumRodjenja}</strong></p>` : ''}
-      </div>
-      <div class="exam-content">
-        ${sections.join('\n        ')}
-      </div>
-      <div class="signature">
-        <div class="sig-line"></div>
-        <div class="doctor-name">${esc(doctorFullName)}</div>
-        ${spec ? `<div class="doctor-spec">${esc(spec)}</div>` : ''}
-      </div>
+    <div class="patient-box">
+      <div>Ime i prezime: <strong>${esc(patient.ime)} ${esc(patient.prezime)}</strong></div>
+      <div>Datum: <strong>${datumStr}</strong></div>
+      ${datumRodjenja ? `<div>Datum rodjenja: <strong>${datumRodjenja}</strong></div>` : ''}
     </div>
-    <div class="footer-bar"></div>
+    <div class="content">
+      ${sections.join('\n      ')}
+    </div>
+    <div class="signature">
+      <div class="sig-line"></div>
+      <div class="sig-name">${esc(doctorFullName)}</div>
+      ${spec ? `<div class="sig-spec">${esc(spec)}</div>` : ''}
+    </div>
   </div>
-  <script>
-    window.onload = function() {
-      setTimeout(function() { window.print(); }, 300);
-    };
-  </script>
 </body>
 </html>`;
 
-  const printWindow = window.open('', '_blank', 'width=800,height=1000');
-  if (printWindow) {
-    printWindow.document.write(html);
-    printWindow.document.close();
+  // Koristimo skriveni iframe umjesto novog prozora
+  const iframe = document.createElement('iframe');
+  iframe.style.position = 'fixed';
+  iframe.style.right = '0';
+  iframe.style.bottom = '0';
+  iframe.style.width = '0';
+  iframe.style.height = '0';
+  iframe.style.border = 'none';
+  document.body.appendChild(iframe);
+
+  const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
+  if (iframeDoc) {
+    iframeDoc.open();
+    iframeDoc.write(html);
+    iframeDoc.close();
+
+    iframe.onload = () => {
+      setTimeout(() => {
+        iframe.contentWindow?.print();
+        setTimeout(() => document.body.removeChild(iframe), 1000);
+      }, 200);
+    };
   }
 }
 
-function esc(str: string): string {
-  return str
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
-}
-
-// Keep default export for backwards compat but it's no longer used
 export default function PrintReport() {
   return null;
 }

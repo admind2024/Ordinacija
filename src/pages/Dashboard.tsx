@@ -1,10 +1,11 @@
 import { useMemo, useState, useEffect } from 'react';
 import { format, parseISO } from 'date-fns';
-import { CalendarDays, Users, CreditCard, TrendingUp, Printer, Eye, FileText, Banknote } from 'lucide-react';
+import { CalendarDays, Users, CreditCard, TrendingUp, Printer, Eye, FileText, Banknote, Loader2, CheckCircle, XCircle } from 'lucide-react';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import Modal from '../components/ui/Modal';
 import { openPrintReport } from '../components/examinations/PrintReport';
+import { fiscalizeInvoice, loadTeconioCertificate, type FiscalItem, type FiscalResult } from '../lib/fiscalService';
 import { useCalendar } from '../contexts/CalendarContext';
 import { usePatients } from '../contexts/PatientsContext';
 import { supabase } from '../lib/supabase';
@@ -89,6 +90,51 @@ export default function Dashboard() {
   function handlePrintExam(exam: ExamWithDetails) {
     if (!exam.patient || !exam.doctor) return;
     openPrintReport({ examination: exam, patient: exam.patient, doctor: exam.doctor, establishment });
+  }
+
+  // Fiskalizacija
+  const [fiscalizing, setFiscalizing] = useState<string | null>(null);
+  const [fiscalResult, setFiscalResult] = useState<{ id: string; result: FiscalResult } | null>(null);
+
+  async function handleFiscalize(exam: ExamWithDetails) {
+    if (!exam.appointmentServices || exam.appointmentServices.length === 0) {
+      setFiscalResult({ id: exam.id, result: { success: false, error: 'Nema usluga za fiskalizaciju' } });
+      return;
+    }
+
+    setFiscalizing(exam.id);
+    setFiscalResult(null);
+
+    // Ucitaj Teconio certifikat ako nema
+    await loadTeconioCertificate();
+
+    const items: FiscalItem[] = exam.appointmentServices.map((svc: any) => ({
+      name: svc.naziv,
+      unit: 'kom',
+      quantity: Number(svc.kolicina) || 1,
+      unitPriceWithVAT: Number(svc.ukupno) / (Number(svc.kolicina) || 1),
+      vatRate: 21, // standardna PDV stopa
+    }));
+
+    const totalAmount = exam.appointmentTotal || 0;
+
+    const result = await fiscalizeInvoice(items, [
+      { method: 'BANKNOTE', amount: totalAmount },
+    ]);
+
+    setFiscalResult({ id: exam.id, result });
+    setFiscalizing(null);
+
+    if (result.success) {
+      // Sacuvaj FIC u examination
+      if (exam.appointment_id) {
+        await supabase.from('appointments').update({
+          napomena: `${exam.razlog_dolaska || ''}\nFIC: ${result.fic}\nIIC: ${result.iic}`.trim(),
+        }).eq('id', exam.appointment_id);
+      }
+    }
+
+    setTimeout(() => setFiscalResult(null), 8000);
   }
 
   // Ukupno za naplatu danas iz zavrsenih pregleda
@@ -266,17 +312,53 @@ export default function Dashboard() {
                       <Printer size={16} />
                     </button>
                     <button
-                      className="p-2 text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
-                      title="Naplati"
-                      onClick={() => setViewExam(exam)}
+                      className={`p-2 rounded-lg transition-colors ${
+                        fiscalizing === exam.id
+                          ? 'text-purple-600 bg-purple-50'
+                          : 'text-gray-400 hover:text-purple-600 hover:bg-purple-50'
+                      }`}
+                      title="Naplati (fiskalizuj)"
+                      onClick={() => handleFiscalize(exam)}
+                      disabled={!!fiscalizing}
                     >
-                      <Banknote size={16} />
+                      {fiscalizing === exam.id ? <Loader2 size={16} className="animate-spin" /> : <Banknote size={16} />}
                     </button>
                   </div>
                 </div>
               ))}
             </div>
           </Card>
+        </div>
+      )}
+
+      {/* Fiscal rezultat toast */}
+      {fiscalResult && (
+        <div className={`fixed bottom-6 right-6 z-50 max-w-sm p-4 rounded-xl shadow-lg border ${
+          fiscalResult.result.success
+            ? 'bg-green-50 border-green-200'
+            : 'bg-red-50 border-red-200'
+        }`}>
+          <div className="flex items-start gap-3">
+            {fiscalResult.result.success ? (
+              <CheckCircle size={20} className="text-green-600 shrink-0 mt-0.5" />
+            ) : (
+              <XCircle size={20} className="text-red-600 shrink-0 mt-0.5" />
+            )}
+            <div>
+              <p className={`text-sm font-medium ${fiscalResult.result.success ? 'text-green-800' : 'text-red-800'}`}>
+                {fiscalResult.result.success ? 'Fiskalizacija uspjesna!' : 'Fiskalizacija neuspjesna'}
+              </p>
+              {fiscalResult.result.fic && (
+                <p className="text-xs text-green-600 mt-1">FIC: {fiscalResult.result.fic}</p>
+              )}
+              {fiscalResult.result.invoiceNumber && (
+                <p className="text-xs text-green-600">Racun: {fiscalResult.result.invoiceNumber}</p>
+              )}
+              {fiscalResult.result.error && (
+                <p className="text-xs text-red-600 mt-1">{fiscalResult.result.error}</p>
+              )}
+            </div>
+          </div>
         </div>
       )}
 

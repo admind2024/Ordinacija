@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from 'react';
 import { addDays, addWeeks, addMonths, isWithinInterval, parseISO } from 'date-fns';
-import type { Appointment, AppointmentStatus, Doctor, Room, Service, ServiceCategory } from '../types';
+import type { Appointment, AppointmentStatus, Doctor, Room, Service, ServiceCategory, Material } from '../types';
 import { supabase } from '../lib/supabase';
 import { useAutoReminders } from '../hooks/useAutoReminders';
 
@@ -33,6 +33,7 @@ interface CalendarContextType {
   rooms: Room[];
   services: Service[];
   serviceCategories: ServiceCategory[];
+  materials: Material[];
   loading: boolean;
 
   setSelectedDate: (date: Date) => void;
@@ -68,6 +69,11 @@ interface CalendarContextType {
   updateService: (id: string, updates: Partial<Service>) => Promise<void>;
   deleteService: (id: string) => Promise<void>;
 
+  // Material CRUD
+  createMaterial: (material: Omit<Material, 'id'>) => Promise<Material | null>;
+  updateMaterial: (id: string, updates: Partial<Material>) => Promise<void>;
+  deleteMaterial: (id: string) => Promise<void>;
+
   // Service Category CRUD
   createServiceCategory: (cat: Omit<ServiceCategory, 'id'>) => Promise<ServiceCategory | null>;
   updateServiceCategory: (id: string, updates: Partial<ServiceCategory>) => Promise<void>;
@@ -85,6 +91,7 @@ export function CalendarProvider({ children }: { children: ReactNode }) {
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [rooms, setRooms] = useState<Room[]>([]);
   const [services, setServices] = useState<Service[]>([]);
+  const [materials, setMaterials] = useState<Material[]>([]);
   const [serviceCategories, setServiceCategories] = useState<ServiceCategory[]>([]);
   const [smsLog, setSmsLog] = useState<SmsLogEntry[]>([]);
   const [loading, setLoading] = useState(true);
@@ -97,13 +104,14 @@ export function CalendarProvider({ children }: { children: ReactNode }) {
   const fetchData = useCallback(async () => {
     setLoading(true);
 
-    const [doctorsRes, roomsRes, servicesRes, categoriesRes, appointmentsRes, smsLogRes] = await Promise.all([
+    const [doctorsRes, roomsRes, servicesRes, categoriesRes, appointmentsRes, smsLogRes, materialsRes] = await Promise.all([
       supabase.from('doctors').select('*').eq('aktivan', true),
       supabase.from('rooms').select('*').eq('aktivan', true),
       supabase.from('services').select('*').eq('aktivan', true),
       supabase.from('service_categories').select('*').order('redoslijed'),
       supabase.from('appointments').select('*, appointment_services(*), patient:patients(ime, prezime, telefon)').order('pocetak', { ascending: true }),
       supabase.from('notifications').select('*').order('datum_slanja', { ascending: false }).limit(500),
+      supabase.from('materials').select('*').eq('aktivan', true).order('naziv'),
     ]);
 
     const fetchedDoctors = (doctorsRes.data || []) as Doctor[];
@@ -116,6 +124,7 @@ export function CalendarProvider({ children }: { children: ReactNode }) {
       cijena: Number(s.cijena) || 0,
     })) as Service[]);
     setServiceCategories((categoriesRes.data || []) as ServiceCategory[]);
+    setMaterials((materialsRes.data || []) as Material[]);
 
     const aptsWithServices = (appointmentsRes.data || []).map((apt: any) => ({
       ...apt,
@@ -403,6 +412,26 @@ export function CalendarProvider({ children }: { children: ReactNode }) {
     setServices((prev) => prev.filter((s) => s.id !== id));
   }, []);
 
+  // ===== Material CRUD =====
+  const createMaterial = useCallback(async (material: Omit<Material, 'id'>) => {
+    const { data, error } = await supabase.from('materials').insert(material).select().single();
+    if (error) { console.error('Greska pri kreiranju materijala:', error); return null; }
+    setMaterials((prev) => [...prev, data as Material]);
+    return data as Material;
+  }, []);
+
+  const updateMaterial = useCallback(async (id: string, updates: Partial<Material>) => {
+    const { error } = await supabase.from('materials').update(updates).eq('id', id);
+    if (error) { console.error('Greska pri azuriranju materijala:', error); return; }
+    setMaterials((prev) => prev.map((m) => (m.id === id ? { ...m, ...updates } : m)));
+  }, []);
+
+  const deleteMaterial = useCallback(async (id: string) => {
+    const { error } = await supabase.from('materials').update({ aktivan: false }).eq('id', id);
+    if (error) { console.error('Greska pri brisanju materijala:', error); return; }
+    setMaterials((prev) => prev.filter((m) => m.id !== id));
+  }, []);
+
   // ===== Service Category CRUD =====
   const createServiceCategory = useCallback(async (cat: Omit<ServiceCategory, 'id'>) => {
     const { data, error } = await supabase.from('service_categories').insert(cat).select().single();
@@ -430,7 +459,7 @@ export function CalendarProvider({ children }: { children: ReactNode }) {
     <CalendarContext.Provider
       value={{
         selectedDate, view, filters, appointments,
-        doctors, rooms, services, serviceCategories, loading,
+        doctors, rooms, services, serviceCategories, materials, loading,
         setSelectedDate, setView, goToToday, goForward, goBack,
         toggleDoctorFilter, toggleRoomFilter, setColorSource,
         selectAllDoctors, deselectAllDoctors,
@@ -438,6 +467,7 @@ export function CalendarProvider({ children }: { children: ReactNode }) {
         getFilteredAppointments, getAppointmentColor,
         smsLog, addSmsLog,
         createDoctor, updateDoctor, deleteDoctor,
+        createMaterial, updateMaterial, deleteMaterial,
         createService, updateService, deleteService,
         createServiceCategory, updateServiceCategory, deleteServiceCategory,
         refreshData: fetchData,

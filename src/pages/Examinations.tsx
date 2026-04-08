@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { format, parseISO } from 'date-fns';
-import { ClipboardList, User, Clock, Printer, FileText } from 'lucide-react';
+import { ClipboardList, User, Clock, Printer, FileText, Package, Plus, Trash2 } from 'lucide-react';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import ExaminationForm from '../components/examinations/ExaminationForm';
@@ -9,10 +9,18 @@ import { openPrintReport } from '../components/examinations/PrintReport';
 import { useCalendar } from '../contexts/CalendarContext';
 import { supabase } from '../lib/supabase';
 import { APPOINTMENT_STATUS_COLORS, APPOINTMENT_STATUS_LABELS } from '../types';
-import type { Appointment, Examination, Patient, Establishment } from '../types';
+import type { Appointment, Examination, Patient, Establishment, MaterialUsage } from '../types';
+
+interface UsedMaterial {
+  id: string;
+  material_id: string;
+  naziv: string;
+  kolicina: number;
+  jedinica: string;
+}
 
 export default function Examinations() {
-  const { appointments, doctors } = useCalendar();
+  const { appointments, doctors, materials } = useCalendar();
 
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
   const [patient, setPatient] = useState<Patient | null>(null);
@@ -20,6 +28,9 @@ export default function Examinations() {
   const [currentExam, setCurrentExam] = useState<Examination | null>(null);
   const [establishment, setEstablishment] = useState<Establishment | null>(null);
   const [saving, setSaving] = useState(false);
+  const [usedMaterials, setUsedMaterials] = useState<UsedMaterial[]>([]);
+  const [selectedMaterialId, setSelectedMaterialId] = useState('');
+  const [materialQty, setMaterialQty] = useState('1');
 
   // Danasnji termini — svi osim otkazanih
   const today = new Date();
@@ -62,6 +73,20 @@ export default function Examinations() {
     const existingExam = (exams || []).find((e: any) => e.appointment_id === apt.id);
     if (existingExam) {
       setCurrentExam(existingExam as Examination);
+      // Ucitaj utrosene materijale za ovaj pregled
+      const { data: usageData } = await supabase
+        .from('material_usage')
+        .select('*, material:materials(naziv, jedinica_mjere)')
+        .eq('examination_id', existingExam.id);
+      setUsedMaterials((usageData || []).map((u: any) => ({
+        id: u.id,
+        material_id: u.material_id,
+        naziv: u.material?.naziv || '',
+        kolicina: Number(u.kolicina),
+        jedinica: u.material?.jedinica_mjere || 'kom',
+      })));
+    } else {
+      setUsedMaterials([]);
     }
   }, []);
 
@@ -124,6 +149,40 @@ export default function Examinations() {
 
   const aptServices = selectedAppointment?.services || [];
   const aptTotal = aptServices.reduce((sum, s) => sum + s.ukupno, 0);
+
+  async function handleAddMaterial() {
+    if (!selectedMaterialId || !currentExam || !selectedAppointment) return;
+    const mat = materials.find((m) => m.id === selectedMaterialId);
+    if (!mat) return;
+    const qty = Number(materialQty) || 1;
+
+    const { data } = await supabase.from('material_usage').insert({
+      examination_id: currentExam.id,
+      appointment_id: selectedAppointment.id,
+      material_id: mat.id,
+      kolicina: qty,
+      ljekar_id: selectedAppointment.doctor_id,
+      patient_id: patient?.id,
+      datum: new Date().toISOString().slice(0, 10),
+    }).select().single();
+
+    if (data) {
+      setUsedMaterials((prev) => [...prev, {
+        id: data.id,
+        material_id: mat.id,
+        naziv: mat.naziv,
+        kolicina: qty,
+        jedinica: mat.jedinica_mjere,
+      }]);
+      setSelectedMaterialId('');
+      setMaterialQty('1');
+    }
+  }
+
+  async function handleRemoveMaterial(usageId: string) {
+    await supabase.from('material_usage').delete().eq('id', usageId);
+    setUsedMaterials((prev) => prev.filter((m) => m.id !== usageId));
+  }
 
   return (
     <div className="print:hidden">
@@ -271,6 +330,61 @@ export default function Examinations() {
                   appointmentNapomena={selectedAppointment.napomena ?? undefined}
                 />
               </Card>
+
+              {/* Utroseni materijali */}
+              {currentExam && (
+                <Card>
+                  <div className="flex items-center gap-2 mb-4">
+                    <Package size={18} className="text-purple-600" />
+                    <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider">Utroseni materijali</h3>
+                  </div>
+
+                  {/* Dodaj materijal */}
+                  <div className="flex gap-2 mb-3">
+                    <select
+                      value={selectedMaterialId}
+                      onChange={(e) => setSelectedMaterialId(e.target.value)}
+                      className="flex-1 px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    >
+                      <option value="">Odaberi materijal...</option>
+                      {materials.map((m) => (
+                        <option key={m.id} value={m.id}>{m.naziv} ({m.jedinica_mjere})</option>
+                      ))}
+                    </select>
+                    <input
+                      type="number"
+                      min="0.1"
+                      step="0.1"
+                      value={materialQty}
+                      onChange={(e) => setMaterialQty(e.target.value)}
+                      className="w-20 px-3 py-2 border border-border rounded-lg text-sm text-center focus:outline-none focus:ring-2 focus:ring-primary-500"
+                      placeholder="Kol."
+                    />
+                    <Button size="sm" onClick={handleAddMaterial} disabled={!selectedMaterialId}>
+                      <Plus size={14} /> Dodaj
+                    </Button>
+                  </div>
+
+                  {/* Lista materijala */}
+                  {usedMaterials.length === 0 ? (
+                    <p className="text-sm text-gray-400 text-center py-3">Nema unesenih materijala</p>
+                  ) : (
+                    <div className="space-y-1">
+                      {usedMaterials.map((um) => (
+                        <div key={um.id} className="flex items-center justify-between bg-purple-50 rounded-lg px-3 py-2">
+                          <span className="text-sm text-purple-800">{um.naziv}</span>
+                          <div className="flex items-center gap-3">
+                            <span className="text-sm font-medium text-purple-900">{um.kolicina} {um.jedinica}</span>
+                            <button onClick={() => handleRemoveMaterial(um.id)} className="text-gray-400 hover:text-red-500">
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </Card>
+              )}
 
               {/* Istorija pregleda */}
               {patientExams.filter((e) => e.id !== currentExam?.id).length > 0 && (

@@ -114,6 +114,14 @@ export default function AppointmentModal({
     setSelectedServices((prev) => prev.filter((s) => s.service_id !== serviceId));
   }
 
+  function updateServiceDiscount(serviceId: string, discount: number) {
+    setSelectedServices((prev) => prev.map((s) => {
+      if (s.service_id !== serviceId) return s;
+      const pop = Math.max(0, Math.min(100, discount));
+      return { ...s, popust: pop, ukupno: s.cijena * s.kolicina * (1 - pop / 100) };
+    }));
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!selectedPatientId || !doctorId || !roomId) return;
@@ -322,13 +330,22 @@ export default function AppointmentModal({
           {selectedServices.length > 0 && (
             <div className="mt-2 space-y-1">
               {selectedServices.map((svc) => (
-                <div key={svc.id} className="flex items-center justify-between bg-gray-50 rounded-lg px-3 py-2">
-                  <span className="text-sm">{svc.naziv}</span>
-                  <div className="flex items-center gap-3">
-                    <span className="text-sm font-medium">{svc.ukupno.toFixed(2)} EUR</span>
-                    {svc.popust > 0 && (
-                      <span className="text-xs text-green-600">-{svc.popust}%</span>
-                    )}
+                <div key={svc.id} className="flex items-center justify-between bg-gray-50 rounded-lg px-3 py-2 gap-2">
+                  <span className="text-sm flex-1 min-w-0 truncate">{svc.naziv}</span>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <div className="flex items-center gap-1">
+                      <input
+                        type="number"
+                        min={0}
+                        max={100}
+                        value={svc.popust}
+                        onChange={(e) => updateServiceDiscount(svc.service_id, Number(e.target.value))}
+                        className="w-14 px-1.5 py-1 border border-border rounded text-xs text-center focus:outline-none focus:ring-1 focus:ring-primary-500"
+                        title="Popust %"
+                      />
+                      <span className="text-xs text-gray-400">%</span>
+                    </div>
+                    <span className="text-sm font-medium w-20 text-right">{svc.ukupno.toFixed(2)} EUR</span>
                     <button
                       type="button"
                       onClick={() => removeService(svc.service_id)}

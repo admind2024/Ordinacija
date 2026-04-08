@@ -246,7 +246,8 @@ export function CalendarProvider({ children }: { children: ReactNode }) {
         ukupno: s.ukupno,
       }));
 
-      await supabase.from('appointment_services').insert(servicesWithAptId);
+      const { error: svcError } = await supabase.from('appointment_services').insert(servicesWithAptId);
+      if (svcError) console.error('Greska pri unosu usluga:', svcError);
     }
 
     const newApt = { ...data, services: aptServices || [] } as Appointment;

@@ -5,6 +5,7 @@ import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
 import Modal from '../components/ui/Modal';
 import { useCalendar } from '../contexts/CalendarContext';
+import { usePatients } from '../contexts/PatientsContext';
 import { supabase } from '../lib/supabase';
 import type { Material } from '../types';
 
@@ -17,10 +18,12 @@ interface UsageRow {
   material_naziv: string;
   material_jedinica: string;
   ljekar_ime: string;
+  patient_ime: string;
 }
 
 export default function Materials() {
   const { materials, createMaterial, updateMaterial, deleteMaterial, doctors } = useCalendar();
+  const { patients } = usePatients();
   const [tab, setTab] = useState<MatTab>('katalog');
   const [search, setSearch] = useState('');
   const [formOpen, setFormOpen] = useState(false);
@@ -71,7 +74,7 @@ export default function Materials() {
     setLoadingUsage(true);
     const { data } = await supabase
       .from('material_usage')
-      .select('id, datum, kolicina, material_id, ljekar_id')
+      .select('id, datum, kolicina, material_id, ljekar_id, patient_id')
       .gte('datum', dateFrom)
       .lte('datum', dateTo)
       .order('datum', { ascending: false });
@@ -79,10 +82,12 @@ export default function Materials() {
     const rows: UsageRow[] = (data || []).map((u: any) => {
       const mat = materials.find((m) => m.id === u.material_id);
       const doc = doctors.find((d) => d.id === u.ljekar_id);
+      const pat = patients.find((p) => p.id === u.patient_id);
       return {
         id: u.id, datum: u.datum, kolicina: Number(u.kolicina),
         material_naziv: mat?.naziv || '—', material_jedinica: mat?.jedinica_mjere || '',
         ljekar_ime: doc ? `${doc.titula || 'Dr'} ${doc.ime} ${doc.prezime}` : '—',
+        patient_ime: pat ? `${pat.ime} ${pat.prezime}` : '—',
       };
     }).filter((r) => {
       if (filterMaterial && !r.material_naziv.toLowerCase().includes(filterMaterial.toLowerCase())) return false;
@@ -200,7 +205,8 @@ export default function Materials() {
               <span className="w-24">Datum</span>
               <span className="flex-1">Materijal</span>
               <span className="w-20 text-center">Kolicina</span>
-              <span className="w-48">Ljekar</span>
+              <span className="w-36">Pacijent</span>
+              <span className="w-36">Ljekar</span>
             </div>
             {loadingUsage ? (
               <div className="flex items-center justify-center py-12"><Loader2 size={24} className="animate-spin text-gray-400" /></div>
@@ -213,7 +219,8 @@ export default function Materials() {
                     <span className="text-sm text-gray-600 w-24">{u.datum}</span>
                     <span className="text-sm font-medium text-gray-900 flex-1">{u.material_naziv}</span>
                     <span className="text-sm font-bold text-purple-700 w-20 text-center">{u.kolicina} {u.material_jedinica}</span>
-                    <span className="text-sm text-gray-600 w-48 truncate">{u.ljekar_ime}</span>
+                    <span className="text-sm text-gray-600 w-36 truncate">{u.patient_ime}</span>
+                    <span className="text-sm text-gray-600 w-36 truncate">{u.ljekar_ime}</span>
                   </div>
                 ))}
               </div>

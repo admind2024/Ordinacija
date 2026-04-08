@@ -5,7 +5,7 @@ import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
 import { useCalendar } from '../contexts/CalendarContext';
 import { supabase } from '../lib/supabase';
-import type { Establishment as EstType } from '../types';
+
 
 export default function Establishment() {
   const { rooms } = useCalendar();

@@ -2,13 +2,13 @@ import { useState, useMemo, useEffect } from 'react';
 import { BarChart3, TrendingUp, Users, Calendar, CreditCard, FileText } from 'lucide-react';
 import Card from '../components/ui/Card';
 import { useCalendar } from '../contexts/CalendarContext';
-import { usePatients } from '../contexts/PatientsContext';
+
 import { supabase } from '../lib/supabase';
 import { APPOINTMENT_STATUS_COLORS } from '../types';
 
 export default function Reports() {
   const { appointments, doctors } = useCalendar();
-  const { patients } = usePatients();
+  
   const [selectedDoctor, setSelectedDoctor] = useState<string>('all');
   const [dateFrom, setDateFrom] = useState(() => {
     const d = new Date(); d.setDate(1);
@@ -45,7 +45,6 @@ export default function Reports() {
   }, [filtered]);
 
   // Fiskalizovani pregledi u periodu
-  const [fiscalCount, setFiscalCount] = useState(0);
   const [examCount, setExamCount] = useState(0);
 
   useEffect(() => {
@@ -62,7 +61,6 @@ export default function Reports() {
       .eq('status', 'sent')
       .gte('datum_slanja', `${dateFrom}T00:00:00`)
       .lte('datum_slanja', `${dateTo}T23:59:59`)
-      .then(({ count }) => setFiscalCount(count || 0));
   }, [dateFrom, dateTo]);
 
   // Po ljekaru

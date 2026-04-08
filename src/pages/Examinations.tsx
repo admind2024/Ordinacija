@@ -147,7 +147,6 @@ export default function Examinations() {
                   const aptPatient = apt.patient as any;
                   const d = new Date(apt.pocetak);
                   const aptTime = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
-                  const doctor = doctors.find((dr) => dr.id === apt.doctor_id);
                   const svcNames = apt.services?.map((s) => s.naziv).join(', ') || '';
                   const svcTotal = apt.services?.reduce((sum, s) => sum + s.ukupno, 0) || 0;
 

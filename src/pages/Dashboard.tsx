@@ -70,8 +70,16 @@ export default function Dashboard() {
               .from('appointment_services')
               .select('*')
               .eq('appointment_id', exam.appointment_id);
-            aptServices = svcData || [];
-            aptTotal = aptServices.reduce((sum: number, s: any) => sum + Number(s.ukupno || 0), 0);
+            aptServices = (svcData || []).map((s: any) => ({ ...s, ukupno: Number(s.ukupno) || 0, cijena: Number(s.cijena) || 0, kolicina: Number(s.kolicina) || 1 }));
+            aptTotal = aptServices.reduce((sum: number, s: any) => sum + s.ukupno, 0);
+          }
+          // Fallback: ako nema usluga iz appointment_services, probaj iz appointments
+          if (aptTotal === 0 && exam.appointment_id) {
+            const apt = appointments.find((a) => a.id === exam.appointment_id);
+            if (apt?.services && apt.services.length > 0) {
+              aptServices = apt.services;
+              aptTotal = apt.services.reduce((sum, s) => sum + s.ukupno, 0);
+            }
           }
           return {
             ...exam,

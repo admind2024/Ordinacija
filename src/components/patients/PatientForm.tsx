@@ -162,7 +162,6 @@ export default function PatientForm({ isOpen, onClose, editPatient }: PatientFor
               <span className="text-sm text-green-700">% popusta na sve usluge pri zakazivanju</span>
             </div>
           </div>
-          </div>
 
           <div className="mt-4">
             <label className="block text-sm font-medium text-gray-700 mb-1">Napomena</label>

@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { format, startOfDay, addDays, parseISO } from 'date-fns';
+import { format, startOfDay, addDays } from 'date-fns';
 import { getReminderSettings } from '../lib/reminderSettings';
 import { isSmsConfigured, sendSms } from '../lib/smsService';
 import { smsPodsjetnik } from '../lib/smsTemplates';

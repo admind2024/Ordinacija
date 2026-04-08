@@ -8,6 +8,7 @@ import ExaminationHistory from '../components/examinations/ExaminationHistory';
 import PrintReport from '../components/examinations/PrintReport';
 import { useCalendar } from '../contexts/CalendarContext';
 import { supabase } from '../lib/supabase';
+import { APPOINTMENT_STATUS_COLORS, APPOINTMENT_STATUS_LABELS } from '../types';
 import type { Appointment, Examination, Patient, Establishment } from '../types';
 
 export default function Examinations() {
@@ -46,7 +47,6 @@ export default function Examinations() {
     setSelectedAppointment(apt);
     setCurrentExam(null);
 
-    // Dohvati pacijenta
     const { data: patientData } = await supabase
       .from('patients')
       .select('*')
@@ -54,7 +54,6 @@ export default function Examinations() {
       .single();
     setPatient(patientData as Patient);
 
-    // Dohvati prethodne preglede
     const { data: exams } = await supabase
       .from('examinations')
       .select('*')
@@ -62,7 +61,6 @@ export default function Examinations() {
       .order('datum', { ascending: false });
     setPatientExams((exams || []) as Examination[]);
 
-    // Provjeri da li vec postoji pregled za ovaj termin
     const existingExam = (exams || []).find((e: any) => e.appointment_id === apt.id);
     if (existingExam) {
       setCurrentExam(existingExam as Examination);
@@ -84,7 +82,6 @@ export default function Examinations() {
     };
 
     if (currentExam) {
-      // Update
       const { data: updated } = await supabase
         .from('examinations')
         .update(payload)
@@ -98,7 +95,6 @@ export default function Examinations() {
         );
       }
     } else {
-      // Insert
       const { data: inserted } = await supabase
         .from('examinations')
         .insert(payload)
@@ -122,6 +118,9 @@ export default function Examinations() {
     ? doctors.find((d) => d.id === selectedAppointment.doctor_id)
     : null;
 
+  const aptServices = selectedAppointment?.services || [];
+  const aptTotal = aptServices.reduce((sum, s) => sum + s.ukupno, 0);
+
   return (
     <div className="print:hidden">
       <div className="mb-4">
@@ -142,29 +141,28 @@ export default function Examinations() {
                 <p className="text-sm">Nema pacijenata za danas</p>
               </div>
             ) : (
-              <div className="space-y-1">
+              <div className="space-y-2">
                 {todaysAppointments.map((apt) => {
                   const isSelected = selectedAppointment?.id === apt.id;
                   const aptPatient = apt.patient as any;
-                  const aptTime = format(parseISO(apt.pocetak), 'HH:mm');
-                  const doctor = doctors.find((d) => d.id === apt.doctor_id);
-                  const statusBg = apt.status === 'zavrsen'
-                    ? 'border-l-green-500'
-                    : apt.status === 'u_toku'
-                      ? 'border-l-orange-500'
-                      : 'border-l-purple-500';
+                  const d = new Date(apt.pocetak);
+                  const aptTime = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+                  const doctor = doctors.find((dr) => dr.id === apt.doctor_id);
+                  const svcNames = apt.services?.map((s) => s.naziv).join(', ') || '';
+                  const svcTotal = apt.services?.reduce((sum, s) => sum + s.ukupno, 0) || 0;
 
                   return (
                     <button
                       key={apt.id}
                       onClick={() => loadPatientData(apt)}
-                      className={`w-full text-left px-3 py-3 rounded-lg border-l-4 transition-colors ${statusBg}
+                      className={`w-full text-left px-3 py-3 rounded-lg border-l-4 transition-colors
                         ${isSelected
-                          ? 'bg-primary-50 border border-primary-200'
+                          ? 'bg-primary-50 border-l-primary-500 border border-primary-200'
                           : 'bg-gray-50 hover:bg-gray-100 border border-transparent'
                         }`}
+                      style={{ borderLeftColor: isSelected ? undefined : APPOINTMENT_STATUS_COLORS[apt.status] }}
                     >
-                      <div className="flex items-center justify-between">
+                      <div className="flex items-center justify-between mb-1">
                         <p className="text-sm font-medium text-gray-900">
                           {aptPatient ? `${aptPatient.ime} ${aptPatient.prezime}` : 'Pacijent'}
                         </p>
@@ -172,11 +170,23 @@ export default function Examinations() {
                           <Clock size={12} /> {aptTime}
                         </span>
                       </div>
-                      {doctor && (
-                        <p className="text-xs text-gray-400 mt-0.5">
-                          {doctor.titula || 'Dr'} {doctor.ime} {doctor.prezime}
-                        </p>
+                      {svcNames && (
+                        <p className="text-xs text-gray-500 truncate">{svcNames}</p>
                       )}
+                      <div className="flex items-center justify-between mt-1">
+                        <span
+                          className="text-[10px] px-1.5 py-0.5 rounded-full font-medium"
+                          style={{
+                            backgroundColor: APPOINTMENT_STATUS_COLORS[apt.status] + '20',
+                            color: APPOINTMENT_STATUS_COLORS[apt.status],
+                          }}
+                        >
+                          {APPOINTMENT_STATUS_LABELS[apt.status]}
+                        </span>
+                        {svcTotal > 0 && (
+                          <span className="text-xs font-medium text-gray-600">{svcTotal.toFixed(0)} EUR</span>
+                        )}
+                      </div>
                     </button>
                   );
                 })}
@@ -199,26 +209,42 @@ export default function Examinations() {
             <div className="space-y-6">
               {/* Patient header */}
               <Card>
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between flex-wrap gap-4">
                   <div className="flex items-center gap-4">
                     <div className="w-12 h-12 bg-primary-100 rounded-full flex items-center justify-center">
                       <User size={24} className="text-primary-700" />
                     </div>
                     <div>
                       <h3 className="text-lg font-semibold text-gray-900">{patient.ime} {patient.prezime}</h3>
-                      <div className="flex gap-4 text-sm text-gray-500">
+                      <div className="flex flex-wrap gap-3 text-sm text-gray-500">
                         {patient.datum_rodjenja && (
-                          <span>Datum rodjenja: {format(parseISO(patient.datum_rodjenja), 'dd.MM.yyyy.')}</span>
+                          <span>Rodjen/a: {format(parseISO(patient.datum_rodjenja), 'dd.MM.yyyy.')}</span>
                         )}
                         {patient.telefon && <span>Tel: {patient.telefon}</span>}
                       </div>
+                      {aptServices.length > 0 && (
+                        <p className="text-xs text-blue-600 mt-1">
+                          {aptServices.map((s) => s.naziv).join(', ')} — <strong>{aptTotal.toFixed(2)} EUR</strong>
+                        </p>
+                      )}
                     </div>
                   </div>
-                  {currentExam && currentExam.status === 'zavrsen' && (
-                    <Button variant="secondary" onClick={() => handlePrint(currentExam)}>
-                      <Printer size={16} /> Stampaj nalaz
-                    </Button>
-                  )}
+                  <div className="flex items-center gap-2">
+                    <span
+                      className="text-xs px-2 py-1 rounded-full font-medium"
+                      style={{
+                        backgroundColor: APPOINTMENT_STATUS_COLORS[selectedAppointment.status] + '20',
+                        color: APPOINTMENT_STATUS_COLORS[selectedAppointment.status],
+                      }}
+                    >
+                      {APPOINTMENT_STATUS_LABELS[selectedAppointment.status]}
+                    </span>
+                    {currentExam && currentExam.status === 'zavrsen' && (
+                      <Button variant="secondary" size="sm" onClick={() => handlePrint(currentExam)}>
+                        <Printer size={14} /> Stampaj
+                      </Button>
+                    )}
+                  </div>
                 </div>
               </Card>
 
@@ -238,6 +264,8 @@ export default function Examinations() {
                   initialData={currentExam || undefined}
                   onSave={handleSave}
                   saving={saving}
+                  appointmentServices={aptServices}
+                  appointmentNapomena={selectedAppointment.napomena ?? undefined}
                 />
               </Card>
 

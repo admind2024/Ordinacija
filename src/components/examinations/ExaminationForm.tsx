@@ -1,21 +1,27 @@
 import { useState } from 'react';
-import { Save, CheckCircle, Loader2 } from 'lucide-react';
+import { Save, CheckCircle, Loader2, ShoppingBag } from 'lucide-react';
 import Button from '../ui/Button';
-import type { Examination } from '../../types';
+import type { Examination, AppointmentService } from '../../types';
 
 interface ExaminationFormProps {
   initialData?: Partial<Examination>;
   onSave: (data: Partial<Examination>, finish: boolean) => Promise<void>;
   saving?: boolean;
+  appointmentServices?: AppointmentService[];
+  appointmentNapomena?: string;
 }
 
-export default function ExaminationForm({ initialData, onSave, saving }: ExaminationFormProps) {
-  const [razlogDolaska, setRazlogDolaska] = useState(initialData?.razlog_dolaska || '');
+export default function ExaminationForm({ initialData, onSave, saving, appointmentServices, appointmentNapomena }: ExaminationFormProps) {
+  // Pre-popuni razlog dolaska sa uslugama iz termina ako nema postojeceg
+  const defaultRazlog = initialData?.razlog_dolaska || '';
+  const [razlogDolaska, setRazlogDolaska] = useState(defaultRazlog);
   const [nalaz, setNalaz] = useState(initialData?.nalaz || '');
   const [terapija, setTerapija] = useState(initialData?.terapija || '');
   const [preporuke, setPreporuke] = useState(initialData?.preporuke || '');
   const [kontrolniPregled, setKontrolniPregled] = useState(initialData?.kontrolni_pregled || '');
   const [napomena, setNapomena] = useState(initialData?.napomena || '');
+
+  const ukupnaCijena = appointmentServices?.reduce((sum, s) => sum + s.ukupno, 0) || 0;
 
   function getData(): Partial<Examination> {
     return {
@@ -30,6 +36,36 @@ export default function ExaminationForm({ initialData, onSave, saving }: Examina
 
   return (
     <div className="space-y-4">
+      {/* Usluge iz termina */}
+      {appointmentServices && appointmentServices.length > 0 && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+          <div className="flex items-center gap-2 mb-2">
+            <ShoppingBag size={14} className="text-blue-600" />
+            <span className="text-xs font-semibold text-blue-700 uppercase">Zakazane usluge</span>
+          </div>
+          <div className="space-y-1">
+            {appointmentServices.map((svc) => (
+              <div key={svc.id} className="flex justify-between text-sm">
+                <span className="text-blue-800">{svc.naziv} {svc.kolicina > 1 ? `x${svc.kolicina}` : ''}</span>
+                <span className="font-medium text-blue-900">{svc.ukupno.toFixed(2)} EUR</span>
+              </div>
+            ))}
+            <div className="flex justify-between text-sm font-bold border-t border-blue-200 pt-1 mt-1">
+              <span className="text-blue-800">Ukupno</span>
+              <span className="text-blue-900">{ukupnaCijena.toFixed(2)} EUR</span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Napomena iz zakazivanja */}
+      {appointmentNapomena && (
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+          <p className="text-xs font-semibold text-amber-700 uppercase mb-1">Napomena iz zakazivanja</p>
+          <p className="text-sm text-amber-800">{appointmentNapomena}</p>
+        </div>
+      )}
+
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">Razlog dolaska</label>
         <textarea

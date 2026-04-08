@@ -1,5 +1,4 @@
 import { forwardRef } from 'react';
-import { format, parseISO } from 'date-fns';
 import type { Examination, Doctor, Patient, Establishment } from '../../types';
 
 interface PrintReportProps {
@@ -9,87 +8,99 @@ interface PrintReportProps {
   establishment: Establishment | null;
 }
 
+function fmtDate(dateStr: string): string {
+  try {
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return dateStr;
+    return `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}.${d.getFullYear()}.`;
+  } catch {
+    return dateStr;
+  }
+}
+
 const PrintReport = forwardRef<HTMLDivElement, PrintReportProps>(
   ({ examination, patient, doctor, establishment }, ref) => {
-    const datumStr = examination.datum
-      ? format(parseISO(examination.datum), 'dd.MM.yyyy.')
-      : '';
-    const datumRodjenja = patient.datum_rodjenja
-      ? format(parseISO(patient.datum_rodjenja), 'dd.MM.yyyy.')
-      : '';
+    const datumStr = examination.datum ? fmtDate(examination.datum) : '';
+    const datumRodjenja = patient.datum_rodjenja ? fmtDate(patient.datum_rodjenja) : '';
     const doctorFullName = `${doctor.titula || 'Dr'} ${doctor.ime} ${doctor.prezime}`.trim();
 
     return (
-      <div ref={ref} className="print-report hidden print:block">
+      <div ref={ref} className="print-report">
         <div className="print-page">
-          {/* Header */}
-          <div className="flex items-start justify-between mb-8">
-            <div className="flex items-center gap-4">
-              {establishment?.logo_url ? (
-                <img src={establishment.logo_url} alt="" className="w-20 h-20 object-contain" />
-              ) : (
-                <img src="/logo.png" alt="" className="w-16 h-16 object-contain" />
-              )}
-            </div>
-            <div className="text-right text-sm leading-relaxed">
-              <p className="font-semibold text-base">
-                {establishment?.naziv || 'PZU Poliklinika "Ministry of Aesthetics - MOA"'}
-              </p>
-              <p>{establishment?.adresa || 'Ul Seika Zaida, The Capital Plaza'}</p>
-              <p>{establishment?.grad || 'Podgorica'}</p>
-              <p>PIB: {establishment?.pib || '03706273'}</p>
-              <p>{establishment?.telefon || '+382 67/941-941'}</p>
-              <p>{establishment?.email || 'info@moa.clinic'}</p>
-              <p>www.moa.clinic</p>
-            </div>
-          </div>
+          {/* Header — logo lijevo, podaci desno */}
+          <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '20px' }}>
+            <tbody>
+              <tr>
+                <td style={{ width: '120px', verticalAlign: 'top', paddingRight: '20px' }}>
+                  <img
+                    src="/logo.png"
+                    alt="MOA"
+                    style={{ width: '100px', height: '100px', objectFit: 'contain' }}
+                  />
+                </td>
+                <td style={{ verticalAlign: 'top', textAlign: 'right', fontSize: '11pt', lineHeight: '1.6' }}>
+                  <div style={{ fontWeight: 'bold', fontSize: '12pt' }}>
+                    {establishment?.naziv || 'PZU Poliklinika "Ministry of Aesthetics - MOA"'}
+                  </div>
+                  <div>{establishment?.adresa || 'Ul Seika Zaida, The Capital Plaza'}</div>
+                  <div>{establishment?.grad || 'Podgorica'}</div>
+                  <div>PIB: {establishment?.pib || '03706273'}</div>
+                  <div>{establishment?.telefon || '+382 67/941-941'}</div>
+                  <div>{establishment?.email || 'info@moa.clinic'}</div>
+                  <div>www.moa.clinic</div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
 
-          <hr className="border-gray-300 mb-6" />
+          <hr style={{ border: 'none', borderTop: '1px solid #333', margin: '15px 0 25px 0' }} />
 
           {/* Podaci o pacijentu */}
-          <div className="mb-6 text-sm leading-relaxed">
-            <p>Ime i prezime: <strong>{patient.ime} {patient.prezime}</strong></p>
-            <p>Datum: <strong>{datumStr}</strong></p>
-            {datumRodjenja && <p>Datum rodjenja: <strong>{datumRodjenja}</strong></p>}
+          <div style={{ fontSize: '12pt', lineHeight: '1.8', marginBottom: '25px' }}>
+            <div>Ime i prezime: <strong>{patient.ime} {patient.prezime}</strong></div>
+            <div>Datum: <strong>{datumStr}</strong></div>
+            {datumRodjenja && <div>Datum rodjenja: <strong>{datumRodjenja}</strong></div>}
           </div>
 
           {/* Sadrzaj pregleda */}
-          <div className="space-y-4 text-sm leading-relaxed mb-16">
+          <div style={{ fontSize: '12pt', lineHeight: '1.8', marginBottom: '60px' }}>
             {examination.razlog_dolaska && (
-              <div>
-                <p className="whitespace-pre-wrap">{examination.razlog_dolaska}</p>
+              <div style={{ marginBottom: '15px', whiteSpace: 'pre-wrap' }}>
+                {examination.razlog_dolaska}
               </div>
             )}
 
             {examination.nalaz && (
-              <div>
-                <p className="whitespace-pre-wrap">{examination.nalaz}</p>
+              <div style={{ marginBottom: '15px', whiteSpace: 'pre-wrap' }}>
+                {examination.nalaz}
               </div>
             )}
 
             {examination.terapija && (
-              <div>
-                <p className="whitespace-pre-wrap">Th: {examination.terapija}</p>
+              <div style={{ marginBottom: '15px', whiteSpace: 'pre-wrap' }}>
+                Th: {examination.terapija}
               </div>
             )}
 
             {examination.preporuke && (
-              <div>
-                <p className="whitespace-pre-wrap">{examination.preporuke}</p>
+              <div style={{ marginBottom: '15px', whiteSpace: 'pre-wrap' }}>
+                {examination.preporuke}
               </div>
             )}
 
             {examination.kontrolni_pregled && (
-              <div>
-                <p>Kontrolni pregled: {examination.kontrolni_pregled}</p>
+              <div style={{ marginBottom: '15px' }}>
+                Kontrolni pregled {examination.kontrolni_pregled}
               </div>
             )}
           </div>
 
-          {/* Potpis doktora */}
-          <div className="text-right mt-auto pt-8">
-            <p className="text-sm font-medium">{doctorFullName}</p>
-            <p className="text-xs text-gray-600">{doctor.specijalizacija ? `spec.${doctor.specijalizacija}` : ''}</p>
+          {/* Potpis doktora — desno dolje */}
+          <div style={{ textAlign: 'right', marginTop: '40px' }}>
+            <div style={{ fontSize: '12pt', fontWeight: '500' }}>{doctorFullName}</div>
+            {doctor.specijalizacija && (
+              <div style={{ fontSize: '10pt', color: '#555' }}>spec.{doctor.specijalizacija}</div>
+            )}
           </div>
         </div>
       </div>

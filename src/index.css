@@ -78,7 +78,6 @@ body {
   .print-report,
   .print-report * {
     visibility: visible !important;
-    display: block !important;
   }
 
   .print-report {
@@ -86,32 +85,41 @@ body {
     left: 0;
     top: 0;
     width: 100%;
+    display: block !important;
   }
 
   .print-page {
-    width: 190mm;
-    min-height: 270mm;
-    margin: 10mm auto;
+    width: 180mm;
+    min-height: 260mm;
+    margin: 0 auto;
     padding: 0;
     font-family: 'Times New Roman', Times, serif;
     font-size: 12pt;
-    line-height: 1.5;
+    line-height: 1.6;
     color: #000;
   }
 
-  .print-page .flex {
-    display: flex !important;
+  .print-page table {
+    display: table !important;
+  }
+  .print-page table tbody {
+    display: table-row-group !important;
+  }
+  .print-page table tr {
+    display: table-row !important;
+  }
+  .print-page table td {
+    display: table-cell !important;
   }
 
   .print-page img {
-    max-width: 80px;
-    max-height: 80px;
+    display: inline-block !important;
+    max-width: 100px;
+    max-height: 100px;
   }
 
-  .print-page hr {
-    border: none;
-    border-top: 1px solid #333;
-    margin: 8mm 0;
+  .print-page div {
+    display: block !important;
   }
 
   /* Sakrij sidebar, header, navigaciju */

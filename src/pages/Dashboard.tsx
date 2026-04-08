@@ -36,10 +36,11 @@ export default function Dashboard() {
   }, [appointments]);
 
   // Zavrseni pregledi danas — za sestre
-  const [todayExams, setTodayExams] = useState<(Examination & { patient?: Patient; doctor?: Doctor })[]>([]);
+  type ExamWithDetails = Examination & { patient?: Patient; doctor?: Doctor; appointmentServices?: any[]; appointmentTotal?: number };
+  const [todayExams, setTodayExams] = useState<ExamWithDetails[]>([]);
   const [establishment, setEstablishment] = useState<Establishment | null>(null);
-  const [viewExam, setViewExam] = useState<(Examination & { patient?: Patient; doctor?: Doctor }) | null>(null);
-  const [printExam, setPrintExam] = useState<(Examination & { patient?: Patient; doctor?: Doctor }) | null>(null);
+  const [viewExam, setViewExam] = useState<ExamWithDetails | null>(null);
+  const [printExam, setPrintExam] = useState<ExamWithDetails | null>(null);
 
   useEffect(() => {
     const todayStr = format(new Date(), 'yyyy-MM-dd');
@@ -49,12 +50,26 @@ export default function Dashboard() {
       .gte('datum', todayStr)
       .lte('datum', todayStr)
       .order('updated_at', { ascending: false })
-      .then(({ data }) => {
+      .then(async ({ data }) => {
         if (!data) return;
-        const enriched = data.map((exam: any) => ({
-          ...exam,
-          patient: patients.find((p) => p.id === exam.patient_id),
-          doctor: doctors.find((d) => d.id === exam.doctor_id),
+        const enriched = await Promise.all(data.map(async (exam: any) => {
+          let aptServices: any[] = [];
+          let aptTotal = 0;
+          if (exam.appointment_id) {
+            const { data: svcData } = await supabase
+              .from('appointment_services')
+              .select('*')
+              .eq('appointment_id', exam.appointment_id);
+            aptServices = svcData || [];
+            aptTotal = aptServices.reduce((sum: number, s: any) => sum + Number(s.ukupno || 0), 0);
+          }
+          return {
+            ...exam,
+            patient: patients.find((p) => p.id === exam.patient_id),
+            doctor: doctors.find((d) => d.id === exam.doctor_id),
+            appointmentServices: aptServices,
+            appointmentTotal: aptTotal,
+          };
         }));
         setTodayExams(enriched);
       });
@@ -204,10 +219,17 @@ export default function Dashboard() {
                     </p>
                     <p className="text-xs text-gray-500">
                       {exam.doctor ? `${exam.doctor.titula || 'Dr'} ${exam.doctor.ime} ${exam.doctor.prezime}` : ''}
-                      {exam.razlog_dolaska ? ` — ${exam.razlog_dolaska.slice(0, 50)}${exam.razlog_dolaska.length > 50 ? '...' : ''}` : ''}
+                      {exam.appointmentServices && exam.appointmentServices.length > 0
+                        ? ` — ${exam.appointmentServices.map((s: any) => s.naziv).join(', ')}`
+                        : exam.razlog_dolaska ? ` — ${exam.razlog_dolaska.slice(0, 50)}` : ''}
                     </p>
                   </div>
-                  <div className="flex gap-2 shrink-0">
+                  {(exam.appointmentTotal || 0) > 0 && (
+                    <span className="text-sm font-semibold text-gray-900 shrink-0">
+                      {exam.appointmentTotal?.toFixed(2)} EUR
+                    </span>
+                  )}
+                  <div className="flex gap-1 shrink-0">
                     <button
                       onClick={() => setViewExam(exam)}
                       className="p-2 text-gray-400 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors"
@@ -243,6 +265,24 @@ export default function Dashboard() {
                 {viewExam.datum ? ` — ${format(parseISO(viewExam.datum), 'dd.MM.yyyy.')}` : ''}
               </p>
             </div>
+
+            {/* Usluge i cijena */}
+            {viewExam.appointmentServices && viewExam.appointmentServices.length > 0 && (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                <p className="text-xs font-semibold text-blue-700 uppercase mb-2">Usluge — za naplatu</p>
+                {viewExam.appointmentServices.map((svc: any) => (
+                  <div key={svc.id} className="flex justify-between text-sm">
+                    <span className="text-blue-800">{svc.naziv} {svc.kolicina > 1 ? `x${svc.kolicina}` : ''}</span>
+                    <span className="font-medium text-blue-900">{Number(svc.ukupno).toFixed(2)} EUR</span>
+                  </div>
+                ))}
+                <div className="flex justify-between font-bold border-t border-blue-200 pt-1 mt-2 text-sm">
+                  <span className="text-blue-800">Ukupno za naplatu</span>
+                  <span className="text-blue-900">{viewExam.appointmentTotal?.toFixed(2)} EUR</span>
+                </div>
+              </div>
+            )}
+
             {viewExam.razlog_dolaska && (
               <div>
                 <p className="text-xs font-semibold text-gray-500 uppercase mb-1">Razlog dolaska</p>

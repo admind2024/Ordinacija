@@ -1,10 +1,15 @@
-import { useMemo } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { format, parseISO, isToday } from 'date-fns';
-import { CalendarDays, Users, CreditCard, TrendingUp } from 'lucide-react';
+import { CalendarDays, Users, CreditCard, TrendingUp, Printer, Eye, FileText } from 'lucide-react';
 import Card from '../components/ui/Card';
+import Button from '../components/ui/Button';
+import Modal from '../components/ui/Modal';
+import PrintReport from '../components/examinations/PrintReport';
 import { useCalendar } from '../contexts/CalendarContext';
 import { usePatients } from '../contexts/PatientsContext';
+import { supabase } from '../lib/supabase';
 import { APPOINTMENT_STATUS_COLORS, APPOINTMENT_STATUS_LABELS } from '../types';
+import type { Examination, Patient, Doctor, Establishment } from '../types';
 
 export default function Dashboard() {
   const { appointments, doctors } = useCalendar();
@@ -29,6 +34,38 @@ export default function Dashboard() {
     const completed = appointments.filter((a) => a.status === 'zavrsen').length;
     return total > 0 ? ((completed / total) * 100).toFixed(0) : '0';
   }, [appointments]);
+
+  // Zavrseni pregledi danas — za sestre
+  const [todayExams, setTodayExams] = useState<(Examination & { patient?: Patient; doctor?: Doctor })[]>([]);
+  const [establishment, setEstablishment] = useState<Establishment | null>(null);
+  const [viewExam, setViewExam] = useState<(Examination & { patient?: Patient; doctor?: Doctor }) | null>(null);
+  const [printExam, setPrintExam] = useState<(Examination & { patient?: Patient; doctor?: Doctor }) | null>(null);
+
+  useEffect(() => {
+    const todayStr = format(new Date(), 'yyyy-MM-dd');
+    supabase.from('examinations')
+      .select('*')
+      .eq('status', 'zavrsen')
+      .gte('datum', todayStr)
+      .lte('datum', todayStr)
+      .order('updated_at', { ascending: false })
+      .then(({ data }) => {
+        if (!data) return;
+        const enriched = data.map((exam: any) => ({
+          ...exam,
+          patient: patients.find((p) => p.id === exam.patient_id),
+          doctor: doctors.find((d) => d.id === exam.doctor_id),
+        }));
+        setTodayExams(enriched);
+      });
+    supabase.from('establishments').select('*').limit(1).single()
+      .then(({ data }) => { if (data) setEstablishment(data as Establishment); });
+  }, [patients, doctors]);
+
+  function handlePrintExam(exam: Examination & { patient?: Patient; doctor?: Doctor }) {
+    setPrintExam(exam);
+    setTimeout(() => window.print(), 200);
+  }
 
   const stats = [
     { label: 'Termini danas', value: String(todayAppointments.length), icon: CalendarDays, color: 'text-primary-600 bg-primary-100' },
@@ -145,6 +182,115 @@ export default function Dashboard() {
           </div>
         </Card>
       </div>
+
+      {/* Zavrseni pregledi danas — za sestre */}
+      {todayExams.length > 0 && (
+        <div className="mt-6">
+          <Card padding={false}>
+            <div className="px-6 py-4 border-b border-border flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <FileText size={16} className="text-green-600" />
+                <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider">Zavrseni pregledi danas</h3>
+              </div>
+              <span className="text-xs text-gray-400">{todayExams.length} pregleda</span>
+            </div>
+            <div className="divide-y divide-border max-h-[400px] overflow-y-auto">
+              {todayExams.map((exam) => (
+                <div key={exam.id} className="px-6 py-3 flex items-center gap-4">
+                  <div className="w-1 h-10 rounded-full bg-green-500 shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-900">
+                      {exam.patient ? `${exam.patient.ime} ${exam.patient.prezime}` : '—'}
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      {exam.doctor ? `${exam.doctor.titula || 'Dr'} ${exam.doctor.ime} ${exam.doctor.prezime}` : ''}
+                      {exam.razlog_dolaska ? ` — ${exam.razlog_dolaska.slice(0, 50)}${exam.razlog_dolaska.length > 50 ? '...' : ''}` : ''}
+                    </p>
+                  </div>
+                  <div className="flex gap-2 shrink-0">
+                    <button
+                      onClick={() => setViewExam(exam)}
+                      className="p-2 text-gray-400 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors"
+                      title="Pogledaj nalaz"
+                    >
+                      <Eye size={16} />
+                    </button>
+                    <button
+                      onClick={() => handlePrintExam(exam)}
+                      className="p-2 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                      title="Stampaj nalaz"
+                    >
+                      <Printer size={16} />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </Card>
+        </div>
+      )}
+
+      {/* Modal za pregled nalaza */}
+      {viewExam && (
+        <Modal isOpen onClose={() => setViewExam(null)} title="Nalaz pregleda" size="lg">
+          <div className="space-y-4 text-sm">
+            <div className="bg-gray-50 rounded-lg p-3">
+              <p className="font-medium text-gray-900">
+                {viewExam.patient ? `${viewExam.patient.ime} ${viewExam.patient.prezime}` : ''}
+              </p>
+              <p className="text-xs text-gray-500">
+                {viewExam.doctor ? `${viewExam.doctor.titula || 'Dr'} ${viewExam.doctor.ime} ${viewExam.doctor.prezime}` : ''}
+                {viewExam.datum ? ` — ${format(parseISO(viewExam.datum), 'dd.MM.yyyy.')}` : ''}
+              </p>
+            </div>
+            {viewExam.razlog_dolaska && (
+              <div>
+                <p className="text-xs font-semibold text-gray-500 uppercase mb-1">Razlog dolaska</p>
+                <p className="text-gray-700 whitespace-pre-wrap">{viewExam.razlog_dolaska}</p>
+              </div>
+            )}
+            {viewExam.nalaz && (
+              <div>
+                <p className="text-xs font-semibold text-gray-500 uppercase mb-1">Nalaz / Procedura</p>
+                <p className="text-gray-700 whitespace-pre-wrap">{viewExam.nalaz}</p>
+              </div>
+            )}
+            {viewExam.terapija && (
+              <div>
+                <p className="text-xs font-semibold text-gray-500 uppercase mb-1">Terapija</p>
+                <p className="text-gray-700 whitespace-pre-wrap">{viewExam.terapija}</p>
+              </div>
+            )}
+            {viewExam.preporuke && (
+              <div>
+                <p className="text-xs font-semibold text-gray-500 uppercase mb-1">Preporuke</p>
+                <p className="text-gray-700 whitespace-pre-wrap">{viewExam.preporuke}</p>
+              </div>
+            )}
+            {viewExam.kontrolni_pregled && (
+              <div>
+                <p className="text-xs font-semibold text-gray-500 uppercase mb-1">Kontrolni pregled</p>
+                <p className="text-gray-700">{viewExam.kontrolni_pregled}</p>
+              </div>
+            )}
+            <div className="flex justify-end pt-2">
+              <Button variant="secondary" onClick={() => { setViewExam(null); handlePrintExam(viewExam); }}>
+                <Printer size={16} /> Stampaj
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* Hidden print component */}
+      {printExam && printExam.patient && printExam.doctor && (
+        <PrintReport
+          examination={printExam}
+          patient={printExam.patient}
+          doctor={printExam.doctor}
+          establishment={establishment}
+        />
+      )}
     </div>
   );
 }

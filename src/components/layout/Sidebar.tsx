@@ -13,6 +13,7 @@ import {
   Building2,
   ChevronLeft,
   ChevronRight,
+  ClipboardList,
 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -20,6 +21,7 @@ const navigation = [
   { name: 'Dashboard', path: '/', icon: LayoutDashboard, roles: ['admin', 'menadzer', 'recepcija', 'ljekar'] },
   { name: 'Kalendar', path: '/kalendar', icon: CalendarDays, roles: ['admin', 'menadzer', 'recepcija', 'ljekar'] },
   { name: 'Pacijenti', path: '/pacijenti', icon: Users, roles: ['admin', 'menadzer', 'recepcija', 'ljekar'] },
+  { name: 'Pregled', path: '/pregled', icon: ClipboardList, roles: ['admin', 'menadzer', 'ljekar'] },
   { name: 'Naplata', path: '/naplata', icon: CreditCard, roles: ['admin', 'menadzer', 'recepcija'] },
   { name: 'Izvjestaji', path: '/izvjestaji', icon: BarChart3, roles: ['admin', 'menadzer'] },
   { name: 'Ljekari', path: '/ljekari', icon: Stethoscope, roles: ['admin', 'menadzer'] },

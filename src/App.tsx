@@ -15,6 +15,7 @@ import Materials from './pages/Materials';
 import Notifications from './pages/Notifications';
 import Establishment from './pages/Establishment';
 import Settings from './pages/Settings';
+import Examinations from './pages/Examinations';
 
 function AppRoutes() {
   const { user } = useAuth();
@@ -57,6 +58,7 @@ function AppRoutes() {
             </ProtectedRoute>
           }
         />
+        <Route path="/pregled" element={<Examinations />} />
         <Route path="/materijali" element={<Materials />} />
         <Route
           path="/notifikacije"

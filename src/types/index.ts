@@ -254,6 +254,29 @@ export interface Campaign {
   created_at: string;
 }
 
+// Pregled / medicinski nalaz
+export type ExaminationStatus = 'draft' | 'zavrsen';
+
+export interface Examination {
+  id: string;
+  appointment_id?: string;
+  patient_id: string;
+  doctor_id: string;
+  datum: string;
+  razlog_dolaska?: string;
+  nalaz?: string;
+  terapija?: string;
+  preporuke?: string;
+  kontrolni_pregled?: string;
+  napomena?: string;
+  status: ExaminationStatus;
+  created_at: string;
+  updated_at: string;
+  // Relacije
+  patient?: Patient;
+  doctor?: Doctor;
+}
+
 // Boje statusa termina
 export const APPOINTMENT_STATUS_COLORS: Record<AppointmentStatus, string> = {
   zakazan: '#3B82F6',     // plava

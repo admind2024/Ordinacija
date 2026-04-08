@@ -65,3 +65,63 @@ body {
 ::-webkit-scrollbar-thumb:hover {
   background: #8BBCBC;
 }
+
+/* ============================
+   Print stilovi za izvjestaje
+   ============================ */
+@media print {
+  /* Sakrij sve osim print komponente */
+  body * {
+    visibility: hidden;
+  }
+
+  .print-report,
+  .print-report * {
+    visibility: visible !important;
+    display: block !important;
+  }
+
+  .print-report {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+  }
+
+  .print-page {
+    width: 190mm;
+    min-height: 270mm;
+    margin: 10mm auto;
+    padding: 0;
+    font-family: 'Times New Roman', Times, serif;
+    font-size: 12pt;
+    line-height: 1.5;
+    color: #000;
+  }
+
+  .print-page .flex {
+    display: flex !important;
+  }
+
+  .print-page img {
+    max-width: 80px;
+    max-height: 80px;
+  }
+
+  .print-page hr {
+    border: none;
+    border-top: 1px solid #333;
+    margin: 8mm 0;
+  }
+
+  /* Sakrij sidebar, header, navigaciju */
+  aside, nav, header, footer,
+  .print\\:hidden {
+    display: none !important;
+  }
+
+  @page {
+    size: A4;
+    margin: 15mm;
+  }
+}

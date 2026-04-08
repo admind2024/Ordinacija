@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Bell, CheckCircle, Loader2, Send, XCircle, Settings as SettingsIcon } from 'lucide-react';
+import { CheckCircle, Loader2, Send, XCircle, Settings as SettingsIcon } from 'lucide-react';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
@@ -22,7 +22,7 @@ export default function Settings() {
   const [testResult, setTestResult] = useState<{ success: boolean; error?: string } | null>(null);
   const [testing, setTesting] = useState(false);
   const [testPhone, setTestPhone] = useState('');
-  const [testText, setTestText] = useState('Test poruka iz MOA sistema');
+  const [testText] = useState("Test poruka iz MOA sistema");
   const [sendingTest, setSendingTest] = useState(false);
   const [testSendResult, setTestSendResult] = useState<{ success: boolean; error?: string } | null>(null);
 

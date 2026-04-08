@@ -1,6 +1,6 @@
 import { useMemo, useState, useEffect } from 'react';
-import { format, parseISO, isToday } from 'date-fns';
-import { CalendarDays, Users, CreditCard, TrendingUp, Printer, Eye, FileText } from 'lucide-react';
+import { format, parseISO } from 'date-fns';
+import { CalendarDays, Users, CreditCard, TrendingUp, Printer, Eye, FileText, Banknote } from 'lucide-react';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import Modal from '../components/ui/Modal';
@@ -11,18 +11,35 @@ import { supabase } from '../lib/supabase';
 import { APPOINTMENT_STATUS_COLORS, APPOINTMENT_STATUS_LABELS } from '../types';
 import type { Examination, Patient, Doctor, Establishment } from '../types';
 
+function isLocalToday(isoStr: string): boolean {
+  const d = new Date(isoStr);
+  const now = new Date();
+  return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate();
+}
+
 export default function Dashboard() {
   const { appointments, doctors } = useCalendar();
   const { patients } = usePatients();
 
   const todayAppointments = useMemo(
     () => appointments
-      .filter((a) => isToday(parseISO(a.pocetak)))
-      .sort((a, b) => parseISO(a.pocetak).getTime() - parseISO(b.pocetak).getTime()),
+      .filter((a) => isLocalToday(a.pocetak))
+      .sort((a, b) => new Date(a.pocetak).getTime() - new Date(b.pocetak).getTime()),
     [appointments]
   );
 
-  const completedRevenue = useMemo(
+  // Prihod: iz danasnih zavrsenih termina + iz zavrsenih pregleda danas
+  const todayCompletedApts = useMemo(
+    () => todayAppointments.filter((a) => a.status === 'zavrsen'),
+    [todayAppointments]
+  );
+
+  const todayRevenue = useMemo(
+    () => todayCompletedApts.reduce((sum, a) => sum + (a.services?.reduce((s, svc) => s + svc.ukupno, 0) || 0), 0),
+    [todayCompletedApts]
+  );
+
+  const totalRevenue = useMemo(
     () => appointments
       .filter((a) => a.status === 'zavrsen')
       .reduce((sum, a) => sum + (a.services?.reduce((s, svc) => s + svc.ukupno, 0) || 0), 0),
@@ -30,10 +47,10 @@ export default function Dashboard() {
   );
 
   const realizationRate = useMemo(() => {
-    const total = appointments.length;
-    const completed = appointments.filter((a) => a.status === 'zavrsen').length;
+    const total = todayAppointments.length;
+    const completed = todayCompletedApts.length;
     return total > 0 ? ((completed / total) * 100).toFixed(0) : '0';
-  }, [appointments]);
+  }, [todayAppointments, todayCompletedApts]);
 
   // Zavrseni pregledi danas — za sestre
   type ExamWithDetails = Examination & { patient?: Patient; doctor?: Doctor; appointmentServices?: any[]; appointmentTotal?: number };
@@ -81,11 +98,14 @@ export default function Dashboard() {
     openPrintReport({ examination: exam, patient: exam.patient, doctor: exam.doctor, establishment });
   }
 
+  // Ukupno za naplatu danas iz zavrsenih pregleda
+  const todayExamsTotal = todayExams.reduce((sum, e) => sum + (e.appointmentTotal || 0), 0);
+
   const stats = [
     { label: 'Termini danas', value: String(todayAppointments.length), icon: CalendarDays, color: 'text-primary-600 bg-primary-100' },
     { label: 'Ukupno pacijenata', value: String(patients.length), icon: Users, color: 'text-green-600 bg-green-100' },
-    { label: 'Prihod (EUR)', value: completedRevenue.toFixed(0), icon: CreditCard, color: 'text-purple-600 bg-purple-100' },
-    { label: 'Stopa realizacije', value: `${realizationRate}%`, icon: TrendingUp, color: 'text-orange-600 bg-orange-100' },
+    { label: 'Prihod danas (EUR)', value: todayRevenue > 0 ? todayRevenue.toFixed(0) : todayExamsTotal.toFixed(0), icon: CreditCard, color: 'text-purple-600 bg-purple-100' },
+    { label: 'Realizacija danas', value: `${realizationRate}%`, icon: TrendingUp, color: 'text-orange-600 bg-orange-100' },
   ];
 
   return (
@@ -93,7 +113,7 @@ export default function Dashboard() {
       <div className="mb-6">
         <h2 className="text-2xl font-bold text-gray-900">Dashboard</h2>
         <p className="text-sm text-gray-500 mt-1">
-          Pregled poslovanja — {format(new Date(), 'EEEE, dd.MM.yyyy.')}
+          Pregled poslovanja — {format(new Date(), 'dd.MM.yyyy.')}
         </p>
       </div>
 
@@ -128,11 +148,13 @@ export default function Dashboard() {
               todayAppointments.map((apt) => {
                 const patient = patients.find((p) => p.id === apt.patient_id);
                 const doctor = doctors.find((d) => d.id === apt.doctor_id);
+                const aptTime = new Date(apt.pocetak);
+                const svcTotal = apt.services?.reduce((s, svc) => s + svc.ukupno, 0) || 0;
                 return (
                   <div key={apt.id} className="px-6 py-3 flex items-center gap-3">
                     <div className="w-14 text-center shrink-0">
                       <p className="text-sm font-semibold text-gray-900">
-                        {format(parseISO(apt.pocetak), 'HH:mm')}
+                        {String(aptTime.getHours()).padStart(2, '0')}:{String(aptTime.getMinutes()).padStart(2, '0')}
                       </p>
                     </div>
                     <div
@@ -148,6 +170,9 @@ export default function Dashboard() {
                         {apt.services?.[0] && ` · ${apt.services[0].naziv}`}
                       </p>
                     </div>
+                    {svcTotal > 0 && (
+                      <span className="text-xs font-medium text-gray-600 shrink-0">{svcTotal.toFixed(0)} EUR</span>
+                    )}
                     <span
                       className="text-[10px] px-2 py-0.5 rounded-full font-medium shrink-0"
                       style={{
@@ -172,6 +197,7 @@ export default function Dashboard() {
           <div className="divide-y divide-border">
             {doctors.map((doctor) => {
               const docApts = todayAppointments.filter((a) => a.doctor_id === doctor.id);
+              const docRevenue = docApts.reduce((sum, a) => sum + (a.services?.reduce((s, svc) => s + svc.ukupno, 0) || 0), 0);
               return (
                 <div key={doctor.id} className="px-6 py-3 flex items-center gap-3">
                   <div
@@ -187,8 +213,8 @@ export default function Dashboard() {
                     <p className="text-xs text-gray-400">{doctor.specijalizacija}</p>
                   </div>
                   <div className="text-right">
-                    <p className="text-sm font-semibold text-gray-900">{docApts.length}</p>
-                    <p className="text-xs text-gray-400">termina</p>
+                    <p className="text-sm font-semibold text-gray-900">{docApts.length} termina</p>
+                    {docRevenue > 0 && <p className="text-xs text-green-600">{docRevenue.toFixed(0)} EUR</p>}
                   </div>
                 </div>
               );
@@ -206,7 +232,10 @@ export default function Dashboard() {
                 <FileText size={16} className="text-green-600" />
                 <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider">Zavrseni pregledi danas</h3>
               </div>
-              <span className="text-xs text-gray-400">{todayExams.length} pregleda</span>
+              <div className="flex items-center gap-3">
+                <span className="text-sm font-semibold text-gray-900">{todayExamsTotal.toFixed(2)} EUR ukupno</span>
+                <span className="text-xs text-gray-400">{todayExams.length} pregleda</span>
+              </div>
             </div>
             <div className="divide-y divide-border max-h-[400px] overflow-y-auto">
               {todayExams.map((exam) => (
@@ -220,11 +249,11 @@ export default function Dashboard() {
                       {exam.doctor ? `${exam.doctor.titula || 'Dr'} ${exam.doctor.ime} ${exam.doctor.prezime}` : ''}
                       {exam.appointmentServices && exam.appointmentServices.length > 0
                         ? ` — ${exam.appointmentServices.map((s: any) => s.naziv).join(', ')}`
-                        : exam.razlog_dolaska ? ` — ${exam.razlog_dolaska.slice(0, 50)}` : ''}
+                        : ''}
                     </p>
                   </div>
                   {(exam.appointmentTotal || 0) > 0 && (
-                    <span className="text-sm font-semibold text-gray-900 shrink-0">
+                    <span className="text-sm font-bold text-green-700 bg-green-50 px-2 py-1 rounded shrink-0">
                       {exam.appointmentTotal?.toFixed(2)} EUR
                     </span>
                   )}
@@ -243,6 +272,13 @@ export default function Dashboard() {
                     >
                       <Printer size={16} />
                     </button>
+                    <button
+                      className="p-2 text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
+                      title="Naplati"
+                      onClick={() => setViewExam(exam)}
+                    >
+                      <Banknote size={16} />
+                    </button>
                   </div>
                 </div>
               ))}
@@ -251,7 +287,7 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* Modal za pregled nalaza */}
+      {/* Modal za pregled nalaza + naplata */}
       {viewExam && (
         <Modal isOpen onClose={() => setViewExam(null)} title="Nalaz pregleda" size="lg">
           <div className="space-y-4 text-sm">
@@ -312,7 +348,7 @@ export default function Dashboard() {
                 <p className="text-gray-700">{viewExam.kontrolni_pregled}</p>
               </div>
             )}
-            <div className="flex justify-end pt-2">
+            <div className="flex justify-end gap-2 pt-2">
               <Button variant="secondary" onClick={() => { setViewExam(null); handlePrintExam(viewExam); }}>
                 <Printer size={16} /> Stampaj
               </Button>
@@ -320,7 +356,6 @@ export default function Dashboard() {
           </div>
         </Modal>
       )}
-
     </div>
   );
 }

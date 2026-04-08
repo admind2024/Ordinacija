@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { format, parseISO } from 'date-fns';
-import { ClipboardList, User, Clock, Printer, FileText, Package, Plus, Trash2 } from 'lucide-react';
+import { ClipboardList, User, Clock, Printer, FileText, Package, Plus, Trash2, CalendarDays, Phone, ChevronRight } from 'lucide-react';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import DoctorLogin from '../components/ui/DoctorLogin';
@@ -10,7 +10,7 @@ import { openPrintReport } from '../components/examinations/PrintReport';
 import { useCalendar } from '../contexts/CalendarContext';
 import { supabase } from '../lib/supabase';
 import { APPOINTMENT_STATUS_COLORS, APPOINTMENT_STATUS_LABELS } from '../types';
-import type { Appointment, Examination, Patient, Establishment } from '../types';
+import type { Appointment, Doctor, Examination, Patient, Establishment } from '../types';
 
 interface UsedMaterial {
   id: string;
@@ -21,6 +21,14 @@ interface UsedMaterial {
 }
 
 export default function Examinations() {
+  return (
+    <DoctorLogin>
+      {(loggedDoctor) => <ExaminationsContent loggedDoctor={loggedDoctor} />}
+    </DoctorLogin>
+  );
+}
+
+function ExaminationsContent({ loggedDoctor }: { loggedDoctor: Doctor }) {
   const { appointments, doctors, materials } = useCalendar();
 
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
@@ -33,18 +41,15 @@ export default function Examinations() {
   const [selectedMaterialId, setSelectedMaterialId] = useState('');
   const [materialQty, setMaterialQty] = useState('1');
 
-  // Danasnji termini — sakrij one koji vec imaju zavrsen pregled
   const today = new Date();
   const todayStr = format(today, 'yyyy-MM-dd');
   const [completedExamAptIds, setCompletedExamAptIds] = useState<Set<string>>(new Set());
 
-  // Fetch establishment + zavrseni pregledi
   useEffect(() => {
     supabase.from('establishments').select('*').limit(1).single()
       .then(({ data }) => {
         if (data) setEstablishment(data as Establishment);
       });
-    // Dohvati appointment_id-jeve za zavrsene preglede danas
     supabase.from('examinations')
       .select('appointment_id')
       .eq('status', 'zavrsen')
@@ -61,13 +66,12 @@ export default function Examinations() {
       const aptDateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
       if (aptDateStr !== todayStr) return false;
       if (apt.status === 'otkazan' || apt.status === 'nije_dosao') return false;
-      // Sakrij termine koji vec imaju zavrsen pregled
+      if (apt.doctor_id !== loggedDoctor.id) return false;
       if (completedExamAptIds.has(apt.id)) return false;
       return true;
     })
     .sort((a, b) => a.pocetak.localeCompare(b.pocetak));
 
-  // Fetch patient data kad se odabere termin
   const loadPatientData = useCallback(async (apt: Appointment) => {
     setSelectedAppointment(apt);
     setCurrentExam(null);
@@ -89,7 +93,6 @@ export default function Examinations() {
     const existingExam = (exams || []).find((e: any) => e.appointment_id === apt.id);
     if (existingExam) {
       setCurrentExam(existingExam as Examination);
-      // Ucitaj utrosene materijale za ovaj pregled
       const { data: usageData } = await supabase
         .from('material_usage')
         .select('*, material:materials(naziv, jedinica_mjere)')
@@ -200,119 +203,151 @@ export default function Examinations() {
     setUsedMaterials((prev) => prev.filter((m) => m.id !== usageId));
   }
 
+  const completedCount = completedExamAptIds.size;
+  const totalForToday = todaysAppointments.length + completedCount;
+
   return (
-    <DoctorLogin>
     <div className="print:hidden">
-      <div className="mb-4">
-        <h2 className="text-2xl font-bold text-gray-900">Pregled pacijenata</h2>
-        <p className="text-sm text-gray-500 mt-1">Unos nalaza, terapije i preporuka</p>
+      {/* Header sa statistikom */}
+      <div className="mb-6 flex items-center justify-between flex-wrap gap-4">
+        <div>
+          <h2 className="text-2xl font-bold text-gray-900">Moji pregledi</h2>
+          <div className="flex items-center gap-2 mt-1">
+            <CalendarDays size={14} className="text-gray-400" />
+            <span className="text-sm text-gray-500">{format(today, 'EEEE, dd.MM.yyyy.')}</span>
+          </div>
+        </div>
+        <div className="flex items-center gap-3">
+          <div className="text-center px-4 py-2 bg-primary-50 rounded-xl border border-primary-100">
+            <p className="text-2xl font-bold text-primary-700">{todaysAppointments.length}</p>
+            <p className="text-[10px] uppercase tracking-wider text-primary-500 font-medium">Preostalo</p>
+          </div>
+          <div className="text-center px-4 py-2 bg-green-50 rounded-xl border border-green-100">
+            <p className="text-2xl font-bold text-green-700">{completedCount}</p>
+            <p className="text-[10px] uppercase tracking-wider text-green-500 font-medium">Zavrseno</p>
+          </div>
+          {totalForToday > 0 && (
+            <div className="text-center px-4 py-2 bg-gray-50 rounded-xl border border-gray-200">
+              <p className="text-2xl font-bold text-gray-700">{totalForToday}</p>
+              <p className="text-[10px] uppercase tracking-wider text-gray-400 font-medium">Ukupno</p>
+            </div>
+          )}
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Lijevi panel — danasnji termini */}
+        {/* Lijevi panel — lista termina */}
         <div className="lg:col-span-4 xl:col-span-3">
-          <Card>
-            <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">
-              Danas — {format(today, 'dd.MM.yyyy.')}
-            </h3>
-            {todaysAppointments.length === 0 ? (
-              <div className="text-center py-8 text-gray-400">
-                <ClipboardList size={32} className="mx-auto mb-2" />
-                <p className="text-sm">Nema pacijenata za danas</p>
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {todaysAppointments.map((apt) => {
-                  const isSelected = selectedAppointment?.id === apt.id;
-                  const aptPatient = apt.patient as any;
-                  const d = new Date(apt.pocetak);
-                  const aptTime = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
-                  const svcNames = apt.services?.map((s) => s.naziv).join(', ') || '';
-                  const svcTotal = apt.services?.reduce((sum, s) => sum + s.ukupno, 0) || 0;
+          <div className="sticky top-4">
+            <Card>
+              <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">
+                Pacijenti danas
+              </h3>
+              {todaysAppointments.length === 0 ? (
+                <div className="text-center py-12 text-gray-300">
+                  <ClipboardList size={40} className="mx-auto mb-3" />
+                  <p className="text-sm font-medium text-gray-400">Nema preostalih pacijenata</p>
+                  <p className="text-xs text-gray-300 mt-1">Svi pregledi su zavrseni</p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {todaysAppointments.map((apt) => {
+                    const isSelected = selectedAppointment?.id === apt.id;
+                    const aptPatient = apt.patient as any;
+                    const d = new Date(apt.pocetak);
+                    const aptTime = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+                    const svcNames = apt.services?.map((s) => s.naziv).join(', ') || '';
+                    const svcTotal = apt.services?.reduce((sum, s) => sum + s.ukupno, 0) || 0;
 
-                  return (
-                    <button
-                      key={apt.id}
-                      onClick={() => loadPatientData(apt)}
-                      className={`w-full text-left px-3 py-3 rounded-lg border-l-4 transition-colors
-                        ${isSelected
-                          ? 'bg-primary-50 border-l-primary-500 border border-primary-200'
-                          : 'bg-gray-50 hover:bg-gray-100 border border-transparent'
-                        }`}
-                      style={{ borderLeftColor: isSelected ? undefined : APPOINTMENT_STATUS_COLORS[apt.status] }}
-                    >
-                      <div className="flex items-center justify-between mb-1">
-                        <p className="text-sm font-medium text-gray-900">
-                          {aptPatient ? `${aptPatient.ime} ${aptPatient.prezime}` : 'Pacijent'}
-                        </p>
-                        <span className="text-xs text-gray-500 flex items-center gap-1">
-                          <Clock size={12} /> {aptTime}
-                        </span>
-                      </div>
-                      {svcNames && (
-                        <p className="text-xs text-gray-500 truncate">{svcNames}</p>
-                      )}
-                      <div className="flex items-center justify-between mt-1">
-                        <span
-                          className="text-[10px] px-1.5 py-0.5 rounded-full font-medium"
-                          style={{
-                            backgroundColor: APPOINTMENT_STATUS_COLORS[apt.status] + '20',
-                            color: APPOINTMENT_STATUS_COLORS[apt.status],
-                          }}
-                        >
-                          {APPOINTMENT_STATUS_LABELS[apt.status]}
-                        </span>
-                        {svcTotal > 0 && (
-                          <span className="text-xs font-medium text-gray-600">{svcTotal.toFixed(0)} EUR</span>
+                    return (
+                      <button
+                        key={apt.id}
+                        onClick={() => loadPatientData(apt)}
+                        className={`w-full text-left px-4 py-3.5 rounded-xl transition-all group
+                          ${isSelected
+                            ? 'bg-primary-50 ring-2 ring-primary-300 shadow-sm'
+                            : 'bg-gray-50 hover:bg-gray-100 hover:shadow-sm'
+                          }`}
+                      >
+                        <div className="flex items-center justify-between mb-1.5">
+                          <p className={`text-sm font-semibold ${isSelected ? 'text-primary-900' : 'text-gray-900'}`}>
+                            {aptPatient ? `${aptPatient.ime} ${aptPatient.prezime}` : 'Pacijent'}
+                          </p>
+                          <ChevronRight size={14} className={`transition-transform ${isSelected ? 'text-primary-500 translate-x-0.5' : 'text-gray-300 group-hover:text-gray-400'}`} />
+                        </div>
+                        <div className="flex items-center gap-2 mb-1.5">
+                          <span className="flex items-center gap-1 text-xs text-gray-500">
+                            <Clock size={11} /> {aptTime}
+                          </span>
+                          <span
+                            className="text-[10px] px-1.5 py-0.5 rounded-full font-medium"
+                            style={{
+                              backgroundColor: APPOINTMENT_STATUS_COLORS[apt.status] + '15',
+                              color: APPOINTMENT_STATUS_COLORS[apt.status],
+                            }}
+                          >
+                            {APPOINTMENT_STATUS_LABELS[apt.status]}
+                          </span>
+                        </div>
+                        {svcNames && (
+                          <p className="text-xs text-gray-400 truncate">{svcNames}</p>
                         )}
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-          </Card>
+                        {svcTotal > 0 && (
+                          <p className="text-xs font-semibold text-gray-500 mt-1">{svcTotal.toFixed(0)} EUR</p>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </Card>
+          </div>
         </div>
 
-        {/* Desni panel — detalji i formular */}
+        {/* Desni panel — pregled */}
         <div className="lg:col-span-8 xl:col-span-9">
           {!selectedAppointment ? (
-            <Card>
-              <div className="text-center py-16 text-gray-400">
-                <User size={48} className="mx-auto mb-4" />
-                <p className="text-lg font-medium">Odaberite pacijenta</p>
-                <p className="text-sm mt-1">Kliknite na pacijenta sa lijeve strane za unos pregleda</p>
+            <div className="flex items-center justify-center min-h-[50vh]">
+              <div className="text-center text-gray-300">
+                <div className="w-20 h-20 bg-gray-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                  <User size={36} className="text-gray-300" />
+                </div>
+                <p className="text-lg font-medium text-gray-400">Odaberite pacijenta</p>
+                <p className="text-sm text-gray-300 mt-1">Izaberite pacijenta sa lijeve strane</p>
               </div>
-            </Card>
+            </div>
           ) : patient ? (
-            <div className="space-y-6">
-              {/* Patient header */}
-              <Card>
-                <div className="flex items-center justify-between flex-wrap gap-4">
+            <div className="space-y-5">
+              {/* Patient info header */}
+              <div className="bg-white rounded-xl border border-border p-5">
+                <div className="flex items-start justify-between flex-wrap gap-4">
                   <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 bg-primary-100 rounded-full flex items-center justify-center">
-                      <User size={24} className="text-primary-700" />
+                    <div className="w-14 h-14 bg-primary-100 rounded-2xl flex items-center justify-center">
+                      <span className="text-lg font-bold text-primary-700">
+                        {patient.ime.charAt(0)}{patient.prezime.charAt(0)}
+                      </span>
                     </div>
                     <div>
-                      <h3 className="text-lg font-semibold text-gray-900">{patient.ime} {patient.prezime}</h3>
-                      <div className="flex flex-wrap gap-3 text-sm text-gray-500">
+                      <h3 className="text-xl font-bold text-gray-900">{patient.ime} {patient.prezime}</h3>
+                      <div className="flex flex-wrap items-center gap-3 mt-1">
                         {patient.datum_rodjenja && (
-                          <span>Rodjen/a: {format(parseISO(patient.datum_rodjenja), 'dd.MM.yyyy.')}</span>
+                          <span className="text-xs text-gray-400">
+                            {format(parseISO(patient.datum_rodjenja), 'dd.MM.yyyy.')}
+                          </span>
                         )}
-                        {patient.telefon && <span>Tel: {patient.telefon}</span>}
+                        {patient.telefon && (
+                          <a href={`tel:${patient.telefon}`} className="flex items-center gap-1 text-xs text-primary-600 hover:text-primary-700">
+                            <Phone size={11} /> {patient.telefon}
+                          </a>
+                        )}
                       </div>
-                      {aptServices.length > 0 && (
-                        <p className="text-xs text-blue-600 mt-1">
-                          {aptServices.map((s) => s.naziv).join(', ')} — <strong>{aptTotal.toFixed(2)} EUR</strong>
-                        </p>
-                      )}
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
                     <span
-                      className="text-xs px-2 py-1 rounded-full font-medium"
+                      className="text-xs px-2.5 py-1 rounded-full font-medium"
                       style={{
-                        backgroundColor: APPOINTMENT_STATUS_COLORS[selectedAppointment.status] + '20',
+                        backgroundColor: APPOINTMENT_STATUS_COLORS[selectedAppointment.status] + '15',
                         color: APPOINTMENT_STATUS_COLORS[selectedAppointment.status],
                       }}
                     >
@@ -325,10 +360,26 @@ export default function Examinations() {
                     )}
                   </div>
                 </div>
-              </Card>
 
-              {/* Formular za pregled */}
-              <Card>
+                {/* Usluge */}
+                {aptServices.length > 0 && (
+                  <div className="mt-4 pt-3 border-t border-gray-100">
+                    <div className="flex items-center justify-between">
+                      <div className="flex flex-wrap gap-1.5">
+                        {aptServices.map((s, i) => (
+                          <span key={i} className="text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded-md">
+                            {s.naziv}
+                          </span>
+                        ))}
+                      </div>
+                      <span className="text-sm font-bold text-gray-700">{aptTotal.toFixed(2)} EUR</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Formular */}
+              <div className="bg-white rounded-xl border border-border p-5">
                 <div className="flex items-center gap-2 mb-4">
                   <FileText size={18} className="text-primary-600" />
                   <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider">
@@ -346,22 +397,21 @@ export default function Examinations() {
                   appointmentServices={aptServices}
                   appointmentNapomena={selectedAppointment.napomena ?? undefined}
                 />
-              </Card>
+              </div>
 
-              {/* Utroseni materijali */}
+              {/* Materijali */}
               {currentExam && (
-                <Card>
+                <div className="bg-white rounded-xl border border-border p-5">
                   <div className="flex items-center gap-2 mb-4">
                     <Package size={18} className="text-purple-600" />
                     <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider">Utroseni materijali</h3>
                   </div>
 
-                  {/* Dodaj materijal */}
                   <div className="flex gap-2 mb-3">
                     <select
                       value={selectedMaterialId}
                       onChange={(e) => setSelectedMaterialId(e.target.value)}
-                      className="flex-1 px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                      className="flex-1 px-3 py-2.5 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 bg-gray-50"
                     >
                       <option value="">Odaberi materijal...</option>
                       {materials.map((m) => (
@@ -374,7 +424,7 @@ export default function Examinations() {
                       step="0.1"
                       value={materialQty}
                       onChange={(e) => setMaterialQty(e.target.value)}
-                      className="w-20 px-3 py-2 border border-border rounded-lg text-sm text-center focus:outline-none focus:ring-2 focus:ring-primary-500"
+                      className="w-20 px-3 py-2.5 border border-border rounded-lg text-sm text-center focus:outline-none focus:ring-2 focus:ring-primary-500 bg-gray-50"
                       placeholder="Kol."
                     />
                     <Button size="sm" onClick={handleAddMaterial} disabled={!selectedMaterialId}>
@@ -382,17 +432,16 @@ export default function Examinations() {
                     </Button>
                   </div>
 
-                  {/* Lista materijala */}
                   {usedMaterials.length === 0 ? (
-                    <p className="text-sm text-gray-400 text-center py-3">Nema unesenih materijala</p>
+                    <p className="text-sm text-gray-300 text-center py-4">Nema unesenih materijala</p>
                   ) : (
-                    <div className="space-y-1">
+                    <div className="space-y-1.5">
                       {usedMaterials.map((um) => (
-                        <div key={um.id} className="flex items-center justify-between bg-purple-50 rounded-lg px-3 py-2">
-                          <span className="text-sm text-purple-800">{um.naziv}</span>
+                        <div key={um.id} className="flex items-center justify-between bg-purple-50 rounded-lg px-3 py-2.5">
+                          <span className="text-sm text-purple-800 font-medium">{um.naziv}</span>
                           <div className="flex items-center gap-3">
-                            <span className="text-sm font-medium text-purple-900">{um.kolicina} {um.jedinica}</span>
-                            <button onClick={() => handleRemoveMaterial(um.id)} className="text-gray-400 hover:text-red-500">
+                            <span className="text-sm font-semibold text-purple-900">{um.kolicina} {um.jedinica}</span>
+                            <button onClick={() => handleRemoveMaterial(um.id)} className="text-gray-400 hover:text-red-500 transition-colors">
                               <Trash2 size={14} />
                             </button>
                           </div>
@@ -400,12 +449,12 @@ export default function Examinations() {
                       ))}
                     </div>
                   )}
-                </Card>
+                </div>
               )}
 
-              {/* Istorija pregleda */}
+              {/* Istorija */}
               {patientExams.filter((e) => e.id !== currentExam?.id).length > 0 && (
-                <Card>
+                <div className="bg-white rounded-xl border border-border p-5">
                   <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">
                     Istorija pregleda ({patientExams.filter((e) => e.id !== currentExam?.id).length})
                   </h3>
@@ -413,14 +462,12 @@ export default function Examinations() {
                     examinations={patientExams.filter((e) => e.id !== currentExam?.id)}
                     doctors={doctors}
                   />
-                </Card>
+                </div>
               )}
             </div>
           ) : null}
         </div>
       </div>
-
     </div>
-    </DoctorLogin>
   );
 }

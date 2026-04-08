@@ -12,7 +12,6 @@ import Billing from './pages/Billing';
 import Reports from './pages/Reports';
 import Doctors from './pages/Doctors';
 import Materials from './pages/Materials';
-import Notifications from './pages/Notifications';
 import Establishment from './pages/Establishment';
 import Settings from './pages/Settings';
 import Examinations from './pages/Examinations';
@@ -62,14 +61,6 @@ function AppRoutes() {
         <Route path="/pregled" element={<Examinations />} />
         <Route path="/cjenovnik" element={<ServicesPage />} />
         <Route path="/materijali" element={<Materials />} />
-        <Route
-          path="/notifikacije"
-          element={
-            <ProtectedRoute roles={['admin', 'menadzer', 'marketing']}>
-              <Notifications />
-            </ProtectedRoute>
-          }
-        />
         <Route
           path="/ustanova"
           element={

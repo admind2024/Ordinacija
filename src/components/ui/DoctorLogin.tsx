@@ -1,17 +1,16 @@
 import { useState } from 'react';
-import { Stethoscope } from 'lucide-react';
+import { Stethoscope, LogOut } from 'lucide-react';
 import Button from './Button';
 import { useCalendar } from '../../contexts/CalendarContext';
 import type { Doctor } from '../../types';
 
 interface DoctorLoginProps {
-  children: React.ReactNode;
-  onDoctorLogin?: (doctor: Doctor) => void;
+  children: (doctor: Doctor) => React.ReactNode;
 }
 
-export default function DoctorLogin({ children, onDoctorLogin }: DoctorLoginProps) {
+export default function DoctorLogin({ children }: DoctorLoginProps) {
   const { doctors } = useCalendar();
-  const [loggedIn, setLoggedIn] = useState(false);
+  const [loggedDoctor, setLoggedDoctor] = useState<Doctor | null>(null);
   const [pin, setPin] = useState('');
   const [error, setError] = useState('');
 
@@ -20,16 +19,42 @@ export default function DoctorLogin({ children, onDoctorLogin }: DoctorLoginProp
     if (!pin.trim()) { setError('Unesite PIN'); return; }
     const doctor = doctors.find((d) => d.pin === pin.trim());
     if (doctor) {
-      setLoggedIn(true);
+      setLoggedDoctor(doctor);
       setError('');
-      onDoctorLogin?.(doctor);
     } else {
       setError('Pogresan PIN');
       setPin('');
     }
   }
 
-  if (loggedIn) return <>{children}</>;
+  if (loggedDoctor) {
+    return (
+      <div>
+        {/* Doctor banner */}
+        <div className="mb-4 bg-primary-50 border border-primary-200 rounded-xl px-4 py-3 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm" style={{ backgroundColor: loggedDoctor.boja || '#6366f1' }}>
+              {loggedDoctor.ime.charAt(0)}{loggedDoctor.prezime.charAt(0)}
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-gray-900">
+                {loggedDoctor.titula} {loggedDoctor.ime} {loggedDoctor.prezime}
+              </p>
+              <p className="text-xs text-gray-500">{loggedDoctor.specijalizacija}</p>
+            </div>
+          </div>
+          <button
+            onClick={() => { setLoggedDoctor(null); setPin(''); }}
+            className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-red-600 transition-colors px-3 py-1.5 rounded-lg hover:bg-red-50"
+          >
+            <LogOut size={14} />
+            Odjavi se
+          </button>
+        </div>
+        {children(loggedDoctor)}
+      </div>
+    );
+  }
 
   return (
     <div className="flex items-center justify-center min-h-[60vh]">

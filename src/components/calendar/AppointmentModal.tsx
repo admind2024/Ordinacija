@@ -7,8 +7,6 @@ import { useCalendar } from '../../contexts/CalendarContext';
 import { usePatients } from '../../contexts/PatientsContext';
 import { supabase } from '../../lib/supabase';
 import type { Appointment, AppointmentService } from '../../types';
-import { sendSms, isSmsConfigured } from '../../lib/smsService';
-import { smsPotvrda } from '../../lib/smsTemplates';
 
 interface AppointmentModalProps {
   isOpen: boolean;
@@ -27,7 +25,7 @@ export default function AppointmentModal({
   defaultDate,
   defaultTime,
 }: AppointmentModalProps) {
-  const { createAppointment, updateAppointment, addSmsLog, doctors, rooms, services, serviceCategories, materials } = useCalendar();
+  const { createAppointment, updateAppointment, doctors, rooms, services, serviceCategories, materials } = useCalendar();
   const { patients } = usePatients();
   const isEdit = !!editAppointment;
 
@@ -64,9 +62,6 @@ export default function AppointmentModal({
   );
   const [napomena, setNapomena] = useState(editAppointment?.napomena ?? '');
   const [showPatientList, setShowPatientList] = useState(false);
-  const [posaljiSms, setPosaljiSms] = useState(true);
-  const [smsStatus, setSmsStatus] = useState<string | null>(null);
-
   // Materijali
   const [selectedMaterials, setSelectedMaterials] = useState<{ material_id: string; naziv: string; kolicina: number; jedinica: string }[]>([]);
 
@@ -197,31 +192,6 @@ export default function AppointmentModal({
         }
       }
 
-      // SMS potvrda
-      if (created && posaljiSms && isSmsConfigured() && selectedPatient?.telefon) {
-        const doctor = doctors.find((d) => d.id === doctorId);
-        const doctorName = doctor ? `${doctor.titula || ''} ${doctor.ime} ${doctor.prezime}`.trim() : undefined;
-        const text = smsPotvrda({
-          imeIPrezime: `${selectedPatient.ime} ${selectedPatient.prezime}`,
-          datum: pocetak.toISOString(),
-          doctor: doctorName,
-        });
-
-        const result = await sendSms(selectedPatient.telefon, text);
-        addSmsLog({
-          id: `sms-${Date.now()}`,
-          patient: `${selectedPatient.ime} ${selectedPatient.prezime}`,
-          phone: selectedPatient.telefon,
-          text,
-          status: result.success ? 'sent' : 'failed',
-          error: result.error,
-          datum: new Date().toISOString(),
-          tip: 'potvrda',
-        });
-
-        setSmsStatus(result.success ? 'SMS potvrda poslana!' : `SMS greska: ${result.error}`);
-        setTimeout(() => setSmsStatus(null), 4000);
-      }
     }
     onClose();
   }
@@ -465,25 +435,6 @@ export default function AppointmentModal({
             placeholder="Interna biljeska..."
           />
         </div>
-
-        {/* SMS potvrda */}
-        {!isEdit && isSmsConfigured() && (
-          <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={posaljiSms}
-              onChange={(e) => setPosaljiSms(e.target.checked)}
-              className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
-            />
-            Posalji SMS potvrdu pacijentu
-          </label>
-        )}
-
-        {smsStatus && (
-          <p className={`text-sm ${smsStatus.includes('greska') ? 'text-red-600' : 'text-green-600'}`}>
-            {smsStatus}
-          </p>
-        )}
 
         {/* Dugmad */}
         <div className="flex justify-end gap-2 pt-2">

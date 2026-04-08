@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useCallback, useEffect, type React
 import { addDays, addWeeks, addMonths, isWithinInterval, parseISO } from 'date-fns';
 import type { Appointment, AppointmentStatus, Doctor, Room, Service, ServiceCategory } from '../types';
 import { supabase } from '../lib/supabase';
+import { useAutoReminders } from '../hooks/useAutoReminders';
 
 export type CalendarView = 'day' | 'week' | 'month' | 'agenda';
 export type ColorSource = 'doctor' | 'status' | 'room';
@@ -86,8 +87,8 @@ export function CalendarProvider({ children }: { children: ReactNode }) {
       supabase.from('rooms').select('*').eq('aktivan', true),
       supabase.from('services').select('*').eq('aktivan', true),
       supabase.from('service_categories').select('*').order('redoslijed'),
-      supabase.from('appointments').select('*, appointment_services(*)').order('pocetak', { ascending: true }),
-      supabase.from('notifications').select('*').order('datum_slanja', { ascending: false }).limit(100),
+      supabase.from('appointments').select('*, appointment_services(*), patient:patients(ime, prezime, telefon)').order('pocetak', { ascending: true }),
+      supabase.from('notifications').select('*').order('datum_slanja', { ascending: false }).limit(500),
     ]);
 
     const fetchedDoctors = (doctorsRes.data || []) as Doctor[];
@@ -117,8 +118,8 @@ export function CalendarProvider({ children }: { children: ReactNode }) {
       .filter((n: any) => n.kanal === 'sms')
       .map((n: any) => ({
         id: n.id,
-        patient: n.patient_id || '',
-        phone: '',
+        patient: n.patient_ime || n.patient_id || '',
+        phone: n.patient_telefon || '',
         text: n.sadrzaj,
         status: n.status === 'sent' || n.status === 'delivered' ? 'sent' as const : 'failed' as const,
         error: n.error,
@@ -345,6 +346,9 @@ export function CalendarProvider({ children }: { children: ReactNode }) {
     },
     [filters, doctors, rooms]
   );
+
+  // Automatski SMS podsjetnici
+  useAutoReminders(appointments);
 
   return (
     <CalendarContext.Provider

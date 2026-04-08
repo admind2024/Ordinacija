@@ -39,12 +39,6 @@ export default function Dashboard() {
     [todayCompletedApts]
   );
 
-    () => appointments
-      .filter((a) => a.status === 'zavrsen')
-      .reduce((sum, a) => sum + (a.services?.reduce((s, svc) => s + svc.ukupno, 0) || 0), 0),
-    [appointments]
-  );
-
   const realizationRate = useMemo(() => {
     const total = todayAppointments.length;
     const completed = todayCompletedApts.length;

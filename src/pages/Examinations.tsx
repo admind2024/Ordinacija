@@ -9,7 +9,7 @@ import { openPrintReport } from '../components/examinations/PrintReport';
 import { useCalendar } from '../contexts/CalendarContext';
 import { supabase } from '../lib/supabase';
 import { APPOINTMENT_STATUS_COLORS, APPOINTMENT_STATUS_LABELS } from '../types';
-import type { Appointment, Examination, Patient, Establishment, MaterialUsage } from '../types';
+import type { Appointment, Examination, Patient, Establishment } from '../types';
 
 interface UsedMaterial {
   id: string;

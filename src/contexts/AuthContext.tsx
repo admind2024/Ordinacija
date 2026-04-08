@@ -12,7 +12,7 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const DEMO_PASSWORD = '1519';
+const ALLOWED_PASSWORDS = ['moa2026', '1519'];
 const LS_USER_KEY = 'moa_current_user';
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -31,7 +31,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   async function signIn(email: string, password: string) {
-    if (password !== DEMO_PASSWORD) {
+    if (!ALLOWED_PASSWORDS.includes(password)) {
       return { error: 'Pogresna sifra' };
     }
 

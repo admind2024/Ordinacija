@@ -5,6 +5,7 @@ import Button from '../ui/Button';
 import Input from '../ui/Input';
 import { useCalendar } from '../../contexts/CalendarContext';
 import { usePatients } from '../../contexts/PatientsContext';
+import { supabase } from '../../lib/supabase';
 import type { Appointment, AppointmentService } from '../../types';
 import { sendSms, isSmsConfigured } from '../../lib/smsService';
 import { smsPotvrda } from '../../lib/smsTemplates';
@@ -26,7 +27,7 @@ export default function AppointmentModal({
   defaultDate,
   defaultTime,
 }: AppointmentModalProps) {
-  const { createAppointment, updateAppointment, addSmsLog, doctors, rooms, services, serviceCategories } = useCalendar();
+  const { createAppointment, updateAppointment, addSmsLog, doctors, rooms, services, serviceCategories, materials } = useCalendar();
   const { patients } = usePatients();
   const isEdit = !!editAppointment;
 
@@ -65,6 +66,23 @@ export default function AppointmentModal({
   const [showPatientList, setShowPatientList] = useState(false);
   const [posaljiSms, setPosaljiSms] = useState(true);
   const [smsStatus, setSmsStatus] = useState<string | null>(null);
+
+  // Materijali
+  const [selectedMaterials, setSelectedMaterials] = useState<{ material_id: string; naziv: string; kolicina: number; jedinica: string }[]>([]);
+
+  function addMaterial(materialId: string) {
+    const mat = materials.find((m) => m.id === materialId);
+    if (!mat || selectedMaterials.find((m) => m.material_id === materialId)) return;
+    setSelectedMaterials((prev) => [...prev, { material_id: mat.id, naziv: mat.naziv, kolicina: 1, jedinica: mat.jedinica_mjere }]);
+  }
+
+  function removeMaterial(materialId: string) {
+    setSelectedMaterials((prev) => prev.filter((m) => m.material_id !== materialId));
+  }
+
+  function updateMaterialQty(materialId: string, qty: number) {
+    setSelectedMaterials((prev) => prev.map((m) => m.material_id === materialId ? { ...m, kolicina: Math.max(0.1, qty) } : m));
+  }
 
   const filteredPatients = useMemo(() => {
     if (!patientSearch) return patients.slice(0, 5);
@@ -136,9 +154,22 @@ export default function AppointmentModal({
         room_id: roomId,
         pocetak: pocetak.toISOString(),
         kraj: kraj.toISOString(),
-        napomena,
+        napomena: napomena || undefined,
         services: selectedServices,
       });
+      // Sacuvaj materijale
+      if (selectedMaterials.length > 0) {
+        for (const mat of selectedMaterials) {
+          await supabase.from('material_usage').insert({
+            appointment_id: editAppointment.id,
+            material_id: mat.material_id,
+            kolicina: mat.kolicina,
+            ljekar_id: doctorId,
+            patient_id: selectedPatientId,
+            datum: datum,
+          });
+        }
+      }
     } else {
       const newAppointment = {
         patient_id: selectedPatientId,
@@ -151,6 +182,20 @@ export default function AppointmentModal({
         services: selectedServices,
       };
       const created = await createAppointment(newAppointment);
+
+      // Sacuvaj materijale
+      if (created && selectedMaterials.length > 0) {
+        for (const mat of selectedMaterials) {
+          await supabase.from('material_usage').insert({
+            appointment_id: created.id,
+            material_id: mat.material_id,
+            kolicina: mat.kolicina,
+            ljekar_id: doctorId,
+            patient_id: selectedPatientId,
+            datum: datum,
+          });
+        }
+      }
 
       // SMS potvrda
       if (created && posaljiSms && isSmsConfigured() && selectedPatient?.telefon) {
@@ -359,6 +404,52 @@ export default function AppointmentModal({
               <div className="flex justify-end pt-2 border-t border-border">
                 <span className="text-sm font-semibold">Ukupno: {ukupnaCijena.toFixed(2)} EUR</span>
               </div>
+            </div>
+          )}
+        </div>
+
+        {/* Materijali */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Utroseni materijali</label>
+          <select
+            onChange={(e) => {
+              if (e.target.value) addMaterial(e.target.value);
+              e.target.value = '';
+            }}
+            className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+            defaultValue=""
+          >
+            <option value="">+ Dodaj materijal...</option>
+            {materials.map((m) => (
+              <option key={m.id} value={m.id}>{m.naziv} ({m.jedinica_mjere})</option>
+            ))}
+          </select>
+
+          {selectedMaterials.length > 0 && (
+            <div className="mt-2 space-y-1">
+              {selectedMaterials.map((mat) => (
+                <div key={mat.material_id} className="flex items-center justify-between bg-purple-50 rounded-lg px-3 py-2 gap-2">
+                  <span className="text-sm text-purple-800 flex-1 min-w-0 truncate">{mat.naziv}</span>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <input
+                      type="number"
+                      min={0.1}
+                      step={0.1}
+                      value={mat.kolicina}
+                      onChange={(e) => updateMaterialQty(mat.material_id, Number(e.target.value))}
+                      className="w-16 px-1.5 py-1 border border-border rounded text-xs text-center focus:outline-none focus:ring-1 focus:ring-primary-500"
+                    />
+                    <span className="text-xs text-purple-600">{mat.jedinica}</span>
+                    <button
+                      type="button"
+                      onClick={() => removeMaterial(mat.material_id)}
+                      className="text-gray-400 hover:text-danger text-xs"
+                    >
+                      Ukloni
+                    </button>
+                  </div>
+                </div>
+              ))}
             </div>
           )}
         </div>

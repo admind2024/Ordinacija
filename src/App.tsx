@@ -16,6 +16,7 @@ import Notifications from './pages/Notifications';
 import Establishment from './pages/Establishment';
 import Settings from './pages/Settings';
 import Examinations from './pages/Examinations';
+import ServicesPage from './pages/Services';
 
 function AppRoutes() {
   const { user } = useAuth();
@@ -59,6 +60,7 @@ function AppRoutes() {
           }
         />
         <Route path="/pregled" element={<Examinations />} />
+        <Route path="/cjenovnik" element={<ServicesPage />} />
         <Route path="/materijali" element={<Materials />} />
         <Route
           path="/notifikacije"

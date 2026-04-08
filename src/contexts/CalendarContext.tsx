@@ -58,6 +58,21 @@ interface CalendarContextType {
   smsLog: SmsLogEntry[];
   addSmsLog: (entry: SmsLogEntry) => void;
 
+  // Doctor CRUD
+  createDoctor: (doctor: Omit<Doctor, 'id'>) => Promise<Doctor | null>;
+  updateDoctor: (id: string, updates: Partial<Doctor>) => Promise<void>;
+  deleteDoctor: (id: string) => Promise<void>;
+
+  // Service CRUD
+  createService: (service: Omit<Service, 'id'>) => Promise<Service | null>;
+  updateService: (id: string, updates: Partial<Service>) => Promise<void>;
+  deleteService: (id: string) => Promise<void>;
+
+  // Service Category CRUD
+  createServiceCategory: (cat: Omit<ServiceCategory, 'id'>) => Promise<ServiceCategory | null>;
+  updateServiceCategory: (id: string, updates: Partial<ServiceCategory>) => Promise<void>;
+  deleteServiceCategory: (id: string) => Promise<void>;
+
   refreshData: () => Promise<void>;
 }
 
@@ -347,6 +362,67 @@ export function CalendarProvider({ children }: { children: ReactNode }) {
     [filters, doctors, rooms]
   );
 
+  // ===== Doctor CRUD =====
+  const createDoctor = useCallback(async (doctor: Omit<Doctor, 'id'>) => {
+    const { data, error } = await supabase.from('doctors').insert(doctor).select().single();
+    if (error) { console.error('Greska pri kreiranju ljekara:', error); return null; }
+    setDoctors((prev) => [...prev, data as Doctor]);
+    return data as Doctor;
+  }, []);
+
+  const updateDoctor = useCallback(async (id: string, updates: Partial<Doctor>) => {
+    const { error } = await supabase.from('doctors').update(updates).eq('id', id);
+    if (error) { console.error('Greska pri azuriranju ljekara:', error); return; }
+    setDoctors((prev) => prev.map((d) => (d.id === id ? { ...d, ...updates } : d)));
+  }, []);
+
+  const deleteDoctor = useCallback(async (id: string) => {
+    const { error } = await supabase.from('doctors').update({ aktivan: false }).eq('id', id);
+    if (error) { console.error('Greska pri brisanju ljekara:', error); return; }
+    setDoctors((prev) => prev.filter((d) => d.id !== id));
+  }, []);
+
+  // ===== Service CRUD =====
+  const createService = useCallback(async (service: Omit<Service, 'id'>) => {
+    const { data, error } = await supabase.from('services').insert(service).select().single();
+    if (error) { console.error('Greska pri kreiranju usluge:', error); return null; }
+    const svc = { ...data, cijena: Number(data.cijena) || 0 } as Service;
+    setServices((prev) => [...prev, svc]);
+    return svc;
+  }, []);
+
+  const updateService = useCallback(async (id: string, updates: Partial<Service>) => {
+    const { error } = await supabase.from('services').update(updates).eq('id', id);
+    if (error) { console.error('Greska pri azuriranju usluge:', error); return; }
+    setServices((prev) => prev.map((s) => (s.id === id ? { ...s, ...updates } : s)));
+  }, []);
+
+  const deleteService = useCallback(async (id: string) => {
+    const { error } = await supabase.from('services').update({ aktivan: false }).eq('id', id);
+    if (error) { console.error('Greska pri brisanju usluge:', error); return; }
+    setServices((prev) => prev.filter((s) => s.id !== id));
+  }, []);
+
+  // ===== Service Category CRUD =====
+  const createServiceCategory = useCallback(async (cat: Omit<ServiceCategory, 'id'>) => {
+    const { data, error } = await supabase.from('service_categories').insert(cat).select().single();
+    if (error) { console.error('Greska pri kreiranju kategorije:', error); return null; }
+    setServiceCategories((prev) => [...prev, data as ServiceCategory]);
+    return data as ServiceCategory;
+  }, []);
+
+  const updateServiceCategory = useCallback(async (id: string, updates: Partial<ServiceCategory>) => {
+    const { error } = await supabase.from('service_categories').update(updates).eq('id', id);
+    if (error) { console.error('Greska pri azuriranju kategorije:', error); return; }
+    setServiceCategories((prev) => prev.map((c) => (c.id === id ? { ...c, ...updates } : c)));
+  }, []);
+
+  const deleteServiceCategory = useCallback(async (id: string) => {
+    const { error } = await supabase.from('service_categories').delete().eq('id', id);
+    if (error) { console.error('Greska pri brisanju kategorije:', error); return; }
+    setServiceCategories((prev) => prev.filter((c) => c.id !== id));
+  }, []);
+
   // Automatski SMS podsjetnici
   useAutoReminders(appointments);
 
@@ -361,6 +437,9 @@ export function CalendarProvider({ children }: { children: ReactNode }) {
         createAppointment, updateAppointment, deleteAppointment, updateAppointmentStatus,
         getFilteredAppointments, getAppointmentColor,
         smsLog, addSmsLog,
+        createDoctor, updateDoctor, deleteDoctor,
+        createService, updateService, deleteService,
+        createServiceCategory, updateServiceCategory, deleteServiceCategory,
         refreshData: fetchData,
       }}
     >

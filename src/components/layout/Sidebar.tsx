@@ -14,6 +14,7 @@ import {
   ChevronLeft,
   ChevronRight,
   ClipboardList,
+  ListOrdered,
 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -23,6 +24,7 @@ const navigation = [
   { name: 'Pacijenti', path: '/pacijenti', icon: Users, roles: ['admin', 'menadzer', 'recepcija', 'ljekar'] },
   { name: 'Pregled', path: '/pregled', icon: ClipboardList, roles: ['admin', 'menadzer', 'ljekar'] },
   { name: 'Naplata', path: '/naplata', icon: CreditCard, roles: ['admin', 'menadzer', 'recepcija'] },
+  { name: 'Cjenovnik', path: '/cjenovnik', icon: ListOrdered, roles: ['admin', 'menadzer'] },
   { name: 'Izvjestaji', path: '/izvjestaji', icon: BarChart3, roles: ['admin', 'menadzer'] },
   { name: 'Ljekari', path: '/ljekari', icon: Stethoscope, roles: ['admin', 'menadzer'] },
   { name: 'Materijali', path: '/materijali', icon: Package, roles: ['admin', 'menadzer', 'ljekar'] },

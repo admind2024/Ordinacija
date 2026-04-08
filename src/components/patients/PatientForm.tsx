@@ -142,10 +142,26 @@ export default function PatientForm({ isOpen, onClose, editPatient }: PatientFor
             </div>
             <Input label="Detalji preporuke" value={form.detalji_preporuke} onChange={(e) => update('detalji_preporuke', e.target.value)} placeholder="Npr. ime osobe, naziv posta..." />
             <Input label="Osiguranje" value={form.osiguranje} onChange={(e) => update('osiguranje', e.target.value)} />
-            <Input label="Popust (%)" type="number" min={0} max={100} value={form.popust} onChange={(e) => update('popust', Number(e.target.value))} />
             {!isEdit && (
               <Input label="Pocetno stanje (EUR)" type="number" value={form.pocetno_stanje} onChange={(e) => update('pocetno_stanje', Number(e.target.value))} />
             )}
+          </div>
+
+          {/* Popust - istaknut */}
+          <div className="mt-4 bg-green-50 border border-green-200 rounded-lg p-4">
+            <label className="block text-sm font-semibold text-green-800 mb-2">Popust na cijenu usluga (%)</label>
+            <div className="flex items-center gap-3">
+              <input
+                type="number"
+                min={0}
+                max={100}
+                value={form.popust}
+                onChange={(e) => update('popust', Number(e.target.value))}
+                className="w-24 px-3 py-2 border border-green-300 rounded-lg text-sm text-center font-bold focus:outline-none focus:ring-2 focus:ring-green-500"
+              />
+              <span className="text-sm text-green-700">% popusta na sve usluge pri zakazivanju</span>
+            </div>
+          </div>
           </div>
 
           <div className="mt-4">

@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { format, addMinutes, parseISO } from 'date-fns';
+import { format, addMinutes } from 'date-fns';
 import Modal from '../ui/Modal';
 import Button from '../ui/Button';
 import Input from '../ui/Input';

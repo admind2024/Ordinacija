@@ -115,6 +115,13 @@ export default function Dashboard() {
   const [fiscalData, setFiscalData] = useState<Record<string, FiscalResult>>({});
 
   async function handleFiscalize(exam: ExamWithDetails) {
+    // Zabrani duplu fiskalizaciju
+    if (fiscalData[exam.id]?.success) {
+      setFiscalResult({ id: exam.id, result: { success: false, error: 'Ovaj pregled je vec fiskalizovan!' } });
+      setTimeout(() => setFiscalResult(null), 4000);
+      return;
+    }
+
     if (!exam.appointmentServices || exam.appointmentServices.length === 0) {
       setFiscalResult({ id: exam.id, result: { success: false, error: 'Nema usluga za fiskalizaciju' } });
       return;
@@ -123,7 +130,6 @@ export default function Dashboard() {
     setFiscalizing(exam.id);
     setFiscalResult(null);
 
-    // Ucitaj Teconio certifikat ako nema
     await loadTeconioCertificate();
 
     const items: FiscalItem[] = exam.appointmentServices.map((svc: any) => ({
@@ -131,7 +137,7 @@ export default function Dashboard() {
       unit: 'kom',
       quantity: Number(svc.kolicina) || 1,
       unitPriceWithVAT: Number(svc.ukupno) / (Number(svc.kolicina) || 1),
-      vatRate: 21, // standardna PDV stopa
+      vatRate: 21,
     }));
 
     const totalAmount = exam.appointmentTotal || 0;
@@ -145,6 +151,28 @@ export default function Dashboard() {
 
     if (result.success) {
       setFiscalData((prev) => ({ ...prev, [exam.id]: result }));
+
+      // Automatski stampaj nakon uspjesne fiskalizacije
+      if (exam.patient && exam.doctor) {
+        setTimeout(() => {
+          openPrintReport({
+            examination: exam,
+            patient: exam.patient!,
+            doctor: exam.doctor!,
+            establishment,
+            services: exam.appointmentServices as any,
+            fiscal: {
+              fic: result.fic,
+              iic: result.iic,
+              invoiceNumber: result.invoiceNumber,
+              qrCodeUrl: result.qrCodeUrl,
+              totalWithoutVAT: result.totals?.totalWithoutVAT,
+              totalVAT: result.totals?.totalVAT,
+              totalPrice: result.totals?.totalPrice,
+            },
+          });
+        }, 500);
+      }
     }
 
     setTimeout(() => setFiscalResult(null), 8000);
@@ -324,18 +352,24 @@ export default function Dashboard() {
                     >
                       <Printer size={16} />
                     </button>
-                    <button
-                      className={`p-2 rounded-lg transition-colors ${
-                        fiscalizing === exam.id
-                          ? 'text-purple-600 bg-purple-50'
-                          : 'text-gray-400 hover:text-purple-600 hover:bg-purple-50'
-                      }`}
-                      title="Naplati (fiskalizuj)"
-                      onClick={() => handleFiscalize(exam)}
-                      disabled={!!fiscalizing}
-                    >
-                      {fiscalizing === exam.id ? <Loader2 size={16} className="animate-spin" /> : <Banknote size={16} />}
-                    </button>
+                    {fiscalData[exam.id]?.success ? (
+                      <span className="p-2 text-green-600 bg-green-50 rounded-lg" title={`FIC: ${fiscalData[exam.id]?.fic}`}>
+                        <CheckCircle size={16} />
+                      </span>
+                    ) : (
+                      <button
+                        className={`p-2 rounded-lg transition-colors ${
+                          fiscalizing === exam.id
+                            ? 'text-purple-600 bg-purple-50'
+                            : 'text-gray-400 hover:text-purple-600 hover:bg-purple-50'
+                        }`}
+                        title="Naplati (fiskalizuj)"
+                        onClick={() => handleFiscalize(exam)}
+                        disabled={!!fiscalizing}
+                      >
+                        {fiscalizing === exam.id ? <Loader2 size={16} className="animate-spin" /> : <Banknote size={16} />}
+                      </button>
+                    )}
                   </div>
                 </div>
               ))}

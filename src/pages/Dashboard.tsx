@@ -40,7 +40,6 @@ export default function Dashboard() {
   const [todayExams, setTodayExams] = useState<ExamWithDetails[]>([]);
   const [establishment, setEstablishment] = useState<Establishment | null>(null);
   const [viewExam, setViewExam] = useState<ExamWithDetails | null>(null);
-  const [printExam, setPrintExam] = useState<ExamWithDetails | null>(null);
 
   useEffect(() => {
     const todayStr = format(new Date(), 'yyyy-MM-dd');

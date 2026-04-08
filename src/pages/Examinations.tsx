@@ -3,6 +3,7 @@ import { format, parseISO } from 'date-fns';
 import { ClipboardList, User, Clock, Printer, FileText, Package, Plus, Trash2 } from 'lucide-react';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
+import PinGate from '../components/ui/PinGate';
 import ExaminationForm from '../components/examinations/ExaminationForm';
 import ExaminationHistory from '../components/examinations/ExaminationHistory';
 import { openPrintReport } from '../components/examinations/PrintReport';
@@ -39,7 +40,7 @@ export default function Examinations() {
     .filter((apt) => {
       const d = new Date(apt.pocetak);
       const aptDateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-      return aptDateStr === todayStr && apt.status !== 'otkazan' && apt.status !== 'nije_dosao';
+      return aptDateStr === todayStr && apt.status !== 'otkazan' && apt.status !== 'nije_dosao' && apt.status !== 'zavrsen';
     })
     .sort((a, b) => a.pocetak.localeCompare(b.pocetak));
 
@@ -185,6 +186,7 @@ export default function Examinations() {
   }
 
   return (
+    <PinGate title="Pregled pacijenata">
     <div className="print:hidden">
       <div className="mb-4">
         <h2 className="text-2xl font-bold text-gray-900">Pregled pacijenata</h2>
@@ -404,5 +406,6 @@ export default function Examinations() {
       </div>
 
     </div>
+    </PinGate>
   );
 }

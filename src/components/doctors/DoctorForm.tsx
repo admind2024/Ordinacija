@@ -23,6 +23,7 @@ export default function DoctorForm({ isOpen, onClose, onSave, editDoctor }: Doct
   const [email, setEmail] = useState(editDoctor?.email || '');
   const [boja, setBoja] = useState(editDoctor?.boja || '#2BA5A5');
   const [biografija, setBiografija] = useState(editDoctor?.biografija || '');
+  const [pin, setPin] = useState(editDoctor?.pin || '');
   const [saving, setSaving] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -30,7 +31,7 @@ export default function DoctorForm({ isOpen, onClose, onSave, editDoctor }: Doct
     if (!ime || !prezime) return;
     setSaving(true);
     await onSave({
-      ime, prezime, specijalizacija, titula, telefon, email, boja, biografija,
+      ime, prezime, specijalizacija, titula, telefon, email, boja, biografija, pin: pin || undefined,
       user_id: editDoctor?.user_id || '',
       aktivan: true,
     } as Omit<Doctor, 'id'>);
@@ -52,6 +53,10 @@ export default function DoctorForm({ isOpen, onClose, onSave, editDoctor }: Doct
         <div className="grid grid-cols-2 gap-4">
           <Input label="Telefon" value={telefon} onChange={(e) => setTelefon(e.target.value)} placeholder="+38269..." />
           <Input label="Email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+        </div>
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+          <Input label="PIN za prijavu na Pregled" value={pin} onChange={(e) => setPin(e.target.value)} placeholder="4-cifreni PIN" />
+          <p className="text-xs text-amber-600 mt-1">Doktor koristi ovaj PIN za pristup stranici Pregled</p>
         </div>
 
         {/* Boja */}

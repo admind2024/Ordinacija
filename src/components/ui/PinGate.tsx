@@ -35,13 +35,15 @@ export default function PinGate({ children, title = 'Super Admin pristup' }: Pin
         </div>
         <h2 className="text-lg font-bold text-gray-900 mb-1">{title}</h2>
         <p className="text-sm text-gray-500 mb-6">Unesite super admin sifru za pristup</p>
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4" autoComplete="off">
           <input
             type="password"
+            name="pin-gate-code"
             value={pin}
             onChange={(e) => { setPin(e.target.value); setError(''); }}
             placeholder="Sifra"
             autoFocus
+            autoComplete="new-password"
             className="w-full px-4 py-3 border border-border rounded-lg text-center text-lg font-bold tracking-widest focus:outline-none focus:ring-2 focus:ring-primary-500"
           />
           {error && <p className="text-sm text-red-600">{error}</p>}

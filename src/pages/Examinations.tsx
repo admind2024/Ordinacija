@@ -3,7 +3,7 @@ import { format, parseISO } from 'date-fns';
 import { ClipboardList, User, Clock, Printer, FileText, Package, Plus, Trash2 } from 'lucide-react';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
-import PinGate from '../components/ui/PinGate';
+import DoctorLogin from '../components/ui/DoctorLogin';
 import ExaminationForm from '../components/examinations/ExaminationForm';
 import ExaminationHistory from '../components/examinations/ExaminationHistory';
 import { openPrintReport } from '../components/examinations/PrintReport';
@@ -201,7 +201,7 @@ export default function Examinations() {
   }
 
   return (
-    <PinGate title="Pregled pacijenata">
+    <DoctorLogin>
     <div className="print:hidden">
       <div className="mb-4">
         <h2 className="text-2xl font-bold text-gray-900">Pregled pacijenata</h2>
@@ -421,6 +421,6 @@ export default function Examinations() {
       </div>
 
     </div>
-    </PinGate>
+    </DoctorLogin>
   );
 }

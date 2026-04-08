@@ -3,9 +3,9 @@ import { Building2, Save, CheckCircle, Loader2 } from 'lucide-react';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
+import PinGate from '../components/ui/PinGate';
 import { useCalendar } from '../contexts/CalendarContext';
 import { supabase } from '../lib/supabase';
-
 
 export default function Establishment() {
   const { rooms } = useCalendar();
@@ -79,6 +79,7 @@ export default function Establishment() {
   }
 
   return (
+    <PinGate title="Ustanova">
     <div>
       <div className="flex items-center justify-between mb-6">
         <div>
@@ -146,5 +147,6 @@ export default function Establishment() {
         </Card>
       </div>
     </div>
+    </PinGate>
   );
 }

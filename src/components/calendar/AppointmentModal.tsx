@@ -34,22 +34,25 @@ export default function AppointmentModal({
   const [selectedPatientId, setSelectedPatientId] = useState(editAppointment?.patient_id || '');
   const [doctorId, setDoctorId] = useState(editAppointment?.doctor_id || doctors[0]?.id || '');
   const [roomId, setRoomId] = useState(editAppointment?.room_id || rooms[0]?.id || '');
-  const [datum, setDatum] = useState(
-    editAppointment
-      ? format(parseISO(editAppointment.pocetak), 'yyyy-MM-dd')
-      : defaultDate
-        ? format(defaultDate, 'yyyy-MM-dd')
-        : format(new Date(), 'yyyy-MM-dd')
-  );
-  const [vrijeme, setVrijeme] = useState(
-    editAppointment
-      ? format(parseISO(editAppointment.pocetak), 'HH:mm')
-      : defaultTime || '09:00'
-  );
+  const [datum, setDatum] = useState(() => {
+    if (editAppointment) {
+      const d = new Date(editAppointment.pocetak);
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    }
+    if (defaultDate) return format(defaultDate, 'yyyy-MM-dd');
+    return format(new Date(), 'yyyy-MM-dd');
+  });
+  const [vrijeme, setVrijeme] = useState(() => {
+    if (editAppointment) {
+      const d = new Date(editAppointment.pocetak);
+      return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+    }
+    return defaultTime || '09:00';
+  });
   const [trajanje, setTrajanje] = useState(() => {
     if (editAppointment) {
       const mins = Math.round(
-        (parseISO(editAppointment.kraj).getTime() - parseISO(editAppointment.pocetak).getTime()) / 60000
+        (new Date(editAppointment.kraj).getTime() - new Date(editAppointment.pocetak).getTime()) / 60000
       );
       return mins;
     }
@@ -58,7 +61,7 @@ export default function AppointmentModal({
   const [selectedServices, setSelectedServices] = useState<AppointmentService[]>(
     editAppointment?.services || []
   );
-  const [napomena, setNapomena] = useState(editAppointment?.napomena || '');
+  const [napomena, setNapomena] = useState(editAppointment?.napomena ?? '');
   const [showPatientList, setShowPatientList] = useState(false);
   const [posaljiSms, setPosaljiSms] = useState(true);
   const [smsStatus, setSmsStatus] = useState<string | null>(null);

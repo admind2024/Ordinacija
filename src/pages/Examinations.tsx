@@ -22,13 +22,14 @@ export default function Examinations() {
   const [printExam, setPrintExam] = useState<Examination | null>(null);
   const printRef = useRef<HTMLDivElement>(null);
 
-  // Danasnji termini sa statusom stigao, u_toku ili zavrsen
+  // Danasnji termini — svi osim otkazanih
   const today = new Date();
   const todayStr = format(today, 'yyyy-MM-dd');
   const todaysAppointments = appointments
     .filter((apt) => {
-      const aptDate = apt.pocetak.slice(0, 10);
-      return aptDate === todayStr && ['stigao', 'u_toku', 'zavrsen'].includes(apt.status);
+      const d = new Date(apt.pocetak);
+      const aptDateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      return aptDateStr === todayStr && apt.status !== 'otkazan' && apt.status !== 'nije_dosao';
     })
     .sort((a, b) => a.pocetak.localeCompare(b.pocetak));
 

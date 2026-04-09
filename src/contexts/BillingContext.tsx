@@ -15,31 +15,9 @@ interface BillingContextType {
 
 const BillingContext = createContext<BillingContextType | undefined>(undefined);
 
-// Demo platni podaci
-function generateDemoPayments(appointments: Appointment[]): Payment[] {
-  const payments: Payment[] = [];
-  const completed = appointments.filter((a) => a.status === 'zavrsen');
-
-  completed.forEach((apt) => {
-    const total = apt.services?.reduce((s, svc) => s + svc.ukupno, 0) || 0;
-    if (total > 0) {
-      payments.push({
-        id: `pay-${apt.id}`,
-        appointment_id: apt.id,
-        iznos: total,
-        metoda: Math.random() > 0.5 ? 'gotovina_fiskalni' : 'kartica_fiskalni',
-        datum: apt.pocetak,
-        fiskalni_status: 'success',
-      });
-    }
-  });
-
-  return payments;
-}
-
 export function BillingProvider({ children }: { children: ReactNode }) {
   const { appointments } = useCalendar();
-  const [payments, setPayments] = useState<Payment[]>(() => generateDemoPayments(appointments));
+  const [payments, setPayments] = useState<Payment[]>([]);
 
   const addPayment = useCallback((payment: Payment) => {
     setPayments((prev) => [...prev, payment]);

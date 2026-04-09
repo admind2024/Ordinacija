@@ -35,13 +35,6 @@ export default function Billing() {
       {tab === 'transactions' && <TransactionList />}
       {tab === 'catalog' && <ServiceCatalog />}
 
-      {/* PENDING nota */}
-      <div className="mt-6 bg-amber-50 border border-amber-200 rounded-lg p-4">
-        <p className="text-sm text-amber-800">
-          <strong>PENDING:</strong> Fiskalizacija (EFI integracija) — API endpoint i certifikat se dostavljaju naknadno od ovlastenog provajdera.
-          Sistem je arhitekturalno pripremljen.
-        </p>
-      </div>
     </div>
   );
 }

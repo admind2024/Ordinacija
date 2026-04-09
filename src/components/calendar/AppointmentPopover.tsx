@@ -18,7 +18,7 @@ const statusOptions: AppointmentStatus[] = [
   'zakazan', 'potvrdjen', 'stigao', 'u_toku', 'zavrsen', 'otkazan', 'nije_dosao',
 ];
 
-export default function AppointmentPopover({ appointment, onClose, onEdit, position }: AppointmentPopoverProps) {
+export default function AppointmentPopover({ appointment, onClose, onEdit }: AppointmentPopoverProps) {
   const { updateAppointmentStatus, deleteAppointment, doctors, rooms } = useCalendar();
   const { patients } = usePatients();
   const [showPayment, setShowPayment] = useState(false);
@@ -32,10 +32,9 @@ export default function AppointmentPopover({ appointment, onClose, onEdit, posit
   }
 
   return (
-    <div className="fixed inset-0 z-50" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20" onClick={onClose}>
       <div
-        className="absolute bg-surface rounded-xl shadow-2xl border border-border w-80 max-h-[80vh] overflow-y-auto"
-        style={{ top: position?.top ?? 100, left: position?.left ?? 100 }}
+        className="bg-surface rounded-xl shadow-2xl border border-border w-96 max-h-[80vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}

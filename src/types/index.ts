@@ -278,6 +278,49 @@ export interface Examination {
   doctor?: Doctor;
 }
 
+// Historijski log procedura (import iz Excel-a)
+export interface ProcedureLog {
+  id: string;
+  patient_id: string;
+  doctor_name: string;
+  datum: string;
+  procedura: string;
+  cijena: number;
+  nacin_placanja?: string;
+  napomena?: string;
+  izvor: string;
+  created_at: string;
+}
+
+// Dugovanje pacijenta
+export type DugovanjeStatus = 'aktivan' | 'placen' | 'otpisan';
+
+export interface Dugovanje {
+  id: string;
+  patient_id: string;
+  iznos: number;
+  preostalo: number;
+  opis?: string;
+  datum_nastanka: string;
+  status: DugovanjeStatus;
+  napomena?: string;
+  created_at: string;
+  // Relacije
+  patient?: Patient;
+  uplate?: UplataDuga[];
+}
+
+// Uplata na dug (rata)
+export interface UplataDuga {
+  id: string;
+  dugovanje_id: string;
+  iznos: number;
+  datum: string;
+  nacin_placanja?: string;
+  napomena?: string;
+  created_at: string;
+}
+
 // Boje statusa termina
 export const APPOINTMENT_STATUS_COLORS: Record<AppointmentStatus, string> = {
   zakazan: '#3B82F6',     // plava

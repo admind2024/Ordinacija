@@ -1,9 +1,11 @@
+import { useState } from 'react';
 import { format, parseISO, differenceInMinutes } from 'date-fns';
-import { X, Phone, Edit, Trash2 } from 'lucide-react';
+import { X, Phone, Edit, Trash2, Banknote } from 'lucide-react';
 import { useCalendar } from '../../contexts/CalendarContext';
 import { usePatients } from '../../contexts/PatientsContext';
 import { APPOINTMENT_STATUS_LABELS, APPOINTMENT_STATUS_COLORS, type AppointmentStatus, type Appointment } from '../../types';
 import Button from '../ui/Button';
+import PaymentForm from '../billing/PaymentForm';
 
 interface AppointmentPopoverProps {
   appointment: Appointment;
@@ -19,6 +21,7 @@ const statusOptions: AppointmentStatus[] = [
 export default function AppointmentPopover({ appointment, onClose, onEdit, position }: AppointmentPopoverProps) {
   const { updateAppointmentStatus, deleteAppointment, doctors, rooms } = useCalendar();
   const { patients } = usePatients();
+  const [showPayment, setShowPayment] = useState(false);
   const patient = patients.find((p) => p.id === appointment.patient_id);
   const doctor = doctors.find((d) => d.id === appointment.doctor_id);
   const room = rooms.find((r) => r.id === appointment.room_id);
@@ -151,6 +154,12 @@ export default function AppointmentPopover({ appointment, onClose, onEdit, posit
 
         {/* Akcije */}
         <div className="flex items-center gap-2 px-4 py-3 border-t border-border bg-gray-50 rounded-b-xl">
+          {appointment.services && appointment.services.length > 0 && (
+            <Button size="sm" onClick={() => setShowPayment(true)}>
+              <Banknote size={14} />
+              Naplata
+            </Button>
+          )}
           <Button variant="secondary" size="sm" onClick={() => onEdit(appointment)}>
             <Edit size={14} />
             Izmijeni
@@ -167,6 +176,15 @@ export default function AppointmentPopover({ appointment, onClose, onEdit, posit
             Obrisi
           </Button>
         </div>
+
+        {/* Payment modal */}
+        {showPayment && (
+          <PaymentForm
+            isOpen={showPayment}
+            onClose={() => setShowPayment(false)}
+            appointment={appointment}
+          />
+        )}
       </div>
     </div>
   );

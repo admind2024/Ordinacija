@@ -1,11 +1,10 @@
 import { useState } from 'react';
-import { BillingProvider } from '../contexts/BillingContext';
 import TransactionList from '../components/billing/TransactionList';
 import ServiceCatalog from '../components/billing/ServiceCatalog';
 
 type BillingTab = 'transactions' | 'catalog';
 
-function BillingContent() {
+export default function Billing() {
   const [tab, setTab] = useState<BillingTab>('transactions');
 
   return (
@@ -44,13 +43,5 @@ function BillingContent() {
         </p>
       </div>
     </div>
-  );
-}
-
-export default function Billing() {
-  return (
-    <BillingProvider>
-      <BillingContent />
-    </BillingProvider>
   );
 }

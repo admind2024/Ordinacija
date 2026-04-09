@@ -1,8 +1,10 @@
 import { useState } from 'react';
+import { AlertTriangle } from 'lucide-react';
 import Modal from '../ui/Modal';
 import Button from '../ui/Button';
 import Input from '../ui/Input';
 import { useBilling } from '../../contexts/BillingContext';
+import { supabase } from '../../lib/supabase';
 import type { Appointment, PaymentMethod } from '../../types';
 import { usePatients } from '../../contexts/PatientsContext';
 
@@ -31,10 +33,15 @@ export default function PaymentForm({ isOpen, onClose, appointment }: PaymentFor
   const [iznos, setIznos] = useState(balance.remaining > 0 ? balance.remaining : 0);
   const [metoda, setMetoda] = useState<PaymentMethod>('gotovina_fiskalni');
   const [napomena, setNapomena] = useState('');
+  const [saving, setSaving] = useState(false);
 
-  function handleSubmit(e: React.FormEvent) {
+  const remaining = balance.remaining - iznos;
+  const willCreateDebt = remaining > 0.01;
+
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (iznos <= 0) return;
+    setSaving(true);
 
     addPayment({
       id: `pay-${Date.now()}`,
@@ -46,11 +53,26 @@ export default function PaymentForm({ isOpen, onClose, appointment }: PaymentFor
       fiskalni_status: metoda.includes('fiskalni') ? 'pending' : undefined,
     });
 
+    // Ako je placeno manje od ukupnog — kreiraj dugovanje automatski
+    if (willCreateDebt && appointment.patient_id) {
+      const serviceNames = appointment.services?.map((s) => s.naziv).join(', ') || 'Usluge';
+      await supabase.from('dugovanja').insert({
+        patient_id: appointment.patient_id,
+        iznos: balance.remaining,
+        preostalo: remaining,
+        opis: `${serviceNames} — placeno ${iznos.toFixed(0)}e od ${balance.remaining.toFixed(0)}e`,
+        datum_nastanka: new Date().toISOString().slice(0, 10),
+        status: 'aktivan',
+        napomena: napomena || null,
+      });
+    }
+
+    setSaving(false);
     onClose();
   }
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Dodaj naplatu" size="md">
+    <Modal isOpen={isOpen} onClose={onClose} title="Naplata" size="md">
       <form onSubmit={handleSubmit} className="space-y-4">
         {/* Info o terminu */}
         <div className="bg-gray-50 rounded-lg p-3 text-sm space-y-1">
@@ -61,7 +83,7 @@ export default function PaymentForm({ isOpen, onClose, appointment }: PaymentFor
             <div className="space-y-0.5">
               {appointment.services.map((svc) => (
                 <div key={svc.id} className="flex justify-between text-gray-600">
-                  <span>{svc.naziv}</span>
+                  <span>{svc.naziv} {svc.kolicina > 1 ? `x${svc.kolicina}` : ''}</span>
                   <span>{svc.ukupno.toFixed(2)} EUR</span>
                 </div>
               ))}
@@ -71,19 +93,21 @@ export default function PaymentForm({ isOpen, onClose, appointment }: PaymentFor
             <span>Ukupno:</span>
             <span>{balance.total.toFixed(2)} EUR</span>
           </div>
-          <div className="flex justify-between text-green-600">
-            <span>Placeno:</span>
-            <span>{balance.paid.toFixed(2)} EUR</span>
-          </div>
+          {balance.paid > 0 && (
+            <div className="flex justify-between text-green-600">
+              <span>Vec placeno:</span>
+              <span>{balance.paid.toFixed(2)} EUR</span>
+            </div>
+          )}
           <div className="flex justify-between font-semibold text-gray-900">
-            <span>Preostalo:</span>
+            <span>Za naplatu:</span>
             <span>{balance.remaining.toFixed(2)} EUR</span>
           </div>
         </div>
 
         {/* Iznos */}
         <Input
-          label="Iznos naplate (EUR) *"
+          label="Koliko pacijent placa? (EUR) *"
           type="number"
           step="0.01"
           min="0.01"
@@ -105,6 +129,21 @@ export default function PaymentForm({ isOpen, onClose, appointment }: PaymentFor
             ))}
           </select>
         </div>
+
+        {/* Upozorenje za dug */}
+        {willCreateDebt && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-3 flex items-start gap-2">
+            <AlertTriangle size={18} className="text-red-500 shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm font-semibold text-red-700">
+                Preostaje dug: {remaining.toFixed(2)} EUR
+              </p>
+              <p className="text-xs text-red-600 mt-0.5">
+                Automatski ce se kreirati dugovanje za {patient?.ime} {patient?.prezime} u iznosu od {remaining.toFixed(2)} EUR u sistemu Dugovanja.
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* Fiskalni info */}
         {metoda.includes('fiskalni') && (
@@ -130,7 +169,9 @@ export default function PaymentForm({ isOpen, onClose, appointment }: PaymentFor
         {/* Dugmad */}
         <div className="flex justify-end gap-2 pt-2">
           <Button variant="secondary" type="button" onClick={onClose}>Otkazi</Button>
-          <Button type="submit">Naplati {iznos.toFixed(2)} EUR</Button>
+          <Button type="submit" disabled={saving}>
+            {saving ? 'Obrada...' : `Naplati ${iznos.toFixed(2)} EUR`}
+          </Button>
         </div>
       </form>
     </Modal>

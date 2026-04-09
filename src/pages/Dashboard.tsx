@@ -1,6 +1,6 @@
 import { useMemo, useState, useEffect } from 'react';
 import { format, parseISO } from 'date-fns';
-import { CalendarDays, Users, CreditCard, TrendingUp, Printer, Eye, FileText, Banknote, Loader2, CheckCircle, XCircle } from 'lucide-react';
+import { CalendarDays, Users, CreditCard, TrendingUp, Printer, Eye, FileText, Banknote, CheckCircle, XCircle, Receipt, AlertTriangle } from 'lucide-react';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import Modal from '../components/ui/Modal';
@@ -118,72 +118,109 @@ export default function Dashboard() {
   }
 
   // Fiskalizacija
-  const [fiscalizing, setFiscalizing] = useState<string | null>(null);
+  const [, setFiscalizing] = useState<string | null>(null);
   const [fiscalResult, setFiscalResult] = useState<{ id: string; result: FiscalResult } | null>(null);
   const [fiscalData, setFiscalData] = useState<Record<string, FiscalResult>>({});
 
-  async function handleFiscalize(exam: ExamWithDetails) {
-    // Zabrani duplu fiskalizaciju
+  // Payment modal state
+  const [payExam, setPayExam] = useState<ExamWithDetails | null>(null);
+  const [payAmount, setPayAmount] = useState(0);
+  const [payMethod, setPayMethod] = useState<'gotovina' | 'kartica'>('gotovina');
+  const [payFiskalizuj, setPayFiskalizuj] = useState(false);
+  const [payNapomena, setPayNapomena] = useState('');
+  const [paySaving, setPaySaving] = useState(false);
+
+  function openPayment(exam: ExamWithDetails) {
     if (fiscalData[exam.id]?.success) {
       setFiscalResult({ id: exam.id, result: { success: false, error: 'Ovaj pregled je vec fiskalizovan!' } });
       setTimeout(() => setFiscalResult(null), 4000);
       return;
     }
+    setPayExam(exam);
+    setPayAmount(exam.appointmentTotal || 0);
+    setPayMethod('gotovina');
+    setPayFiskalizuj(false);
+    setPayNapomena('');
+  }
 
-    if (!exam.appointmentServices || exam.appointmentServices.length === 0) {
-      setFiscalResult({ id: exam.id, result: { success: false, error: 'Nema usluga za fiskalizaciju' } });
-      return;
-    }
+  async function handlePaySubmit() {
+    if (!payExam || payAmount <= 0) return;
+    setPaySaving(true);
 
-    setFiscalizing(exam.id);
-    setFiscalResult(null);
+    const examTotal = payExam.appointmentTotal || 0;
+    const remaining = examTotal - payAmount;
+    const willCreateDebt = remaining > 0.01;
 
-    await loadTeconioCertificate();
-
-    const items: FiscalItem[] = exam.appointmentServices.map((svc: any) => ({
-      name: svc.naziv,
-      unit: 'kom',
-      quantity: Number(svc.kolicina) || 1,
-      unitPriceWithVAT: Number(svc.ukupno) / (Number(svc.kolicina) || 1),
-      vatRate: 21,
-    }));
-
-    const totalAmount = exam.appointmentTotal || 0;
-
-    const result = await fiscalizeInvoice(items, [
-      { method: 'BANKNOTE', amount: totalAmount },
-    ]);
-
-    setFiscalResult({ id: exam.id, result });
-    setFiscalizing(null);
-
-    if (result.success) {
-      setFiscalData((prev) => ({ ...prev, [exam.id]: result }));
-
-      // Automatski stampaj nakon uspjesne fiskalizacije
-      if (exam.patient && exam.doctor) {
-        setTimeout(() => {
-          openPrintReport({
-            examination: exam,
-            patient: exam.patient!,
-            doctor: exam.doctor!,
-            establishment,
-            services: exam.appointmentServices as any,
-            fiscal: {
-              fic: result.fic,
-              iic: result.iic,
-              invoiceNumber: result.invoiceNumber,
-              qrCodeUrl: result.qrCodeUrl,
-              totalWithoutVAT: result.totals?.totalWithoutVAT,
-              totalVAT: result.totals?.totalVAT,
-              totalPrice: result.totals?.totalPrice,
-            },
-          });
-        }, 500);
+    // Ako treba fiskalizacija
+    if (payFiskalizuj) {
+      if (!payExam.appointmentServices || payExam.appointmentServices.length === 0) {
+        setFiscalResult({ id: payExam.id, result: { success: false, error: 'Nema usluga za fiskalizaciju' } });
+        setPaySaving(false);
+        return;
       }
+
+      setFiscalizing(payExam.id);
+      await loadTeconioCertificate();
+
+      const items: FiscalItem[] = payExam.appointmentServices.map((svc: any) => ({
+        name: svc.naziv,
+        unit: 'kom',
+        quantity: Number(svc.kolicina) || 1,
+        unitPriceWithVAT: Number(svc.ukupno) / (Number(svc.kolicina) || 1),
+        vatRate: 21,
+      }));
+
+      const fiscalMethod = payMethod === 'kartica' ? 'CARD' : 'BANKNOTE';
+      const result = await fiscalizeInvoice(items, [
+        { method: fiscalMethod, amount: payAmount },
+      ]);
+
+      setFiscalResult({ id: payExam.id, result });
+      setFiscalizing(null);
+
+      if (result.success) {
+        setFiscalData((prev) => ({ ...prev, [payExam.id]: result }));
+        // Stampaj nakon uspjesne fiskalizacije
+        if (payExam.patient && payExam.doctor) {
+          setTimeout(() => {
+            openPrintReport({
+              examination: payExam,
+              patient: payExam.patient!,
+              doctor: payExam.doctor!,
+              establishment,
+              services: payExam.appointmentServices as any,
+              fiscal: {
+                fic: result.fic,
+                iic: result.iic,
+                invoiceNumber: result.invoiceNumber,
+                qrCodeUrl: result.qrCodeUrl,
+                totalWithoutVAT: result.totals?.totalWithoutVAT,
+                totalVAT: result.totals?.totalVAT,
+                totalPrice: result.totals?.totalPrice,
+              },
+            });
+          }, 500);
+        }
+      }
+      setTimeout(() => setFiscalResult(null), 8000);
     }
 
-    setTimeout(() => setFiscalResult(null), 8000);
+    // Kreiranje dugovanja ako je placeno manje
+    if (willCreateDebt && payExam.patient) {
+      const serviceNames = payExam.appointmentServices?.map((s: any) => s.naziv).join(', ') || 'Usluge';
+      await supabase.from('dugovanja').insert({
+        patient_id: payExam.patient.id,
+        iznos: examTotal,
+        preostalo: remaining,
+        opis: `${serviceNames} — placeno ${payAmount.toFixed(0)}e od ${examTotal.toFixed(0)}e`,
+        datum_nastanka: new Date().toISOString().slice(0, 10),
+        status: 'aktivan',
+        napomena: payNapomena || null,
+      });
+    }
+
+    setPaySaving(false);
+    setPayExam(null);
   }
 
   // Ukupno za naplatu danas iz zavrsenih pregleda
@@ -366,16 +403,11 @@ export default function Dashboard() {
                       </span>
                     ) : (
                       <button
-                        className={`p-2 rounded-lg transition-colors ${
-                          fiscalizing === exam.id
-                            ? 'text-purple-600 bg-purple-50'
-                            : 'text-gray-400 hover:text-purple-600 hover:bg-purple-50'
-                        }`}
-                        title="Naplati (fiskalizuj)"
-                        onClick={() => handleFiscalize(exam)}
-                        disabled={!!fiscalizing}
+                        className="p-2 rounded-lg transition-colors text-gray-400 hover:text-purple-600 hover:bg-purple-50"
+                        title="Naplata"
+                        onClick={() => openPayment(exam)}
                       >
-                        {fiscalizing === exam.id ? <Loader2 size={16} className="animate-spin" /> : <Banknote size={16} />}
+                        <Banknote size={16} />
                       </button>
                     )}
                   </div>
@@ -415,6 +447,130 @@ export default function Dashboard() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Payment modal */}
+      {payExam && (
+        <Modal isOpen onClose={() => setPayExam(null)} title="Naplata" size="md">
+          <div className="space-y-4">
+            {/* Info */}
+            <div className="bg-gray-50 rounded-lg p-3 text-sm space-y-1">
+              <p className="font-medium text-gray-900">
+                {payExam.patient ? `${payExam.patient.ime} ${payExam.patient.prezime}` : 'Pacijent'}
+              </p>
+              {payExam.appointmentServices?.map((svc: any) => (
+                <div key={svc.id} className="flex justify-between text-gray-600">
+                  <span>{svc.naziv} {svc.kolicina > 1 ? `x${svc.kolicina}` : ''}</span>
+                  <span>{Number(svc.ukupno).toFixed(2)} EUR</span>
+                </div>
+              ))}
+              <div className="border-t border-border pt-1 mt-2 flex justify-between font-semibold text-gray-900">
+                <span>Ukupno:</span>
+                <span>{(payExam.appointmentTotal || 0).toFixed(2)} EUR</span>
+              </div>
+            </div>
+
+            {/* Iznos */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Koliko pacijent placa? (EUR) *</label>
+              <input
+                type="number"
+                step="0.01"
+                min="0.01"
+                value={payAmount}
+                onChange={(e) => setPayAmount(Number(e.target.value))}
+                className="w-full px-3 py-2.5 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+              />
+            </div>
+
+            {/* Nacin placanja */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Nacin placanja *</label>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setPayMethod('gotovina')}
+                  className={`flex-1 px-4 py-3 rounded-xl text-sm font-medium border-2 transition-all
+                    ${payMethod === 'gotovina'
+                      ? 'border-green-500 bg-green-50 text-green-700'
+                      : 'border-gray-200 bg-white text-gray-500 hover:border-gray-300'
+                    }`}
+                >
+                  Gotovina (Kes)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPayMethod('kartica')}
+                  className={`flex-1 px-4 py-3 rounded-xl text-sm font-medium border-2 transition-all
+                    ${payMethod === 'kartica'
+                      ? 'border-blue-500 bg-blue-50 text-blue-700'
+                      : 'border-gray-200 bg-white text-gray-500 hover:border-gray-300'
+                    }`}
+                >
+                  Kartica
+                </button>
+              </div>
+            </div>
+
+            {/* Fiskalizacija toggle */}
+            <div
+              onClick={() => setPayFiskalizuj(!payFiskalizuj)}
+              className={`flex items-center justify-between px-4 py-3 rounded-xl border-2 cursor-pointer transition-all
+                ${payFiskalizuj
+                  ? 'border-amber-400 bg-amber-50'
+                  : 'border-gray-200 bg-white hover:border-gray-300'
+                }`}
+            >
+              <div className="flex items-center gap-3">
+                <Receipt size={20} className={payFiskalizuj ? 'text-amber-600' : 'text-gray-400'} />
+                <div>
+                  <p className={`text-sm font-medium ${payFiskalizuj ? 'text-amber-800' : 'text-gray-700'}`}>
+                    Fiskalizacija
+                  </p>
+                  <p className="text-xs text-gray-400">Izdaj fiskalni racun</p>
+                </div>
+              </div>
+              <div className={`w-11 h-6 rounded-full transition-colors relative ${payFiskalizuj ? 'bg-amber-500' : 'bg-gray-300'}`}>
+                <div className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${payFiskalizuj ? 'translate-x-5' : 'translate-x-0.5'}`} />
+              </div>
+            </div>
+
+            {/* Upozorenje za dug */}
+            {payAmount < (payExam.appointmentTotal || 0) - 0.01 && payAmount > 0 && (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-3 flex items-start gap-2">
+                <AlertTriangle size={18} className="text-red-500 shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-sm font-semibold text-red-700">
+                    Preostaje dug: {((payExam.appointmentTotal || 0) - payAmount).toFixed(2)} EUR
+                  </p>
+                  <p className="text-xs text-red-600 mt-0.5">
+                    Automatski ce se kreirati dugovanje za {payExam.patient?.ime} {payExam.patient?.prezime}.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Napomena */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Napomena</label>
+              <textarea
+                value={payNapomena}
+                onChange={(e) => setPayNapomena(e.target.value)}
+                rows={2}
+                className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none"
+                placeholder="Opciona biljeska..."
+              />
+            </div>
+
+            {/* Dugmad */}
+            <div className="flex justify-end gap-2 pt-2">
+              <Button variant="secondary" onClick={() => setPayExam(null)}>Otkazi</Button>
+              <Button onClick={handlePaySubmit} disabled={paySaving || payAmount <= 0}>
+                {paySaving ? 'Obrada...' : `Naplati ${payAmount.toFixed(2)} EUR`}
+              </Button>
+            </div>
+          </div>
+        </Modal>
       )}
 
       {/* Modal za pregled nalaza + naplata */}

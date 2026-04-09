@@ -17,7 +17,7 @@ function CalendarContent() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editingAppointment, setEditingAppointment] = useState<Appointment | null>(null);
   const [popoverAppointment, setPopoverAppointment] = useState<Appointment | null>(null);
-  const [popoverPosition, setPopoverPosition] = useState({ top: 100, left: 100 });
+  const [, setPopoverPosition] = useState({ top: 100, left: 100 });
   const [defaultDate, setDefaultDate] = useState<Date | undefined>();
   const [defaultTime, setDefaultTime] = useState<string | undefined>();
 
@@ -103,7 +103,6 @@ function CalendarContent() {
           appointment={popoverAppointment}
           onClose={() => setPopoverAppointment(null)}
           onEdit={handleEditFromPopover}
-          position={popoverPosition}
         />
       )}
     </div>

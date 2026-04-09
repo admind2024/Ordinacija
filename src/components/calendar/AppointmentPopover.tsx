@@ -11,7 +11,6 @@ interface AppointmentPopoverProps {
   appointment: Appointment;
   onClose: () => void;
   onEdit: (appointment: Appointment) => void;
-  position?: { top: number; left: number };
 }
 
 const statusOptions: AppointmentStatus[] = [

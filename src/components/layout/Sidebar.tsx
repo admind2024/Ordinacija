@@ -7,6 +7,7 @@ import {
   BarChart3,
   Stethoscope,
   Settings,
+  Bell,
   LayoutDashboard,
   Package,
   Building2,
@@ -27,6 +28,7 @@ const navigation = [
   { name: 'Izvjestaji', path: '/izvjestaji', icon: BarChart3, roles: ['admin', 'menadzer'] },
   { name: 'Ljekari', path: '/ljekari', icon: Stethoscope, roles: ['admin', 'menadzer'] },
   { name: 'Materijali', path: '/materijali', icon: Package, roles: ['admin', 'menadzer', 'ljekar'] },
+  { name: 'Notifikacije', path: '/notifikacije', icon: Bell, roles: ['admin', 'menadzer', 'marketing'] },
   { name: 'Ustanova', path: '/ustanova', icon: Building2, roles: ['admin'] },
   { name: 'Podesavanja', path: '/podesavanja', icon: Settings, roles: ['admin'] },
 ];

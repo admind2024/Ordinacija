@@ -2,8 +2,21 @@ import { createContext, useContext, useState, useCallback, useEffect, type React
 import { addDays, addWeeks, addMonths, isWithinInterval, parseISO } from 'date-fns';
 import type { Appointment, AppointmentStatus, Doctor, Room, Service, ServiceCategory, Material } from '../types';
 import { supabase } from '../lib/supabase';
+import { useAutoReminders } from '../hooks/useAutoReminders';
+
 export type CalendarView = 'day' | 'week' | 'month' | 'agenda';
 export type ColorSource = 'doctor' | 'status' | 'room';
+
+export interface SmsLogEntry {
+  id: string;
+  patient: string;
+  phone: string;
+  text: string;
+  status: 'sent' | 'failed';
+  error?: string;
+  datum: string;
+  tip: 'potvrda' | 'podsjetnik' | 'otkazivanje' | 'potvrdjivanje';
+}
 
 interface CalendarFilters {
   doctorIds: string[];
@@ -43,6 +56,9 @@ interface CalendarContextType {
   getFilteredAppointments: (start: Date, end: Date) => Appointment[];
   getAppointmentColor: (appointment: Appointment) => string;
 
+  smsLog: SmsLogEntry[];
+  addSmsLog: (entry: SmsLogEntry) => void;
+
   // Doctor CRUD
   createDoctor: (doctor: Omit<Doctor, 'id'>) => Promise<Doctor | null>;
   updateDoctor: (id: string, updates: Partial<Doctor>) => Promise<void>;
@@ -77,6 +93,7 @@ export function CalendarProvider({ children }: { children: ReactNode }) {
   const [services, setServices] = useState<Service[]>([]);
   const [materials, setMaterials] = useState<Material[]>([]);
   const [serviceCategories, setServiceCategories] = useState<ServiceCategory[]>([]);
+  const [smsLog, setSmsLog] = useState<SmsLogEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState<CalendarFilters>({
     doctorIds: [],
@@ -87,12 +104,13 @@ export function CalendarProvider({ children }: { children: ReactNode }) {
   const fetchData = useCallback(async () => {
     setLoading(true);
 
-    const [doctorsRes, roomsRes, servicesRes, categoriesRes, appointmentsRes, materialsRes] = await Promise.all([
+    const [doctorsRes, roomsRes, servicesRes, categoriesRes, appointmentsRes, smsLogRes, materialsRes] = await Promise.all([
       supabase.from('doctors').select('*').eq('aktivan', true),
       supabase.from('rooms').select('*').eq('aktivan', true),
       supabase.from('services').select('*').eq('aktivan', true),
       supabase.from('service_categories').select('*').order('redoslijed'),
       supabase.from('appointments').select('*, appointment_services(*), patient:patients(ime, prezime, telefon)').order('pocetak', { ascending: true }),
+      supabase.from('notifications').select('*').order('datum_slanja', { ascending: false }).limit(500),
       supabase.from('materials').select('*').eq('aktivan', true).order('naziv'),
     ]);
 
@@ -118,6 +136,21 @@ export function CalendarProvider({ children }: { children: ReactNode }) {
       })),
     }));
     setAppointments(aptsWithServices as Appointment[]);
+
+    // SMS log from notifications table
+    const smsEntries: SmsLogEntry[] = (smsLogRes.data || [])
+      .filter((n: any) => n.kanal === 'sms')
+      .map((n: any) => ({
+        id: n.id,
+        patient: n.patient_ime || n.patient_id || '',
+        phone: n.patient_telefon || '',
+        text: n.sadrzaj,
+        status: n.status === 'sent' || n.status === 'delivered' ? 'sent' as const : 'failed' as const,
+        error: n.error,
+        datum: n.datum_slanja,
+        tip: n.tip || 'potvrda',
+      }));
+    setSmsLog(smsEntries);
 
     // Set filters to include all doctors/rooms
     setFilters((prev) => ({
@@ -287,6 +320,20 @@ export function CalendarProvider({ children }: { children: ReactNode }) {
     );
   }, []);
 
+  const addSmsLog = useCallback(async (entry: SmsLogEntry) => {
+    // Save to notifications table
+    await supabase.from('notifications').insert({
+      patient_id: null,
+      kanal: 'sms',
+      status: entry.status === 'sent' ? 'sent' : 'failed',
+      sadrzaj: entry.text,
+      tip: entry.tip,
+      error: entry.error,
+    });
+
+    setSmsLog((prev) => [entry, ...prev]);
+  }, []);
+
   const getFilteredAppointments = useCallback(
     (start: Date, end: Date) => {
       return appointments.filter((apt) => {
@@ -406,6 +453,9 @@ export function CalendarProvider({ children }: { children: ReactNode }) {
     setServiceCategories((prev) => prev.filter((c) => c.id !== id));
   }, []);
 
+  // Automatski SMS podsjetnici
+  useAutoReminders(appointments);
+
   return (
     <CalendarContext.Provider
       value={{
@@ -416,6 +466,7 @@ export function CalendarProvider({ children }: { children: ReactNode }) {
         selectAllDoctors, deselectAllDoctors,
         createAppointment, updateAppointment, deleteAppointment, updateAppointmentStatus,
         getFilteredAppointments, getAppointmentColor,
+        smsLog, addSmsLog,
         createDoctor, updateDoctor, deleteDoctor,
         createMaterial, updateMaterial, deleteMaterial,
         createService, updateService, deleteService,

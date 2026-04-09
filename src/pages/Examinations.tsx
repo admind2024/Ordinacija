@@ -39,7 +39,7 @@ export default function Examinations() {
 }
 
 function ExaminationsContent({ loggedDoctor }: { loggedDoctor: Doctor }) {
-  const { appointments, doctors, materials } = useCalendar();
+  const { appointments, doctors, materials, updateAppointmentStatus } = useCalendar();
 
   const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
@@ -217,6 +217,11 @@ function ExaminationsContent({ loggedDoctor }: { loggedDoctor: Doctor }) {
         setCurrentExam(inserted as Examination);
         setPatientExams((prev) => [inserted as Examination, ...prev]);
       }
+    }
+
+    // Kad se pregled zavrsi, postavi appointment status na 'zavrsen'
+    if (finish && selectedAppointment) {
+      updateAppointmentStatus(selectedAppointment.id, 'zavrsen');
     }
 
     setSaving(false);

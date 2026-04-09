@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { AlertTriangle } from 'lucide-react';
+import { AlertTriangle, Receipt } from 'lucide-react';
 import Modal from '../ui/Modal';
 import Button from '../ui/Button';
 import Input from '../ui/Input';
@@ -14,16 +14,6 @@ interface PaymentFormProps {
   appointment: Appointment;
 }
 
-const methodLabels: Record<PaymentMethod, string> = {
-  gotovina: 'Gotovina (bez fiskalnog)',
-  gotovina_fiskalni: 'Gotovina (fiskalni)',
-  kartica_fiskalni: 'Kartica (fiskalni)',
-  administrativna_zabrana: 'Administrativna zabrana',
-  osiguranje: 'Osiguranje',
-  bon: 'Bon / Voucher',
-  online: 'Online placanje',
-};
-
 export default function PaymentForm({ isOpen, onClose, appointment }: PaymentFormProps) {
   const { patients } = usePatients();
   const { addPayment, getAppointmentBalance } = useBilling();
@@ -31,17 +21,27 @@ export default function PaymentForm({ isOpen, onClose, appointment }: PaymentFor
   const patient = patients.find((p) => p.id === appointment.patient_id);
 
   const [iznos, setIznos] = useState(balance.remaining > 0 ? balance.remaining : 0);
-  const [metoda, setMetoda] = useState<PaymentMethod>('gotovina_fiskalni');
+  const [nacinPlacanja, setNacinPlacanja] = useState<'gotovina' | 'kartica'>('gotovina');
+  const [fiskalizuj, setFiskalizuj] = useState(false);
   const [napomena, setNapomena] = useState('');
   const [saving, setSaving] = useState(false);
 
   const remaining = balance.remaining - iznos;
   const willCreateDebt = remaining > 0.01;
 
+  function getPaymentMethod(): PaymentMethod {
+    if (fiskalizuj) {
+      return nacinPlacanja === 'kartica' ? 'kartica_fiskalni' : 'gotovina_fiskalni';
+    }
+    return nacinPlacanja === 'kartica' ? 'kartica_fiskalni' : 'gotovina';
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (iznos <= 0) return;
     setSaving(true);
+
+    const metoda = getPaymentMethod();
 
     addPayment({
       id: `pay-${Date.now()}`,
@@ -50,7 +50,7 @@ export default function PaymentForm({ isOpen, onClose, appointment }: PaymentFor
       metoda,
       napomena: napomena || undefined,
       datum: new Date().toISOString(),
-      fiskalni_status: metoda.includes('fiskalni') ? 'pending' : undefined,
+      fiskalni_status: fiskalizuj ? 'pending' : undefined,
     });
 
     // Ako je placeno manje od ukupnog — kreiraj dugovanje automatski
@@ -116,18 +116,56 @@ export default function PaymentForm({ isOpen, onClose, appointment }: PaymentFor
           required
         />
 
-        {/* Metoda */}
+        {/* Nacin placanja */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Nacin placanja *</label>
-          <select
-            value={metoda}
-            onChange={(e) => setMetoda(e.target.value as PaymentMethod)}
-            className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
-          >
-            {(Object.entries(methodLabels) as [PaymentMethod, string][]).map(([key, label]) => (
-              <option key={key} value={key}>{label}</option>
-            ))}
-          </select>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Nacin placanja *</label>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => setNacinPlacanja('gotovina')}
+              className={`flex-1 px-4 py-3 rounded-xl text-sm font-medium border-2 transition-all
+                ${nacinPlacanja === 'gotovina'
+                  ? 'border-green-500 bg-green-50 text-green-700'
+                  : 'border-gray-200 bg-white text-gray-500 hover:border-gray-300'
+                }`}
+            >
+              Gotovina (Kes)
+            </button>
+            <button
+              type="button"
+              onClick={() => setNacinPlacanja('kartica')}
+              className={`flex-1 px-4 py-3 rounded-xl text-sm font-medium border-2 transition-all
+                ${nacinPlacanja === 'kartica'
+                  ? 'border-blue-500 bg-blue-50 text-blue-700'
+                  : 'border-gray-200 bg-white text-gray-500 hover:border-gray-300'
+                }`}
+            >
+              Kartica
+            </button>
+          </div>
+        </div>
+
+        {/* Fiskalizacija toggle */}
+        <div
+          onClick={() => setFiskalizuj(!fiskalizuj)}
+          className={`flex items-center justify-between px-4 py-3 rounded-xl border-2 cursor-pointer transition-all
+            ${fiskalizuj
+              ? 'border-amber-400 bg-amber-50'
+              : 'border-gray-200 bg-white hover:border-gray-300'
+            }`}
+        >
+          <div className="flex items-center gap-3">
+            <Receipt size={20} className={fiskalizuj ? 'text-amber-600' : 'text-gray-400'} />
+            <div>
+              <p className={`text-sm font-medium ${fiskalizuj ? 'text-amber-800' : 'text-gray-700'}`}>
+                Fiskalizacija
+              </p>
+              <p className="text-xs text-gray-400">Izdaj fiskalni racun</p>
+            </div>
+          </div>
+          <div className={`w-11 h-6 rounded-full transition-colors relative ${fiskalizuj ? 'bg-amber-500' : 'bg-gray-300'}`}>
+            <div className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${fiskalizuj ? 'translate-x-5' : 'translate-x-0.5'}`} />
+          </div>
         </div>
 
         {/* Upozorenje za dug */}
@@ -139,18 +177,9 @@ export default function PaymentForm({ isOpen, onClose, appointment }: PaymentFor
                 Preostaje dug: {remaining.toFixed(2)} EUR
               </p>
               <p className="text-xs text-red-600 mt-0.5">
-                Automatski ce se kreirati dugovanje za {patient?.ime} {patient?.prezime} u iznosu od {remaining.toFixed(2)} EUR u sistemu Dugovanja.
+                Automatski ce se kreirati dugovanje za {patient?.ime} {patient?.prezime} u iznosu od {remaining.toFixed(2)} EUR.
               </p>
             </div>
-          </div>
-        )}
-
-        {/* Fiskalni info */}
-        {metoda.includes('fiskalni') && (
-          <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
-            <p className="text-xs text-amber-700">
-              <strong>PENDING:</strong> Fiskalni racun ce biti automatski generisan nakon integracije sa EFI servisom.
-            </p>
           </div>
         )}
 

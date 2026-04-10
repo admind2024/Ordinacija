@@ -116,14 +116,82 @@ Deno.serve(async (req) => {
       const { id: omniRecipientId, channel, dlr, dlr_timestamp, message_status, sending_id } = evt;
       if (!omniRecipientId || !channel || !dlr) continue;
 
-      // 1. Nadji campaign_recipient
+      // 1a. Probaj prvo kao campaign_recipient
       const { data: recipient } = await supabase
         .from('campaign_recipients')
         .select('*, campaign:campaigns(*)')
         .eq('omni_recipient_id', omniRecipientId)
         .maybeSingle();
 
-      if (!recipient) continue;
+      // 1b. Ako nije campaign — probaj kao notifications (podsjetnik)
+      if (!recipient) {
+        const { data: notif } = await supabase
+          .from('notifications')
+          .select('*')
+          .eq('omni_recipient_id', omniRecipientId)
+          .maybeSingle();
+
+        if (!notif) continue;
+
+        // Update notification sa DLR-om
+        const notifUpdates: any = { updated_at: new Date().toISOString() };
+        if (channel === 'viber') {
+          notifUpdates.viber_dlr = dlr;
+        } else if (channel === 'sms') {
+          notifUpdates.sms_dlr = dlr;
+        }
+        await supabase.from('notifications').update(notifUpdates).eq('id', notif.id);
+
+        // Fallback Viber → SMS za podsjetnik
+        if (
+          channel === 'viber' &&
+          VIBER_FAIL_STATES.has(dlr) &&
+          !notif.fallbacked
+        ) {
+          // Ucitaj channel_mode iz reminder_settings
+          const { data: settings } = await supabase
+            .from('reminder_settings')
+            .select('channel_mode, sms_api_key, sms_sender_name, sms_email')
+            .limit(1)
+            .maybeSingle();
+
+          if (settings?.channel_mode === 'viber_then_sms' && settings.sms_api_key) {
+            const smsResult = await sendSmsRakunat(
+              notif.patient_telefon,
+              notif.sadrzaj,
+              settings.sms_api_key,
+              settings.sms_sender_name || '',
+              settings.sms_email || '',
+            );
+
+            await supabase
+              .from('notifications')
+              .update({
+                channel_used: 'sms',
+                kanal: 'sms',
+                fallbacked: true,
+                status: smsResult.success ? 'sent' : 'failed',
+                sms_dlr: smsResult.success ? 'submitted' : 'not_delivered',
+                error: smsResult.error || null,
+                updated_at: new Date().toISOString(),
+              })
+              .eq('id', notif.id);
+          } else {
+            // Nema fallback opcije — samo oznaci kao failed
+            await supabase
+              .from('notifications')
+              .update({
+                status: 'failed',
+                error: `Viber DLR: ${dlr}`,
+                updated_at: new Date().toISOString(),
+              })
+              .eq('id', notif.id);
+          }
+        }
+
+        processed++;
+        continue;
+      }
 
       // 2. Update DLR fields
       const updates: any = { updated_at: new Date().toISOString() };

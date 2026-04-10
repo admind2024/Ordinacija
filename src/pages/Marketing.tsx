@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import {
-  Megaphone, Users, Tags, Plus, Send, Trash2, Edit, Upload, Filter as FilterIcon,
-  Calendar, CheckCircle, XCircle, Loader2, Clock, ChevronRight,
+  Megaphone, Users, Tags, Plus, Send, Trash2, Edit, Upload,
+  CheckCircle, XCircle, Loader2, ChevronRight,
 } from 'lucide-react';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
@@ -1022,6 +1022,20 @@ function KampanjeTab() {
 
   useEffect(() => { load(); }, []);
 
+  async function handleCancel(id: string, e: React.MouseEvent) {
+    e.stopPropagation();
+    if (!confirm('Otkazati ovu kampanju? Ako je vec zakazana kod Omni-ja, mozda je vec obradjena.')) return;
+    await supabase.from('campaigns').update({ status: 'cancelled' }).eq('id', id);
+    load();
+  }
+
+  async function handleDelete(id: string, e: React.MouseEvent) {
+    e.stopPropagation();
+    if (!confirm('Obrisati kampanju zajedno sa svim primaocima? Ovo se ne moze ponistiti.')) return;
+    await supabase.from('campaigns').delete().eq('id', id);
+    load();
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-3">
@@ -1047,6 +1061,7 @@ function KampanjeTab() {
               <span className="w-20 text-center">Primaoci</span>
               <span className="w-24 text-center">Viber/SMS</span>
               <span className="w-32 text-right">Kreirano</span>
+              <span className="w-24 text-right">Akcije</span>
             </div>
             {campaigns.map((c) => (
               <div
@@ -1069,7 +1084,25 @@ function KampanjeTab() {
                 <div className="w-32 text-right text-xs text-gray-400">
                   {new Date(c.created_at).toLocaleString('sr-Latn-ME', { dateStyle: 'short', timeStyle: 'short' })}
                 </div>
-                <ChevronRight size={14} className="text-gray-400" />
+                <div className="w-24 flex justify-end gap-1">
+                  {(c.status === 'scheduled' || c.status === 'sending') && (
+                    <button
+                      onClick={(e) => handleCancel(c.id, e)}
+                      className="p-1 text-gray-400 hover:text-amber-600"
+                      title="Otkazi"
+                    >
+                      <XCircle size={14} />
+                    </button>
+                  )}
+                  <button
+                    onClick={(e) => handleDelete(c.id, e)}
+                    className="p-1 text-gray-400 hover:text-red-600"
+                    title="Obrisi"
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                  <ChevronRight size={14} className="text-gray-400 self-center" />
+                </div>
               </div>
             ))}
           </div>

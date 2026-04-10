@@ -3,7 +3,7 @@ import { getSmsConfig } from './smsService';
 
 const LS_KEY = 'ordinacija_reminder_settings';
 
-export type ReminderTiming = 'dan_termina' | 'dan_prije';
+export type ReminderTiming = 'dan_termina' | 'dan_prije' | 'sat_prije';
 
 export interface ReminderSettings {
   enabled: boolean;

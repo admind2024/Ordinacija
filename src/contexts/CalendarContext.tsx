@@ -3,6 +3,8 @@ import { addDays, addWeeks, addMonths, isWithinInterval, parseISO } from 'date-f
 import type { Appointment, AppointmentStatus, Doctor, Room, Service, ServiceCategory, Material } from '../types';
 import { supabase } from '../lib/supabase';
 import { useAutoReminders } from '../hooks/useAutoReminders';
+import { isSmsConfigured, sendSms } from '../lib/smsService';
+import { smsPotvrda } from '../lib/smsTemplates';
 
 export type CalendarView = 'day' | 'week' | 'month' | 'agenda';
 export type ColorSource = 'doctor' | 'status' | 'room';
@@ -252,6 +254,47 @@ export function CalendarProvider({ children }: { children: ReactNode }) {
 
     const newApt = { ...data, services: aptServices || [] } as Appointment;
     setAppointments((prev) => [...prev, newApt]);
+
+    // Posalji SMS potvrdu pacijentu (fire-and-forget)
+    if (isSmsConfigured()) {
+      (async () => {
+        try {
+          let patientInfo: any = patient;
+          if (!patientInfo?.telefon) {
+            const { data: pd } = await supabase
+              .from('patients')
+              .select('ime, prezime, telefon')
+              .eq('id', aptData.patient_id)
+              .maybeSingle();
+            patientInfo = pd;
+          }
+          if (!patientInfo?.telefon) return;
+
+          const imeIPrezime = `${patientInfo.ime ?? ''} ${patientInfo.prezime ?? ''}`.trim();
+          const doctorName = doctor
+            ? `${doctor.titula ?? ''} ${doctor.ime ?? ''} ${doctor.prezime ?? ''}`.trim()
+            : undefined;
+          const text = smsPotvrda({ imeIPrezime, datum: aptData.pocetak, doctor: doctorName });
+          const result = await sendSms(patientInfo.telefon, text);
+
+          await supabase.from('notifications').insert({
+            patient_id: aptData.patient_id,
+            appointment_id: data.id,
+            kanal: 'sms',
+            status: result.success ? 'sent' : 'failed',
+            sadrzaj: text,
+            tip: 'potvrda',
+            error: result.error || null,
+            patient_ime: imeIPrezime,
+            patient_telefon: patientInfo.telefon,
+            datum_slanja: new Date().toISOString(),
+          });
+        } catch (e) {
+          console.error('SMS potvrda greska:', e);
+        }
+      })();
+    }
+
     return newApt;
   }, []);
 

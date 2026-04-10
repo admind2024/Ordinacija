@@ -173,13 +173,19 @@ export default function Settings() {
                   className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500">
                   <option value="dan_termina">Na dan termina</option>
                   <option value="dan_prije">Dan prije termina</option>
+                  <option value="sat_prije">Sat prije termina</option>
                 </select>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Vrijeme slanja</label>
-                <input type="time" value={reminderVrijeme} onChange={(e) => setReminderVrijeme(e.target.value)}
-                  className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" />
-              </div>
+              {reminderTiming !== 'sat_prije' && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Vrijeme slanja</label>
+                  <input type="time" value={reminderVrijeme} onChange={(e) => setReminderVrijeme(e.target.value)}
+                    className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" />
+                </div>
+              )}
+              {reminderTiming === 'sat_prije' && (
+                <p className="text-xs text-gray-500">SMS se salje oko sat prije svakog pojedinacnog termina.</p>
+              )}
               <div className="flex items-center gap-3">
                 <Button onClick={handleSaveReminders}>Sacuvaj</Button>
                 {reminderSaved && <span className="flex items-center gap-1 text-green-600 text-sm"><CheckCircle size={16} /> Sacuvano</span>}

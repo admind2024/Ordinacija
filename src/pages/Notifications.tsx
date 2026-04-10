@@ -354,24 +354,32 @@ export default function Notifications() {
                 >
                   <option value="dan_termina">Na dan termina</option>
                   <option value="dan_prije">Dan prije termina</option>
+                  <option value="sat_prije">Sat prije termina</option>
                 </select>
               </div>
 
-              {/* Vrijeme */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Vrijeme slanja</label>
-                <input
-                  type="time"
-                  value={reminderVrijeme}
-                  onChange={(e) => setReminderVrijeme(e.target.value)}
-                  className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
-                />
-                <p className="text-xs text-gray-400 mt-1">
-                  {reminderTiming === 'dan_termina'
-                    ? 'SMS ce biti poslan u ovo vrijeme na dan termina'
-                    : 'SMS ce biti poslan u ovo vrijeme dan prije termina'}
+              {/* Vrijeme — samo za dan_termina / dan_prije */}
+              {reminderTiming !== 'sat_prije' && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Vrijeme slanja</label>
+                  <input
+                    type="time"
+                    value={reminderVrijeme}
+                    onChange={(e) => setReminderVrijeme(e.target.value)}
+                    className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  />
+                  <p className="text-xs text-gray-400 mt-1">
+                    {reminderTiming === 'dan_termina'
+                      ? 'SMS ce biti poslan u ovo vrijeme na dan termina'
+                      : 'SMS ce biti poslan u ovo vrijeme dan prije termina'}
+                  </p>
+                </div>
+              )}
+              {reminderTiming === 'sat_prije' && (
+                <p className="text-xs text-gray-500">
+                  SMS ce biti automatski poslan oko sat prije svakog pojedinacnog termina.
                 </p>
-              </div>
+              )}
 
               <div className="flex items-center gap-3">
                 <Button onClick={handleSaveReminders}>
@@ -399,7 +407,9 @@ export default function Notifications() {
               <div className={`w-2 h-2 rounded-full ${reminderEnabled && configured ? 'bg-green-500 animate-pulse' : 'bg-gray-300'}`} />
               <p className="text-sm text-gray-700">
                 {reminderEnabled && configured
-                  ? `Podsjetnici aktivni — slanje u ${reminderVrijeme}h, ${reminderTiming === 'dan_termina' ? 'na dan termina' : 'dan prije termina'}`
+                  ? reminderTiming === 'sat_prije'
+                    ? 'Podsjetnici aktivni — sat prije svakog termina'
+                    : `Podsjetnici aktivni — slanje u ${reminderVrijeme}h, ${reminderTiming === 'dan_termina' ? 'na dan termina' : 'dan prije termina'}`
                   : 'Podsjetnici neaktivni'}
               </p>
             </div>

@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { format, startOfDay, addDays } from 'date-fns';
+import { format, startOfDay, addDays, parseISO } from 'date-fns';
 import { getReminderSettings } from '../lib/reminderSettings';
 import { isSmsConfigured, sendSms } from '../lib/smsService';
 import { smsPodsjetnik } from '../lib/smsTemplates';
@@ -11,6 +11,10 @@ const CHECK_INTERVAL = 60_000; // 1 minut
 /**
  * Automatski salje SMS podsjetnike za zakazane termine.
  * Pokrece se u CalendarProvider, provjerava svaki minut.
+ * Podrzava tri moda:
+ *  - dan_termina: na dan termina u podeseno vrijeme
+ *  - dan_prije: dan prije termina u podeseno vrijeme
+ *  - sat_prije: oko sat prije svakog pojedinacnog termina
  */
 export function useAutoReminders(appointments: Appointment[]) {
   const sendingRef = useRef(false);
@@ -23,41 +27,60 @@ export function useAutoReminders(appointments: Appointment[]) {
       if (!settings.enabled || !isSmsConfigured()) return;
 
       const now = new Date();
-      const [targetHour, targetMinute] = settings.vrijeme.split(':').map(Number);
+      let toSend: Appointment[] = [];
 
-      // Provjeri da li je proslo podeseno vrijeme za slanje
-      if (now.getHours() < targetHour || (now.getHours() === targetHour && now.getMinutes() < targetMinute)) {
-        return; // Nije jos vrijeme
+      if (settings.timing === 'sat_prije') {
+        // Svaki termin koji pocinje u sledecih 65 minuta (prozor za polling)
+        const windowEnd = new Date(now.getTime() + 65 * 60 * 1000);
+        const candidates = appointments.filter((apt) => {
+          const start = parseISO(apt.pocetak);
+          return (
+            start > now &&
+            start <= windowEnd &&
+            (apt.status === 'zakazan' || apt.status === 'potvrdjen')
+          );
+        });
+        if (candidates.length === 0) return;
+
+        // Provjera da li je podsjetnik za ove termine vec poslat (ikad)
+        const ids = candidates.map((c) => c.id);
+        const { data: sent } = await supabase
+          .from('notifications')
+          .select('appointment_id')
+          .eq('tip', 'podsjetnik')
+          .in('appointment_id', ids);
+        const alreadySent = new Set((sent || []).map((r: any) => r.appointment_id));
+        toSend = candidates.filter((c) => !alreadySent.has(c.id));
+      } else {
+        // dan_termina / dan_prije: koristi podeseno vrijeme slanja
+        const [targetHour, targetMinute] = settings.vrijeme.split(':').map(Number);
+        if (now.getHours() < targetHour || (now.getHours() === targetHour && now.getMinutes() < targetMinute)) {
+          return; // Nije jos vrijeme
+        }
+
+        const targetDate = settings.timing === 'dan_prije'
+          ? addDays(startOfDay(now), 1)
+          : startOfDay(now);
+        const targetDateStr = format(targetDate, 'yyyy-MM-dd');
+
+        const targetAppointments = appointments.filter((apt) => {
+          const aptDate = apt.pocetak.slice(0, 10);
+          return aptDate === targetDateStr && (apt.status === 'zakazan' || apt.status === 'potvrdjen');
+        });
+        if (targetAppointments.length === 0) return;
+
+        const todayStr = format(now, 'yyyy-MM-dd');
+        const { data: sentReminders } = await supabase
+          .from('notifications')
+          .select('appointment_id')
+          .eq('tip', 'podsjetnik')
+          .gte('datum_slanja', `${todayStr}T00:00:00`)
+          .lte('datum_slanja', `${todayStr}T23:59:59`);
+
+        const alreadySent = new Set((sentReminders || []).map((r: any) => r.appointment_id));
+        toSend = targetAppointments.filter((apt) => !alreadySent.has(apt.id));
       }
 
-      // Odredi za koji dan treba slati podsjetnike
-      const targetDate = settings.timing === 'dan_prije'
-        ? addDays(startOfDay(now), 1) // sutra
-        : startOfDay(now); // danas
-
-      const targetDateStr = format(targetDate, 'yyyy-MM-dd');
-
-      // Filtriraj termine za ciljni datum koji su zakazani ili potvrdjeni
-      const targetAppointments = appointments.filter((apt) => {
-        const aptDate = apt.pocetak.slice(0, 10); // yyyy-MM-dd
-        return aptDate === targetDateStr && (apt.status === 'zakazan' || apt.status === 'potvrdjen');
-      });
-
-      if (targetAppointments.length === 0) return;
-
-      // Dohvati vec poslane podsjetnike za danas
-      const todayStr = format(now, 'yyyy-MM-dd');
-      const { data: sentReminders } = await supabase
-        .from('notifications')
-        .select('appointment_id')
-        .eq('tip', 'podsjetnik')
-        .gte('datum_slanja', `${todayStr}T00:00:00`)
-        .lte('datum_slanja', `${todayStr}T23:59:59`);
-
-      const alreadySent = new Set((sentReminders || []).map((r: any) => r.appointment_id));
-
-      // Filtriraj termine kojima nije poslan podsjetnik
-      const toSend = targetAppointments.filter((apt) => !alreadySent.has(apt.id));
       if (toSend.length === 0) return;
 
       sendingRef.current = true;
@@ -87,6 +110,9 @@ export function useAutoReminders(appointments: Appointment[]) {
             sadrzaj: text,
             tip: 'podsjetnik',
             error: result.error || null,
+            patient_ime: imeIPrezime,
+            patient_telefon: patientData.telefon,
+            datum_slanja: new Date().toISOString(),
           });
         } else {
           const imeIPrezime = `${patient.ime} ${patient.prezime}`;
@@ -101,6 +127,9 @@ export function useAutoReminders(appointments: Appointment[]) {
             sadrzaj: text,
             tip: 'podsjetnik',
             error: result.error || null,
+            patient_ime: imeIPrezime,
+            patient_telefon: patient.telefon,
+            datum_slanja: new Date().toISOString(),
           });
         }
       }

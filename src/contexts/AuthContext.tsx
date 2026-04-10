@@ -1,5 +1,7 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import { supabase } from '../lib/supabase';
+import { loadSmsConfigFromDb } from '../lib/smsService';
+import { loadReminderSettingsFromDb, setReminderSettings } from '../lib/reminderSettings';
 import type { User, UserRole } from '../types';
 
 interface AuthContextType {
@@ -24,11 +26,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const saved = localStorage.getItem(LS_USER_KEY);
     if (saved) {
       try {
-        setUser(JSON.parse(saved));
+        const parsed = JSON.parse(saved);
+        setUser(parsed);
+        // Ako je korisnik vec ulogovan, odmah povuci SMS config
+        // i reminder settings iz Supabase — ne cekamo otvaranje stranica.
+        void bootstrapUserConfig();
       } catch {}
     }
     setLoading(false);
   }, []);
+
+  async function bootstrapUserConfig() {
+    try {
+      await loadSmsConfigFromDb();
+      const rs = await loadReminderSettingsFromDb();
+      if (rs) setReminderSettings(rs);
+    } catch (e) {
+      console.error('Greska pri ucitavanju SMS/reminder konfiguracije:', e);
+    }
+  }
 
   async function signIn(email: string, password: string) {
     if (!ALLOWED_PASSWORDS.includes(password)) {
@@ -53,6 +69,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     setUser(userData);
     localStorage.setItem(LS_USER_KEY, JSON.stringify(userData));
+    // Odmah nakon login-a povuci SMS config iz baze (kljucno za nove uredjaje)
+    void bootstrapUserConfig();
     return { error: null };
   }
 

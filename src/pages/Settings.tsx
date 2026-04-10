@@ -4,7 +4,7 @@ import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
 import PinGate from '../components/ui/PinGate';
-import { getSmsConfig, setSmsConfig, isSmsConfigured, sendSms, testSmsConnection, loadSmsConfigFromDb } from '../lib/smsService';
+import { getSmsConfig, setSmsConfig, isSmsConfigured, sendSms, testSmsConnection, loadSmsConfigFromDb, syncSmsConfigToDb } from '../lib/smsService';
 import { getReminderSettings, setReminderSettings, syncReminderSettingsToDb, loadReminderSettingsFromDb, type ReminderTiming } from '../lib/reminderSettings';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -57,8 +57,13 @@ export default function Settings() {
     })();
   }, []);
 
-  function handleSaveConfig() {
+  async function handleSaveConfig() {
     setSmsConfig(apiKey, senderName, email);
+    const result = await syncSmsConfigToDb(apiKey, senderName, email);
+    if (!result.success) {
+      alert('Greska pri snimanju u bazu: ' + (result.error || 'nepoznato'));
+      return;
+    }
     setConfigSaved(true);
     setTimeout(() => setConfigSaved(false), 3000);
   }

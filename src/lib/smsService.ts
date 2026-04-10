@@ -26,6 +26,57 @@ export function setSmsConfig(apiKey: string, senderName: string, email: string) 
   localStorage.setItem(LS_EMAIL, email);
 }
 
+/**
+ * Sinhronizuj SMS kredencijale u Supabase reminder_settings tabelu.
+ * Kreira red ako ne postoji, u suprotnom azurira samo sms_* polja.
+ * Vraca true ako je upis uspio.
+ */
+export async function syncSmsConfigToDb(
+  apiKey: string,
+  senderName: string,
+  email: string,
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const { data: existing, error: selectError } = await supabase
+      .from('reminder_settings')
+      .select('id')
+      .limit(1)
+      .maybeSingle();
+
+    if (selectError) {
+      return { success: false, error: selectError.message };
+    }
+
+    const smsPayload = {
+      sms_api_key: apiKey,
+      sms_sender_name: senderName,
+      sms_email: email,
+      updated_at: new Date().toISOString(),
+    };
+
+    if (existing?.id) {
+      const { error } = await supabase
+        .from('reminder_settings')
+        .update(smsPayload)
+        .eq('id', existing.id);
+      if (error) return { success: false, error: error.message };
+    } else {
+      // Red ne postoji — kreiraj ga sa default reminder poljima
+      const { error } = await supabase.from('reminder_settings').insert({
+        ...smsPayload,
+        enabled: false,
+        timing: 'dan_termina',
+        vrijeme: '08:00',
+      });
+      if (error) return { success: false, error: error.message };
+    }
+
+    return { success: true };
+  } catch (e: any) {
+    return { success: false, error: e?.message || 'Nepoznata greska' };
+  }
+}
+
 export function isSmsConfigured(): boolean {
   const { apiKey, senderName } = getSmsConfig();
   return !!apiKey && !!senderName;

@@ -3,7 +3,7 @@ import { Bell, Send, Settings, CheckCircle, XCircle, Loader2, Clock, BarChart3, 
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
-import { getSmsConfig, setSmsConfig, isSmsConfigured, sendSms, testSmsConnection, loadSmsConfigFromDb } from '../lib/smsService';
+import { getSmsConfig, setSmsConfig, isSmsConfigured, sendSms, testSmsConnection, loadSmsConfigFromDb, syncSmsConfigToDb } from '../lib/smsService';
 import {
   getReminderSettings, setReminderSettings, syncReminderSettingsToDb,
   loadReminderSettingsFromDb, type ReminderTiming,
@@ -99,8 +99,13 @@ export default function Notifications() {
     setTimeout(() => setReminderSaved(false), 3000);
   }
 
-  function handleSaveConfig() {
+  async function handleSaveConfig() {
     setSmsConfig(apiKey, senderName, email);
+    const result = await syncSmsConfigToDb(apiKey, senderName, email);
+    if (!result.success) {
+      alert('Greska pri snimanju u bazu: ' + (result.error || 'nepoznato'));
+      return;
+    }
     setConfigSaved(true);
     setTimeout(() => setConfigSaved(false), 3000);
   }

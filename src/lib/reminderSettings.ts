@@ -38,12 +38,12 @@ export function setReminderSettings(settings: ReminderSettings): void {
 export async function syncReminderSettingsToDb(settings: ReminderSettings): Promise<void> {
   const smsConfig = getSmsConfig();
 
-  // Dohvati postojeci red
+  // Dohvati postojeci red (maybeSingle da ne puca ako red ne postoji)
   const { data: existing } = await supabase
     .from('reminder_settings')
     .select('id')
     .limit(1)
-    .single();
+    .maybeSingle();
 
   const payload = {
     enabled: settings.enabled,

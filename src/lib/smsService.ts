@@ -113,6 +113,19 @@ export function formatPhoneNumber(phone: string): string {
   return cleaned;
 }
 
+/**
+ * Zamijeni bosanske/srpske dijakriticke karaktere ASCII ekvivalentima
+ * kako bi SMS ostao u GSM-7 karakter setu (160 char / poruka) umjesto
+ * UCS-2 (70 char / poruka).
+ */
+export function stripDiacritics(text: string): string {
+  const map: Record<string, string> = {
+    'č': 'c', 'ć': 'c', 'đ': 'dz', 'š': 's', 'ž': 'z',
+    'Č': 'C', 'Ć': 'C', 'Đ': 'Dz', 'Š': 'S', 'Ž': 'Z',
+  };
+  return text.replace(/[čćđšžČĆĐŠŽ]/g, (ch) => map[ch] || ch);
+}
+
 export async function sendSms(phone: string, text: string): Promise<SmsResult> {
   const { apiKey, senderName, email } = getSmsConfig();
 
@@ -125,6 +138,7 @@ export async function sendSms(phone: string, text: string): Promise<SmsResult> {
   }
 
   const formattedPhone = formatPhoneNumber(phone);
+  const cleanText = stripDiacritics(text);
 
   try {
     const response = await fetch(SMS_PROXY, {
@@ -132,7 +146,7 @@ export async function sendSms(phone: string, text: string): Promise<SmsResult> {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         phone: formattedPhone,
-        text,
+        text: cleanText,
         apiKey,
         senderName,
         userEmail: email,

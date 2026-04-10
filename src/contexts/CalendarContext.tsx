@@ -2,7 +2,6 @@ import { createContext, useContext, useState, useCallback, useEffect, type React
 import { addDays, addWeeks, addMonths, isWithinInterval, parseISO } from 'date-fns';
 import type { Appointment, AppointmentStatus, Doctor, Room, Service, ServiceCategory, Material } from '../types';
 import { supabase } from '../lib/supabase';
-import { useAutoReminders } from '../hooks/useAutoReminders';
 import { isSmsConfigured, sendSms, stripDiacritics } from '../lib/smsService';
 import { smsPotvrda } from '../lib/smsTemplates';
 
@@ -519,8 +518,8 @@ export function CalendarProvider({ children }: { children: ReactNode }) {
     setServiceCategories((prev) => prev.filter((c) => c.id !== id));
   }, []);
 
-  // Automatski SMS podsjetnici
-  useAutoReminders(appointments);
+  // Automatski SMS podsjetnici rade preko Supabase Edge Function
+  // (send-reminders) + pg_cron, ne iz browsera.
 
   return (
     <CalendarContext.Provider

@@ -3,7 +3,7 @@ import { Bell, Send, Settings, CheckCircle, XCircle, Loader2, Clock, BarChart3, 
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
-import { getSmsConfig, setSmsConfig, isSmsConfigured, sendSms, testSmsConnection } from '../lib/smsService';
+import { getSmsConfig, setSmsConfig, isSmsConfigured, sendSms, testSmsConnection, loadSmsConfigFromDb } from '../lib/smsService';
 import {
   getReminderSettings, setReminderSettings, syncReminderSettingsToDb,
   loadReminderSettingsFromDb, type ReminderTiming,
@@ -60,26 +60,35 @@ export default function Notifications() {
   const [izvjestajTip, setIzvjestajTip] = useState<'sve' | 'potvrda' | 'podsjetnik' | 'otkazivanje' | 'potvrdjivanje'>('sve');
 
   useEffect(() => {
-    const config = getSmsConfig();
-    setApiKey(config.apiKey);
-    setSenderName(config.senderName);
-    setEmail(config.email);
+    // Prvo ucitaj iz localStorage za instant prikaz
+    const localConfig = getSmsConfig();
+    setApiKey(localConfig.apiKey);
+    setSenderName(localConfig.senderName);
+    setEmail(localConfig.email);
 
-    // Load from localStorage first, then try DB
     const rs = getReminderSettings();
     setReminderEnabled(rs.enabled);
     setReminderTiming(rs.timing);
     setReminderVrijeme(rs.vrijeme);
 
-    loadReminderSettingsFromDb().then((dbSettings) => {
+    // Zatim sinhronizuj iz Supabase (za novi uredjaj / drugi PC)
+    (async () => {
+      const loaded = await loadSmsConfigFromDb();
+      if (loaded) {
+        const fresh = getSmsConfig();
+        setApiKey(fresh.apiKey);
+        setSenderName(fresh.senderName);
+        setEmail(fresh.email);
+      }
+
+      const dbSettings = await loadReminderSettingsFromDb();
       if (dbSettings) {
         setReminderEnabled(dbSettings.enabled);
         setReminderTiming(dbSettings.timing);
         setReminderVrijeme(dbSettings.vrijeme);
-        // Sync to localStorage
         setReminderSettings(dbSettings);
       }
-    });
+    })();
   }, []);
 
   async function handleSaveReminders() {

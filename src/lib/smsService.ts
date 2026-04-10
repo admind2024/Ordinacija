@@ -1,3 +1,5 @@
+import { supabase } from './supabase';
+
 const SMS_PROXY = 'https://www.rakunat.com/_functions/smssend';
 
 const LS_API_KEY = 'ordinacija_sms_apiKey';
@@ -27,6 +29,31 @@ export function setSmsConfig(apiKey: string, senderName: string, email: string) 
 export function isSmsConfigured(): boolean {
   const { apiKey, senderName } = getSmsConfig();
   return !!apiKey && !!senderName;
+}
+
+/**
+ * Ucitaj SMS konfiguraciju iz Supabase reminder_settings tabele
+ * i sinhronizuj je u localStorage. Koristi se pri otvaranju stranica
+ * na novom uredjaju kako bi se kredencijali automatski povukli iz baze.
+ * Vraca true ako je konfiguracija uspjesno ucitana.
+ */
+export async function loadSmsConfigFromDb(): Promise<boolean> {
+  const { data, error } = await supabase
+    .from('reminder_settings')
+    .select('sms_api_key, sms_sender_name, sms_email')
+    .limit(1)
+    .maybeSingle();
+
+  if (error || !data) return false;
+
+  const apiKey = data.sms_api_key ?? '';
+  const senderName = data.sms_sender_name ?? '';
+  const email = data.sms_email ?? '';
+
+  if (!apiKey && !senderName && !email) return false;
+
+  setSmsConfig(apiKey, senderName, email);
+  return true;
 }
 
 export function formatPhoneNumber(phone: string): string {

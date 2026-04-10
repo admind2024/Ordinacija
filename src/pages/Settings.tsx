@@ -4,7 +4,7 @@ import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
 import PinGate from '../components/ui/PinGate';
-import { getSmsConfig, setSmsConfig, isSmsConfigured, sendSms, testSmsConnection } from '../lib/smsService';
+import { getSmsConfig, setSmsConfig, isSmsConfigured, sendSms, testSmsConnection, loadSmsConfigFromDb } from '../lib/smsService';
 import { getReminderSettings, setReminderSettings, syncReminderSettingsToDb, loadReminderSettingsFromDb, type ReminderTiming } from '../lib/reminderSettings';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -43,9 +43,18 @@ export default function Settings() {
     setReminderEnabled(rs.enabled);
     setReminderTiming(rs.timing);
     setReminderVrijeme(rs.vrijeme);
-    loadReminderSettingsFromDb().then((db) => {
+
+    (async () => {
+      const loaded = await loadSmsConfigFromDb();
+      if (loaded) {
+        const fresh = getSmsConfig();
+        setApiKey(fresh.apiKey);
+        setSenderName(fresh.senderName);
+        setEmail(fresh.email);
+      }
+      const db = await loadReminderSettingsFromDb();
       if (db) { setReminderEnabled(db.enabled); setReminderTiming(db.timing); setReminderVrijeme(db.vrijeme); setReminderSettings(db); }
-    });
+    })();
   }, []);
 
   function handleSaveConfig() {

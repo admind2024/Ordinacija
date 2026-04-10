@@ -608,6 +608,96 @@ function GroupForm({ onClose, onSaved }: { onClose: () => void; onSaved: () => v
 }
 
 // ============================================================
+// Viber bubble preview — simulira kako ce poruka izgledati u Viber-u
+// ============================================================
+function ViberPreview({ text, caption, actionUrl, imageUrl }: {
+  text: string;
+  caption?: string;
+  actionUrl?: string;
+  imageUrl?: string;
+}) {
+  const hasButton = !!(caption && actionUrl);
+  const hasImage = !!imageUrl;
+  const isEmpty = !text && !hasImage && !hasButton;
+
+  return (
+    <div>
+      <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">Viber preview</p>
+
+      {/* Telefon mockup */}
+      <div className="bg-gradient-to-b from-purple-100 to-purple-50 rounded-2xl p-4 border border-purple-200">
+        {/* Header — avatar + sender name */}
+        <div className="flex items-center gap-2 mb-3 pb-2 border-b border-purple-200">
+          <div className="w-8 h-8 rounded-full bg-purple-600 flex items-center justify-center text-white text-xs font-bold">
+            V
+          </div>
+          <div>
+            <p className="text-xs font-semibold text-gray-800">Ordinacija</p>
+            <p className="text-[10px] text-gray-500">Business account</p>
+          </div>
+        </div>
+
+        {isEmpty ? (
+          <div className="py-8 text-center text-xs text-gray-400">
+            Popuni polja lijevo — preview ce se pojaviti ovdje
+          </div>
+        ) : (
+          <div className="bg-white rounded-xl shadow-sm max-w-[280px] overflow-hidden">
+            {/* Image (poster) */}
+            {hasImage && (
+              <div className="aspect-video bg-gray-100 relative">
+                <img
+                  src={imageUrl}
+                  alt="Viber poster"
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).style.display = 'none';
+                    const fallback = (e.target as HTMLImageElement).nextElementSibling as HTMLElement | null;
+                    if (fallback) fallback.style.display = 'flex';
+                  }}
+                />
+                <div className="absolute inset-0 hidden items-center justify-center text-xs text-gray-400 bg-gray-100">
+                  Slika se ne ucitava
+                </div>
+              </div>
+            )}
+
+            {/* Text */}
+            {text && (
+              <div className="px-3 py-2">
+                <p className="text-sm text-gray-900 whitespace-pre-wrap leading-snug">{text}</p>
+              </div>
+            )}
+
+            {/* Button */}
+            {hasButton && (
+              <div className="px-3 pb-3">
+                <div className="bg-purple-600 text-white text-center text-sm font-medium py-2 rounded-lg">
+                  {caption}
+                </div>
+                <p className="text-[10px] text-gray-400 text-center mt-1 truncate">{actionUrl}</p>
+              </div>
+            )}
+
+            {/* Timestamp (as Viber shows) */}
+            <div className="px-3 pb-2 text-right">
+              <span className="text-[10px] text-gray-400">
+                {new Date().toLocaleTimeString('sr-Latn-ME', { hour: '2-digit', minute: '2-digit' })}
+              </span>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Cena estimate info */}
+      <p className="text-[11px] text-gray-400 mt-2">
+        Viber poruka kod Omni-ja: ~€0.003 · ograniceno na 1000 karaktera · validity 5 min (za fallback) ili 60 min (Viber only)
+      </p>
+    </div>
+  );
+}
+
+// ============================================================
 // TAB: NOVA KAMPANJA (wizard)
 // ============================================================
 function NovaKampanjaTab({ onDone }: { onDone: () => void }) {
@@ -801,28 +891,32 @@ function NovaKampanjaTab({ onDone }: { onDone: () => void }) {
         </p>
 
         {channelMode !== 'sms' && (
-          <div className="space-y-3 mb-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Viber tekst *</label>
-              <textarea
-                value={viberText}
-                onChange={(e) => setViberText(e.target.value)}
-                rows={4}
-                maxLength={1000}
-                className="w-full px-3 py-2 border border-border rounded-lg text-sm"
-                placeholder="Postovani/a {ime}, pozivamo vas..."
-              />
-              <p className="text-xs text-gray-400 mt-1">{viberText.length} / 1000</p>
-            </div>
-            <Input label="Caption (tekst dugmeta)" value={viberCaption} onChange={(e) => setViberCaption(e.target.value)} placeholder="Rezervisi termin" />
-            <Input label="Action URL (link dugmeta)" value={viberActionUrl} onChange={(e) => setViberActionUrl(e.target.value)} placeholder="https://..." />
-            <Input label="Image URL (opciono)" value={viberImageUrl} onChange={(e) => setViberImageUrl(e.target.value)} />
-            {viberText && (
-              <div className="bg-purple-50 border border-purple-200 rounded-lg p-3">
-                <p className="text-xs text-purple-600 font-medium mb-1">Viber preview:</p>
-                <p className="text-sm whitespace-pre-wrap">{renderPersonalizedPreview(viberText)}</p>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+            <div className="space-y-3">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Viber tekst *</label>
+                <textarea
+                  value={viberText}
+                  onChange={(e) => setViberText(e.target.value)}
+                  rows={4}
+                  maxLength={1000}
+                  className="w-full px-3 py-2 border border-border rounded-lg text-sm"
+                  placeholder="Postovani/a {ime}, pozivamo vas..."
+                />
+                <p className="text-xs text-gray-400 mt-1">{viberText.length} / 1000</p>
               </div>
-            )}
+              <Input label="Caption (tekst dugmeta)" value={viberCaption} onChange={(e) => setViberCaption(e.target.value)} placeholder="Rezervisi termin" />
+              <Input label="Action URL (link dugmeta)" value={viberActionUrl} onChange={(e) => setViberActionUrl(e.target.value)} placeholder="https://..." />
+              <Input label="Image URL (poster, opciono)" value={viberImageUrl} onChange={(e) => setViberImageUrl(e.target.value)} placeholder="https://.../slika.jpg" />
+            </div>
+
+            {/* Viber preview — kao Viber bubble */}
+            <ViberPreview
+              text={renderPersonalizedPreview(viberText)}
+              caption={viberCaption}
+              actionUrl={viberActionUrl}
+              imageUrl={viberImageUrl}
+            />
           </div>
         )}
 

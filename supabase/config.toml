@@ -4,8 +4,13 @@ project_id = "pedgschrivtpbzcoqniu"
 verify_jwt = false
 
 # Webhook od Omni Messaging-a — mora biti javan (Omni ne nosi JWT)
+# DEPRECATED: koristimo poll-omni-status umjesto webhook-a, ali ostaje
+# kao opcija za slucaj da odlucimo ipak koristiti webhook
 [functions.omni-delivery-report]
 verify_jwt = false
+
+# poll-omni-status — interni endpoint, pg_cron ga zove svaka 2 min
+# (ostavljen kao verify_jwt = true jer cron nosi anon kljuc)
 
 # omni-test i send-campaign su interni (zovu se iz UI preko anon kljuca)
 # ostavljeni kao verify_jwt = true (default)

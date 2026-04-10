@@ -2,3 +2,10 @@ project_id = "pedgschrivtpbzcoqniu"
 
 [functions.send-reminders]
 verify_jwt = false
+
+# Webhook od Omni Messaging-a — mora biti javan (Omni ne nosi JWT)
+[functions.omni-delivery-report]
+verify_jwt = false
+
+# omni-test i send-campaign su interni (zovu se iz UI preko anon kljuca)
+# ostavljeni kao verify_jwt = true (default)

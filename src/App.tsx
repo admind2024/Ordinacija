@@ -14,6 +14,7 @@ import Reports from './pages/Reports';
 import Doctors from './pages/Doctors';
 import Materials from './pages/Materials';
 import Notifications from './pages/Notifications';
+import Marketing from './pages/Marketing';
 import Establishment from './pages/Establishment';
 import Settings from './pages/Settings';
 import Examinations from './pages/Examinations';
@@ -77,6 +78,14 @@ function AppRoutes() {
           element={
             <ProtectedRoute roles={['admin', 'menadzer', 'marketing']}>
               <Notifications />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/marketing"
+          element={
+            <ProtectedRoute roles={['admin', 'menadzer', 'marketing']}>
+              <Marketing />
             </ProtectedRoute>
           }
         />

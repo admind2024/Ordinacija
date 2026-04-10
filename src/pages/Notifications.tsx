@@ -5,6 +5,10 @@ import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
 import { getSmsConfig, setSmsConfig, isSmsConfigured, sendSms, testSmsConnection, loadSmsConfigFromDb, syncSmsConfigToDb } from '../lib/smsService';
 import {
+  getOmniConfig, setOmniConfig, isOmniConfigured, testOmniConnection, sendTestOmniMessage,
+  loadOmniConfigFromDb, syncOmniConfigToDb, type ChannelMode,
+} from '../lib/omniService';
+import {
   getReminderSettings, setReminderSettings, syncReminderSettingsToDb,
   loadReminderSettingsFromDb, type ReminderTiming,
 } from '../lib/reminderSettings';
@@ -49,6 +53,18 @@ export default function Notifications() {
   const [sendingTest, setSendingTest] = useState(false);
   const [testSendResult, setTestSendResult] = useState<{ success: boolean; error?: string } | null>(null);
 
+  // Omni (Viber) Config state
+  const [omniUserId, setOmniUserId] = useState('');
+  const [omniAuthKey, setOmniAuthKey] = useState('');
+  const [omniChannelMode, setOmniChannelMode] = useState<ChannelMode>('sms');
+  const [omniSaved, setOmniSaved] = useState(false);
+  const [omniTesting, setOmniTesting] = useState(false);
+  const [omniTestResult, setOmniTestResult] = useState<{ success: boolean; error?: string; balance?: number; username?: string } | null>(null);
+  const [omniTestPhone, setOmniTestPhone] = useState('');
+  const [omniTestText, setOmniTestText] = useState('Test Viber poruka iz Ordinacija sistema');
+  const [omniSendingTest, setOmniSendingTest] = useState(false);
+  const [omniTestSendResult, setOmniTestSendResult] = useState<{ success: boolean; error?: string; sending_id?: string } | null>(null);
+
   // Reminder settings
   const [reminderEnabled, setReminderEnabled] = useState(false);
   const [reminderTiming, setReminderTiming] = useState<ReminderTiming>('dan_termina');
@@ -74,6 +90,12 @@ export default function Notifications() {
     setReminderTiming(rs.timing);
     setReminderVrijeme(rs.vrijeme);
 
+    // Omni (Viber) config iz localStorage
+    const localOmni = getOmniConfig();
+    setOmniUserId(localOmni.userId);
+    setOmniAuthKey(localOmni.authKey);
+    setOmniChannelMode(localOmni.channelMode);
+
     // Zatim sinhronizuj iz Supabase (za novi uredjaj / drugi PC)
     (async () => {
       const loaded = await loadSmsConfigFromDb();
@@ -82,6 +104,14 @@ export default function Notifications() {
         setApiKey(fresh.apiKey);
         setSenderName(fresh.senderName);
         setEmail(fresh.email);
+      }
+
+      const omniLoaded = await loadOmniConfigFromDb();
+      if (omniLoaded) {
+        const freshOmni = getOmniConfig();
+        setOmniUserId(freshOmni.userId);
+        setOmniAuthKey(freshOmni.authKey);
+        setOmniChannelMode(freshOmni.channelMode);
       }
 
       const dbSettings = await loadReminderSettingsFromDb();
@@ -93,6 +123,35 @@ export default function Notifications() {
       }
     })();
   }, []);
+
+  async function handleSaveOmniConfig() {
+    const cfg = { userId: omniUserId, authKey: omniAuthKey, channelMode: omniChannelMode };
+    setOmniConfig(cfg);
+    const result = await syncOmniConfigToDb(cfg);
+    if (!result.success) {
+      alert('Greska pri snimanju Omni konfiguracije: ' + (result.error || 'nepoznato'));
+      return;
+    }
+    setOmniSaved(true);
+    setTimeout(() => setOmniSaved(false), 3000);
+  }
+
+  async function handleTestOmniConnection() {
+    setOmniTesting(true);
+    setOmniTestResult(null);
+    const result = await testOmniConnection();
+    setOmniTestResult(result);
+    setOmniTesting(false);
+  }
+
+  async function handleSendOmniTest() {
+    if (!omniTestPhone) return;
+    setOmniSendingTest(true);
+    setOmniTestSendResult(null);
+    const result = await sendTestOmniMessage(omniTestPhone, omniTestText, 'viber');
+    setOmniTestSendResult(result);
+    setOmniSendingTest(false);
+  }
 
   async function handleSaveReminders() {
     const settings = { enabled: reminderEnabled, timing: reminderTiming, vrijeme: reminderVrijeme };
@@ -311,6 +370,113 @@ export default function Notifications() {
                 <div className={`flex items-center gap-2 text-sm ${testSendResult.success ? 'text-green-600' : 'text-red-600'}`}>
                   {testSendResult.success ? <CheckCircle size={16} /> : <XCircle size={16} />}
                   {testSendResult.success ? 'SMS uspjesno poslan!' : `Greska: ${testSendResult.error}`}
+                </div>
+              )}
+            </div>
+          </Card>
+
+          {/* Omni Messaging (Viber) konfiguracija */}
+          <Card>
+            <div className="flex items-center gap-2 mb-4">
+              <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider">Omni Messaging (Viber) — konfiguracija</h3>
+              <span className="text-xs px-2 py-0.5 rounded-full bg-purple-100 text-purple-700 font-medium">Viber Business</span>
+            </div>
+            <p className="text-xs text-gray-500 mb-4">
+              Kredencijali za api.omni-messaging.com. Viber poruke se salju direktno na broj telefona bez opt-in-a.
+              SMS i dalje ide preko licnog SMS provajdera (rakunat).
+            </p>
+            <div className="space-y-4 max-w-md">
+              <Input
+                label="User ID (Omni) *"
+                value={omniUserId}
+                onChange={(e) => setOmniUserId(e.target.value)}
+                placeholder="Omni User ID iz admin panela"
+              />
+              <Input
+                label="Auth Key (Omni) *"
+                type="password"
+                value={omniAuthKey}
+                onChange={(e) => setOmniAuthKey(e.target.value)}
+                placeholder="Omni Auth Key"
+              />
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Kanal za kampanje i podsjetnike</label>
+                <select
+                  value={omniChannelMode}
+                  onChange={(e) => setOmniChannelMode(e.target.value as ChannelMode)}
+                  className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                >
+                  <option value="sms">Samo SMS (rakunat)</option>
+                  <option value="viber">Samo Viber (Omni)</option>
+                  <option value="viber_then_sms">Viber + SMS fallback (preporuceno)</option>
+                </select>
+                <p className="text-xs text-gray-400 mt-1">
+                  {omniChannelMode === 'viber_then_sms'
+                    ? 'Prvo se salje Viber. Ako ne stigne u 5 min ili primalac nije Viber korisnik, automatski SMS preko rakunat.'
+                    : omniChannelMode === 'viber'
+                    ? 'Samo Viber. Ako primalac nije Viber korisnik, poruka nece biti isporucena.'
+                    : 'Samo SMS preko rakunat. Omni se ne koristi.'}
+                </p>
+              </div>
+              <div className="flex gap-2">
+                <Button onClick={handleSaveOmniConfig} disabled={!omniUserId || !omniAuthKey}>
+                  Sacuvaj Omni konfiguraciju
+                </Button>
+                <Button variant="secondary" onClick={handleTestOmniConnection} disabled={!omniUserId || !omniAuthKey || omniTesting}>
+                  {omniTesting ? <Loader2 size={16} className="animate-spin" /> : 'Test konekcije'}
+                </Button>
+              </div>
+
+              {omniSaved && (
+                <div className="flex items-center gap-2 text-green-600 text-sm">
+                  <CheckCircle size={16} /> Omni konfiguracija sacuvana
+                </div>
+              )}
+              {omniTestResult && (
+                <div className={`flex items-center gap-2 text-sm ${omniTestResult.success ? 'text-green-600' : 'text-red-600'}`}>
+                  {omniTestResult.success ? <CheckCircle size={16} /> : <XCircle size={16} />}
+                  {omniTestResult.success
+                    ? `Povezano! Balance: ${omniTestResult.balance?.toFixed(2) ?? '—'} ${omniTestResult.username ? `(${omniTestResult.username})` : ''}`
+                    : `Greska: ${omniTestResult.error}`}
+                </div>
+              )}
+            </div>
+          </Card>
+
+          {/* Test Viber slanje */}
+          <Card>
+            <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">Posalji test Viber poruku</h3>
+            <div className="space-y-4 max-w-md">
+              <Input
+                label="Broj telefona *"
+                value={omniTestPhone}
+                onChange={(e) => setOmniTestPhone(e.target.value)}
+                placeholder="+38267123456"
+              />
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Tekst poruke (max 1000 char)</label>
+                <textarea
+                  value={omniTestText}
+                  onChange={(e) => setOmniTestText(e.target.value)}
+                  rows={3}
+                  maxLength={1000}
+                  className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none"
+                />
+                <p className="text-xs text-gray-400 mt-1">{omniTestText.length} / 1000</p>
+              </div>
+              <Button onClick={handleSendOmniTest} disabled={!omniTestPhone || !isOmniConfigured() || omniSendingTest}>
+                {omniSendingTest ? (
+                  <><Loader2 size={16} className="animate-spin" /> Saljem...</>
+                ) : (
+                  <><Send size={16} /> Posalji test Viber</>
+                )}
+              </Button>
+              {omniTestSendResult && (
+                <div className={`flex items-center gap-2 text-sm ${omniTestSendResult.success ? 'text-green-600' : 'text-red-600'}`}>
+                  {omniTestSendResult.success ? <CheckCircle size={16} /> : <XCircle size={16} />}
+                  {omniTestSendResult.success
+                    ? `Poslato! Sending ID: ${omniTestSendResult.sending_id}`
+                    : `Greska: ${omniTestSendResult.error}`}
                 </div>
               )}
             </div>

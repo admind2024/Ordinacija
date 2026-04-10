@@ -8,6 +8,7 @@ import {
   Stethoscope,
   Settings,
   Bell,
+  Megaphone,
   Wallet,
   LayoutDashboard,
   Package,
@@ -31,6 +32,7 @@ const navigation = [
   { name: 'Materijali', path: '/materijali', icon: Package, roles: ['admin', 'menadzer', 'ljekar'] },
   { name: 'Dugovanja', path: '/dugovanja', icon: Wallet, roles: ['admin', 'menadzer', 'recepcija'] },
   { name: 'Notifikacije', path: '/notifikacije', icon: Bell, roles: ['admin', 'menadzer', 'marketing'] },
+  { name: 'Marketing', path: '/marketing', icon: Megaphone, roles: ['admin', 'menadzer', 'marketing'] },
   { name: 'Ustanova', path: '/ustanova', icon: Building2, roles: ['admin'] },
   { name: 'Podesavanja', path: '/podesavanja', icon: Settings, roles: ['admin'] },
 ];

@@ -117,9 +117,10 @@ Deno.serve(async (req) => {
     let toSend: AppointmentRow[] = [];
 
     if (settings.timing === 'sat_prije') {
-      // Termini koji pocinju u sledecih 55-75 minuta (prozor za 15-min cron)
-      const windowStart = new Date(now.getTime() + 55 * 60 * 1000);
-      const windowEnd = new Date(now.getTime() + 75 * 60 * 1000);
+      // Prozor [45, 80] min — overlap sa susjednim cron tick-om (*/15) + slack
+      // za kasno kreirane termine. Dedupe po appointment_id sprijecava duplikate.
+      const windowStart = new Date(now.getTime() + 45 * 60 * 1000);
+      const windowEnd = new Date(now.getTime() + 80 * 60 * 1000);
 
       const { data: appointments } = await supabase
         .from('appointments')

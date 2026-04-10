@@ -41,11 +41,12 @@ function formatVrijeme(iso: string): string {
 }
 
 function stripDiacritics(text: string): string {
-  const map: Record<string, string> = {
-    'č': 'c', 'ć': 'c', 'đ': 'dz', 'š': 's', 'ž': 'z',
-    'Č': 'C', 'Ć': 'C', 'Đ': 'Dz', 'Š': 'S', 'Ž': 'Z',
-  };
-  return text.replace(/[čćđšžČĆĐŠŽ]/g, (ch) => map[ch] || ch);
+  if (!text) return '';
+  return text
+    .replace(/đ/g, 'dz')
+    .replace(/Đ/g, 'Dz')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
 }
 
 function buildReminderText(ime: string, datum: string): string {

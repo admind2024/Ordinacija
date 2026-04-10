@@ -3,7 +3,7 @@ import { addDays, addWeeks, addMonths, isWithinInterval, parseISO } from 'date-f
 import type { Appointment, AppointmentStatus, Doctor, Room, Service, ServiceCategory, Material } from '../types';
 import { supabase } from '../lib/supabase';
 import { useAutoReminders } from '../hooks/useAutoReminders';
-import { isSmsConfigured, sendSms } from '../lib/smsService';
+import { isSmsConfigured, sendSms, stripDiacritics } from '../lib/smsService';
 import { smsPotvrda } from '../lib/smsTemplates';
 
 export type CalendarView = 'day' | 'week' | 'month' | 'agenda';
@@ -60,6 +60,7 @@ interface CalendarContextType {
 
   smsLog: SmsLogEntry[];
   addSmsLog: (entry: SmsLogEntry) => void;
+  refreshSmsLog: () => Promise<void>;
 
   // Doctor CRUD
   createDoctor: (doctor: Omit<Doctor, 'id'>) => Promise<Doctor | null>;
@@ -274,7 +275,8 @@ export function CalendarProvider({ children }: { children: ReactNode }) {
           const doctorName = doctor
             ? `${doctor.titula ?? ''} ${doctor.ime ?? ''} ${doctor.prezime ?? ''}`.trim()
             : undefined;
-          const text = smsPotvrda({ imeIPrezime, datum: aptData.pocetak, doctor: doctorName });
+          const rawText = smsPotvrda({ imeIPrezime, datum: aptData.pocetak, doctor: doctorName });
+          const text = stripDiacritics(rawText);
           const result = await sendSms(patientInfo.telefon, text);
 
           await supabase.from('notifications').insert({
@@ -285,7 +287,7 @@ export function CalendarProvider({ children }: { children: ReactNode }) {
             sadrzaj: text,
             tip: 'potvrda',
             error: result.error || null,
-            patient_ime: imeIPrezime,
+            patient_ime: stripDiacritics(imeIPrezime),
             patient_telefon: patientInfo.telefon,
             datum_slanja: new Date().toISOString(),
           });
@@ -375,6 +377,27 @@ export function CalendarProvider({ children }: { children: ReactNode }) {
     });
 
     setSmsLog((prev) => [entry, ...prev]);
+  }, []);
+
+  const refreshSmsLog = useCallback(async () => {
+    const { data } = await supabase
+      .from('notifications')
+      .select('*')
+      .eq('kanal', 'sms')
+      .order('datum_slanja', { ascending: false })
+      .limit(1000);
+
+    const smsEntries: SmsLogEntry[] = (data || []).map((n: any) => ({
+      id: n.id,
+      patient: n.patient_ime || n.patient_id || '',
+      phone: n.patient_telefon || '',
+      text: n.sadrzaj,
+      status: n.status === 'sent' || n.status === 'delivered' ? ('sent' as const) : ('failed' as const),
+      error: n.error,
+      datum: n.datum_slanja,
+      tip: n.tip || 'potvrda',
+    }));
+    setSmsLog(smsEntries);
   }, []);
 
   const getFilteredAppointments = useCallback(
@@ -509,7 +532,7 @@ export function CalendarProvider({ children }: { children: ReactNode }) {
         selectAllDoctors, deselectAllDoctors,
         createAppointment, updateAppointment, deleteAppointment, updateAppointmentStatus,
         getFilteredAppointments, getAppointmentColor,
-        smsLog, addSmsLog,
+        smsLog, addSmsLog, refreshSmsLog,
         createDoctor, updateDoctor, deleteDoctor,
         createMaterial, updateMaterial, deleteMaterial,
         createService, updateService, deleteService,

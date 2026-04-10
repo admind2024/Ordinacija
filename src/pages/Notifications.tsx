@@ -33,7 +33,7 @@ const tipLabels: Record<string, string> = {
 
 export default function Notifications() {
   const [tab, setTab] = useState<NotifyTab>('config');
-  const { smsLog } = useCalendar();
+  const { smsLog, refreshSmsLog } = useCalendar();
 
   // SMS Config state
   const [apiKey, setApiKey] = useState('');
@@ -58,6 +58,9 @@ export default function Notifications() {
   // Izvjestaj filter
   const [izvjestajFilter, setIzvjestajFilter] = useState<'sve' | 'sent' | 'failed'>('sve');
   const [izvjestajTip, setIzvjestajTip] = useState<'sve' | 'potvrda' | 'podsjetnik' | 'otkazivanje' | 'potvrdjivanje'>('sve');
+  const [izvjestajDateFrom, setIzvjestajDateFrom] = useState('');
+  const [izvjestajDateTo, setIzvjestajDateTo] = useState('');
+  const [izvjestajRefreshing, setIzvjestajRefreshing] = useState(false);
 
   useEffect(() => {
     // Prvo ucitaj iz localStorage za instant prikaz
@@ -136,14 +139,40 @@ export default function Notifications() {
   const sentCount = sentToday.filter((l) => l.status === 'sent').length;
   const failedCount = sentToday.filter((l) => l.status === 'failed').length;
 
-  // Filtrirani log za izvjestaj
+  // Auto-refresh kad se otvori izvjestaj tab
+  useEffect(() => {
+    if (tab !== 'izvjestaj') return;
+    (async () => {
+      setIzvjestajRefreshing(true);
+      await refreshSmsLog();
+      setIzvjestajRefreshing(false);
+    })();
+  }, [tab, refreshSmsLog]);
+
+  async function handleRefreshIzvjestaj() {
+    setIzvjestajRefreshing(true);
+    await refreshSmsLog();
+    setIzvjestajRefreshing(false);
+  }
+
+  // Filtrirani log za izvjestaj (sort po datumu, najnovije prvo)
   const filteredLog = useMemo(() => {
-    return smsLog.filter((entry) => {
-      if (izvjestajFilter !== 'sve' && entry.status !== izvjestajFilter) return false;
-      if (izvjestajTip !== 'sve' && entry.tip !== izvjestajTip) return false;
-      return true;
-    });
-  }, [smsLog, izvjestajFilter, izvjestajTip]);
+    const fromTs = izvjestajDateFrom ? new Date(`${izvjestajDateFrom}T00:00:00`).getTime() : null;
+    const toTs = izvjestajDateTo ? new Date(`${izvjestajDateTo}T23:59:59`).getTime() : null;
+
+    return smsLog
+      .filter((entry) => {
+        if (izvjestajFilter !== 'sve' && entry.status !== izvjestajFilter) return false;
+        if (izvjestajTip !== 'sve' && entry.tip !== izvjestajTip) return false;
+        if (fromTs || toTs) {
+          const ts = new Date(entry.datum).getTime();
+          if (fromTs && ts < fromTs) return false;
+          if (toTs && ts > toTs) return false;
+        }
+        return true;
+      })
+      .sort((a, b) => new Date(b.datum).getTime() - new Date(a.datum).getTime());
+  }, [smsLog, izvjestajFilter, izvjestajTip, izvjestajDateFrom, izvjestajDateTo]);
 
   // Statistika za izvjestaj
   const stats = useMemo(() => {
@@ -562,7 +591,22 @@ export default function Notifications() {
                   <Filter size={16} className="text-gray-500" />
                   <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider">Detaljan izvjestaj</h3>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex gap-2 flex-wrap items-center">
+                  <input
+                    type="date"
+                    value={izvjestajDateFrom}
+                    onChange={(e) => setIzvjestajDateFrom(e.target.value)}
+                    className="px-3 py-1.5 border border-border rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    title="Od datuma"
+                  />
+                  <span className="text-xs text-gray-400">–</span>
+                  <input
+                    type="date"
+                    value={izvjestajDateTo}
+                    onChange={(e) => setIzvjestajDateTo(e.target.value)}
+                    className="px-3 py-1.5 border border-border rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    title="Do datuma"
+                  />
                   <select
                     value={izvjestajFilter}
                     onChange={(e) => setIzvjestajFilter(e.target.value as any)}
@@ -583,6 +627,13 @@ export default function Notifications() {
                     <option value="otkazivanje">Otkazivanje</option>
                     <option value="potvrdjivanje">Potvrda statusa</option>
                   </select>
+                  <button
+                    onClick={handleRefreshIzvjestaj}
+                    disabled={izvjestajRefreshing}
+                    className="px-3 py-1.5 bg-primary-600 text-white rounded-lg text-xs hover:bg-primary-700 disabled:opacity-50"
+                  >
+                    {izvjestajRefreshing ? 'Osvjezavam...' : 'Osvjezi'}
+                  </button>
                 </div>
               </div>
             </div>

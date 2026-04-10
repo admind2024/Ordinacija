@@ -116,14 +116,17 @@ export function formatPhoneNumber(phone: string): string {
 /**
  * Zamijeni bosanske/srpske dijakriticke karaktere ASCII ekvivalentima
  * kako bi SMS ostao u GSM-7 karakter setu (160 char / poruka) umjesto
- * UCS-2 (70 char / poruka).
+ * UCS-2 (70 char / poruka). Robusno: prvo zamijeni dj/Dj koji se ne
+ * dekomponuju cisto, pa upotrebi NFD dekompoziciju + uklanjanje svih
+ * combining marks (hvata i druge akcente poput é, ö, ü...).
  */
 export function stripDiacritics(text: string): string {
-  const map: Record<string, string> = {
-    'č': 'c', 'ć': 'c', 'đ': 'dz', 'š': 's', 'ž': 'z',
-    'Č': 'C', 'Ć': 'C', 'Đ': 'Dz', 'Š': 'S', 'Ž': 'Z',
-  };
-  return text.replace(/[čćđšžČĆĐŠŽ]/g, (ch) => map[ch] || ch);
+  if (!text) return '';
+  return text
+    .replace(/đ/g, 'dz')
+    .replace(/Đ/g, 'Dz')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
 }
 
 export async function sendSms(phone: string, text: string): Promise<SmsResult> {

@@ -173,6 +173,47 @@ interface UnifiedMessage {
   error: string | null;
   tekst: string | null;
   campaign_id?: string | null;
+  /** Izracunat DLR za prikaz u Izvjestaju (uzima u obzir Omni DLR + rakunat status). */
+  display_dlr: string;
+}
+
+/**
+ * Finalni DLR prikaz po Omni semantici + rakunat-u:
+ * - Ako je Viber DLR dostupan, on je primarni (ukljucuje i pending/expired/failed...)
+ * - Ako je samo SMS DLR, mapiraj submitted -> delivered (rakunat gateway accepted)
+ * - Ako nijedno, ali row ima `sent` status (SMS kroz rakunat), prikazi `sent`
+ * - Ako je `failed`, prikazi `failed`
+ * - Fallback: `pending`
+ */
+function computeDisplayDlr(m: {
+  viber_dlr: string | null;
+  sms_dlr: string | null;
+  status: string;
+  fallbacked: boolean;
+  kanal: string;
+}): string {
+  // Viber kanal dominira ako postoji
+  if (m.viber_dlr) {
+    if (m.viber_dlr === 'delivered') return 'delivered';
+    if (m.viber_dlr === 'pending') {
+      // Ako je fallback vec prosao i SMS submitted, nije vise pending
+      if (m.fallbacked && (m.sms_dlr === 'delivered' || m.sms_dlr === 'submitted')) return 'delivered';
+      return 'pending';
+    }
+    // Failed/expired/blocked/not_viber_user/no_suitable_device
+    if (m.fallbacked && (m.sms_dlr === 'delivered' || m.sms_dlr === 'submitted')) return 'delivered';
+    return m.viber_dlr;
+  }
+  // SMS kroz Omni
+  if (m.sms_dlr) {
+    if (m.sms_dlr === 'delivered' || m.sms_dlr === 'submitted') return 'delivered';
+    if (m.sms_dlr === 'pending') return 'pending';
+    return m.sms_dlr;
+  }
+  // Nema DLR-a — SMS kroz rakunat ili failed
+  if (m.status === 'failed') return 'failed';
+  if (m.status === 'sent' || m.status === 'delivered') return 'sent';
+  return 'pending';
 }
 
 function IzvjestajTab() {
@@ -246,6 +287,9 @@ function IzvjestajTab() {
 
     const fromRecipients: UnifiedMessage[] = recipients.map((r: any) => {
       const camp = campaignMap.get(r.campaign_id);
+      const kanal = r.channel_used || '—';
+      const fallbacked = !!r.fallbacked;
+      const status = r.viber_dlr === 'delivered' || r.sms_dlr === 'delivered' || r.sms_dlr === 'submitted' ? 'sent' : (r.viber_dlr || r.sms_dlr || 'pending');
       return {
         id: `cr-${r.id}`,
         source: 'kampanja',
@@ -253,41 +297,47 @@ function IzvjestajTab() {
         datum: r.created_at,
         primalac: r.ime,
         telefon: r.telefon,
-        kanal: r.channel_used || '—',
-        status: r.viber_dlr === 'delivered' || r.sms_dlr === 'delivered' || r.sms_dlr === 'submitted' ? 'sent' : (r.viber_dlr || r.sms_dlr || 'pending'),
+        kanal,
+        status,
         viber_dlr: r.viber_dlr,
         viber_message_status: r.viber_message_status,
         sms_dlr: r.sms_dlr,
-        fallbacked: !!r.fallbacked,
+        fallbacked,
         clicked: !!r.clicked,
         error: r.error,
         tekst: camp?.viber_text || camp?.sms_text || null,
         campaign_id: r.campaign_id,
+        display_dlr: computeDisplayDlr({ viber_dlr: r.viber_dlr, sms_dlr: r.sms_dlr, status, fallbacked, kanal }),
       };
     });
 
-    const fromNotifs: UnifiedMessage[] = notifs.map((n: any) => ({
-      id: `n-${n.id}`,
-      source: n.tip as any,
-      source_label: n.tip === 'podsjetnik' ? 'Podsjetnik'
-        : n.tip === 'potvrda' ? 'Potvrda termina'
-        : n.tip === 'otkazivanje' ? 'Otkazivanje'
-        : n.tip === 'potvrdjivanje' ? 'Potvrda statusa'
-        : n.tip === 'test' ? 'Test poruka'
-        : n.tip,
-      datum: n.datum_slanja,
-      primalac: n.patient_ime || '—',
-      telefon: n.patient_telefon || '—',
-      kanal: n.channel_used || n.kanal || '—',
-      status: n.status,
-      viber_dlr: n.viber_dlr,
-      viber_message_status: n.viber_message_status,
-      sms_dlr: n.sms_dlr,
-      fallbacked: !!n.fallbacked,
-      clicked: false,
-      error: n.error,
-      tekst: n.sadrzaj,
-    }));
+    const fromNotifs: UnifiedMessage[] = notifs.map((n: any) => {
+      const kanal = n.channel_used || n.kanal || '—';
+      const fallbacked = !!n.fallbacked;
+      return {
+        id: `n-${n.id}`,
+        source: n.tip as any,
+        source_label: n.tip === 'podsjetnik' ? 'Podsjetnik'
+          : n.tip === 'potvrda' ? 'Potvrda termina'
+          : n.tip === 'otkazivanje' ? 'Otkazivanje'
+          : n.tip === 'potvrdjivanje' ? 'Potvrda statusa'
+          : n.tip === 'test' ? 'Test poruka'
+          : n.tip,
+        datum: n.datum_slanja,
+        primalac: n.patient_ime || '—',
+        telefon: n.patient_telefon || '—',
+        kanal,
+        status: n.status,
+        viber_dlr: n.viber_dlr,
+        viber_message_status: n.viber_message_status,
+        sms_dlr: n.sms_dlr,
+        fallbacked,
+        clicked: false,
+        error: n.error,
+        tekst: n.sadrzaj,
+        display_dlr: computeDisplayDlr({ viber_dlr: n.viber_dlr, sms_dlr: n.sms_dlr, status: n.status, fallbacked, kanal }),
+      };
+    });
 
     return [...fromRecipients, ...fromNotifs]
       .filter((m) => {
@@ -302,8 +352,9 @@ function IzvjestajTab() {
   const stats = useMemo(() => {
     const all = unifiedMessages;
     const total = all.length;
-    const viberDelivered = all.filter((m) => m.viber_dlr === 'delivered').length;
-    const smsDelivered = all.filter((m) => m.sms_dlr === 'delivered' || m.sms_dlr === 'submitted').length;
+    // Delivered = display_dlr == 'delivered' ili 'sent' (SMS kroz rakunat — gateway accepted)
+    const viberDelivered = all.filter((m) => m.kanal === 'viber' && m.display_dlr === 'delivered').length;
+    const smsDelivered = all.filter((m) => m.kanal === 'sms' && (m.display_dlr === 'delivered' || m.display_dlr === 'sent')).length;
     const seen = all.filter((m) => m.viber_message_status === 'seen').length;
     const clicked = all.filter((m) => m.clicked).length;
     const fallback = all.filter((m) => m.fallbacked).length;
@@ -459,12 +510,11 @@ function IzvjestajTab() {
                   <span className="flex-1">Izvor / Tekst</span>
                 </div>
                 {unifiedMessages.slice(0, 300).map((m) => {
-                  const dlr = m.viber_dlr || m.sms_dlr || '—';
-                  const dlrColor = dlr === 'delivered'
+                  const dlr = m.display_dlr;
+                  const dlrColor = dlr === 'delivered' || dlr === 'sent'
                     ? 'text-green-700 bg-green-50'
-                    : dlr === 'pending' || dlr === 'submitted'
+                    : dlr === 'pending'
                     ? 'text-amber-700 bg-amber-50'
-                    : dlr === '—' ? 'text-gray-400 bg-gray-50'
                     : 'text-red-700 bg-red-50';
                   return (
                     <div

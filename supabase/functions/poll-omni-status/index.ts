@@ -27,6 +27,13 @@ const VIBER_FAIL_STATES = new Set(['failed', 'expired', 'blocked', 'no_suitable_
 const VIBER_FINAL_STATES = new Set([...VIBER_FAIL_STATES, 'delivered']);
 const SMS_FINAL_STATES = new Set(['delivered', 'not_delivered', 'invalid_msisdn', 'expired', 'call_barred']);
 
+/** Normalizuj telefon za match: cifre + '+' prefix, strip everything else. */
+function normalizePhone(phone: string | null | undefined): string {
+  if (!phone) return '';
+  const digits = (phone || '').replace(/[^\d]/g, '');
+  return digits.replace(/^0+/, '');
+}
+
 function jsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
@@ -122,16 +129,23 @@ Deno.serve(async (req) => {
       if (c.omni_sending_id) sendingIds.add(c.omni_sending_id);
     }
 
-    // 2b. Podsjetnici (notifications) sa pending Viber DLR
-    const { data: pendingReminders } = await supabase
+    // 2b. Notifikacije (podsjetnici, potvrde, test, etc.) sa Omni sending_id u zadnjih 24h
+    //     koje jos nisu final. Ne filtriraj po channel_used jer Viber moze da fallback-uje u SMS
+    //     i tada se status mijenja, a nas poll mora pokupiti oba DLR-a.
+    const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+    const { data: pendingNotifs } = await supabase
       .from('notifications')
-      .select('omni_sending_id')
+      .select('omni_sending_id, viber_dlr, sms_dlr')
       .not('omni_sending_id', 'is', null)
-      .eq('channel_used', 'viber')
-      .or('viber_dlr.is.null,viber_dlr.eq.pending');
+      .gte('datum_slanja', cutoff);
 
-    for (const n of pendingReminders || []) {
-      if (n.omni_sending_id) sendingIds.add(n.omni_sending_id);
+    for (const n of pendingNotifs || []) {
+      const viberFinal = n.viber_dlr && VIBER_FINAL_STATES.has(n.viber_dlr);
+      const smsFinal = n.sms_dlr && SMS_FINAL_STATES.has(n.sms_dlr);
+      // Ako je bar jedan kanal jos u intermediate / null stanju, vrijedi ga pollovati
+      if (!viberFinal || (n.sms_dlr && !smsFinal)) {
+        if (n.omni_sending_id) sendingIds.add(n.omni_sending_id);
+      }
     }
 
     if (sendingIds.size === 0) {
@@ -161,8 +175,34 @@ Deno.serve(async (req) => {
       const recipients = data.data || [];
       totalRecipients += recipients.length;
 
+      // Pre-ucitaj sve notifications i campaign_recipients za ovaj sending_id odjednom
+      // pa match-uj in-memory po normalizovanom telefonu. Omni create response echoes
+      // destinations.id, ali GET /recipients vraca auto-generisan id, pa match po
+      // omni_recipient_id ne radi — zato se oslanjamo na (sending_id, telefon).
+      const { data: campRows } = await supabase
+        .from('campaign_recipients')
+        .select('*, campaign:campaigns!inner(id, omni_sending_id, channel_mode, sms_text, viber_text, sms_sender)')
+        .eq('campaign.omni_sending_id', sid);
+
+      const campByPhone = new Map<string, any>();
+      for (const c of campRows || []) {
+        campByPhone.set(normalizePhone(c.telefon), c);
+      }
+
+      const { data: notifRows } = await supabase
+        .from('notifications')
+        .select('*')
+        .eq('omni_sending_id', sid);
+
+      const notifByPhone = new Map<string, any>();
+      for (const n of notifRows || []) {
+        notifByPhone.set(normalizePhone(n.patient_telefon), n);
+      }
+
       for (const rcp of recipients) {
-        const omniRecipientId = rcp.id;
+        const rcpPhone = normalizePhone(rcp.phone_number);
+        if (!rcpPhone) continue;
+
         const viberMsg = rcp.messages?.viber;
         const smsMsg = rcp.messages?.sms;
 
@@ -171,19 +211,16 @@ Deno.serve(async (req) => {
         const smsDlr = smsMsg?.dlr || null;
 
         // 3a. Update campaign_recipients (ako postoji)
-        const { data: camp } = await supabase
-          .from('campaign_recipients')
-          .select('*, campaign:campaigns(channel_mode, sms_text, viber_text, sms_sender)')
-          .eq('omni_recipient_id', omniRecipientId)
-          .maybeSingle();
-
+        const camp = campByPhone.get(rcpPhone);
         if (camp) {
           const updates: any = { updated_at: new Date().toISOString() };
           if (viberDlr && viberDlr !== camp.viber_dlr) {
             updates.viber_dlr = viberDlr;
             updatedViber++;
           }
-          if (viberMessageStatus) updates.viber_message_status = viberMessageStatus;
+          if (viberMessageStatus && viberMessageStatus !== camp.viber_message_status) {
+            updates.viber_message_status = viberMessageStatus;
+          }
           if (smsDlr && smsDlr !== camp.sms_dlr) {
             updates.sms_dlr = smsDlr;
             updatedSms++;
@@ -226,28 +263,32 @@ Deno.serve(async (req) => {
           continue;
         }
 
-        // 3b. Ako nije kampanja, probaj notifications (podsjetnik)
-        const { data: notif } = await supabase
-          .from('notifications')
-          .select('*')
-          .eq('omni_recipient_id', omniRecipientId)
-          .maybeSingle();
-
+        // 3b. Probaj notifications (podsjetnik / potvrda / test)
+        const notif = notifByPhone.get(rcpPhone);
         if (notif) {
           const updates: any = { updated_at: new Date().toISOString() };
           if (viberDlr && viberDlr !== notif.viber_dlr) {
             updates.viber_dlr = viberDlr;
             updatedViber++;
           }
+          if (viberMessageStatus && viberMessageStatus !== notif.viber_message_status) {
+            updates.viber_message_status = viberMessageStatus;
+          }
           if (smsDlr && smsDlr !== notif.sms_dlr) {
             updates.sms_dlr = smsDlr;
             updatedSms++;
+          }
+          // Reflektuj finalni DLR u glavnom status polju notifikacije
+          if (viberDlr === 'delivered' || smsDlr === 'delivered') {
+            updates.status = 'delivered';
+          } else if (viberDlr && VIBER_FAIL_STATES.has(viberDlr) && !notif.fallbacked) {
+            updates.status = 'failed';
           }
           if (Object.keys(updates).length > 1) {
             await supabase.from('notifications').update(updates).eq('id', notif.id);
           }
 
-          // Fallback za podsjetnik
+          // Fallback za podsjetnik (samo ako je settings.channel_mode=viber_then_sms)
           if (
             viberDlr &&
             VIBER_FAIL_STATES.has(viberDlr) &&

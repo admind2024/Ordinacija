@@ -16,6 +16,11 @@ interface PatientsContextType {
   deletePatient: (id: string) => Promise<void>;
   getPatient: (id: string) => Patient | undefined;
   refreshPatients: () => Promise<void>;
+  /** Aktivna dugovanja po pacijentu: patient_id -> suma preostalog */
+  debtsByPatient: Map<string, number>;
+  /** Suma svih dosada uplaćenih transakcija za pacijenta */
+  paidByPatient: Map<string, number>;
+  refreshDebts: () => Promise<void>;
 }
 
 const PatientsContext = createContext<PatientsContextType | undefined>(undefined);
@@ -26,6 +31,8 @@ export function PatientsProvider({ children }: { children: ReactNode }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [sortField, setSortField] = useState<keyof Patient>('prezime');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
+  const [debtsByPatient, setDebtsByPatient] = useState<Map<string, number>>(new Map());
+  const [paidByPatient, setPaidByPatient] = useState<Map<string, number>>(new Map());
 
   const fetchPatients = useCallback(async () => {
     setLoading(true);
@@ -48,9 +55,39 @@ export function PatientsProvider({ children }: { children: ReactNode }) {
     setLoading(false);
   }, []);
 
+  /** Agregira aktivna dugovanja i uplate po pacijentu iz dugovanja + payments. */
+  const fetchDebts = useCallback(async () => {
+    // Aktivna dugovanja (preostalo > 0)
+    const { data: duga } = await supabase
+      .from('dugovanja')
+      .select('patient_id, preostalo, status')
+      .eq('status', 'aktivan');
+
+    const debtMap = new Map<string, number>();
+    for (const d of duga || []) {
+      if (!d.patient_id) continue;
+      debtMap.set(d.patient_id, (debtMap.get(d.patient_id) || 0) + (Number(d.preostalo) || 0));
+    }
+    setDebtsByPatient(debtMap);
+
+    // Sve uplate preko payments tabele — JOIN preko appointments da dobijemo patient_id
+    const { data: pays } = await supabase
+      .from('payments')
+      .select('iznos, appointment:appointments(patient_id)');
+
+    const paidMap = new Map<string, number>();
+    for (const p of pays || []) {
+      const pid = (p as any).appointment?.patient_id;
+      if (!pid) continue;
+      paidMap.set(pid, (paidMap.get(pid) || 0) + (Number(p.iznos) || 0));
+    }
+    setPaidByPatient(paidMap);
+  }, []);
+
   useEffect(() => {
     fetchPatients();
-  }, [fetchPatients]);
+    fetchDebts();
+  }, [fetchPatients, fetchDebts]);
 
   const setSort = useCallback((field: keyof Patient) => {
     setSortField((prev) => {
@@ -163,6 +200,8 @@ export function PatientsProvider({ children }: { children: ReactNode }) {
         sortField, sortDir, setSort, filteredPatients,
         createPatient, updatePatient, deletePatient, getPatient,
         refreshPatients: fetchPatients,
+        debtsByPatient, paidByPatient,
+        refreshDebts: fetchDebts,
       }}
     >
       {children}

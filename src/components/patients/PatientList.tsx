@@ -11,25 +11,24 @@ interface PatientListProps {
 
 const PAGE_SIZE = 15;
 
-const columns: { key: keyof Patient; label: string; width?: string }[] = [
+const columns: { key: keyof Patient | 'dug'; label: string; width?: string }[] = [
   { key: 'prezime', label: 'Ime i prezime' },
   { key: 'datum_rodjenja', label: 'Datum rodj.' },
   { key: 'telefon', label: 'Telefon' },
-  { key: 'email', label: 'Email' },
   { key: 'grad', label: 'Grad' },
-  { key: 'saldo', label: 'Saldo' },
+  { key: 'dug', label: 'Dugovanje' },
   { key: 'tagovi', label: 'Tagovi' },
 ];
 
 export default function PatientList({ onSelect, onNew }: PatientListProps) {
-  const { searchQuery, setSearchQuery, filteredPatients, sortField, sortDir, setSort } = usePatients();
+  const { searchQuery, setSearchQuery, filteredPatients, sortField, sortDir, setSort, debtsByPatient } = usePatients();
   const [page, setPage] = useState(0);
 
   const totalPages = Math.ceil(filteredPatients.length / PAGE_SIZE);
   const pagePatients = filteredPatients.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
 
-  function renderSortIcon(field: keyof Patient) {
-    if (sortField !== field) return null;
+  function renderSortIcon(field: keyof Patient | 'dug') {
+    if (sortField !== (field as any)) return null;
     return sortDir === 'asc' ? <ChevronUp size={14} /> : <ChevronDown size={14} />;
   }
 
@@ -77,7 +76,7 @@ export default function PatientList({ onSelect, onNew }: PatientListProps) {
                 {columns.map((col) => (
                   <th
                     key={col.key}
-                    onClick={() => setSort(col.key)}
+                    onClick={() => col.key !== 'dug' && setSort(col.key as keyof Patient)}
                     className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider cursor-pointer hover:text-gray-700 select-none"
                   >
                     <div className="flex items-center gap-1">
@@ -89,60 +88,66 @@ export default function PatientList({ onSelect, onNew }: PatientListProps) {
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {pagePatients.map((patient) => (
-                <tr
-                  key={patient.id}
-                  onClick={() => onSelect(patient)}
-                  className="hover:bg-gray-50 cursor-pointer transition-colors"
-                >
-                  <td className="px-4 py-3">
-                    <div>
-                      <span className="font-medium text-gray-900">
-                        {patient.ime} {patient.prezime}
-                      </span>
-                      {patient.ime_roditelja && (
-                        <p className="text-xs text-gray-400">Roditelj: {patient.ime_roditelja}</p>
-                      )}
-                    </div>
-                  </td>
-                  <td className="px-4 py-3 text-gray-600">
-                    {patient.datum_rodjenja
-                      ? new Date(patient.datum_rodjenja).toLocaleDateString('sr-Latn-ME')
-                      : '—'}
-                  </td>
-                  <td className="px-4 py-3 text-gray-600">{patient.telefon}</td>
-                  <td className="px-4 py-3 text-gray-600">{patient.email || '—'}</td>
-                  <td className="px-4 py-3 text-gray-600">{patient.grad || '—'}</td>
-                  <td className="px-4 py-3">
-                    <span
-                      className={`font-medium ${
-                        patient.saldo < 0
-                          ? 'text-red-600'
-                          : patient.saldo > 0
-                            ? 'text-green-600'
-                            : 'text-gray-500'
-                      }`}
-                    >
-                      {patient.saldo !== 0 ? `${patient.saldo > 0 ? '+' : ''}${patient.saldo} EUR` : '0'}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex gap-1 flex-wrap">
-                      {patient.tagovi.map((tag) => (
-                        <span
-                          key={tag}
-                          className={`px-2 py-0.5 rounded-full text-xs font-medium ${tagColors[tag] || 'bg-gray-100 text-gray-600'}`}
-                        >
-                          {tag}
+              {pagePatients.map((patient) => {
+                const dug = debtsByPatient.get(patient.id) || 0;
+                const initials = `${patient.ime?.[0] || ''}${patient.prezime?.[0] || ''}`.toUpperCase();
+                return (
+                  <tr
+                    key={patient.id}
+                    onClick={() => onSelect(patient)}
+                    className="hover:bg-primary-50/40 cursor-pointer transition-colors"
+                  >
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 rounded-full bg-primary-100 text-primary-700 flex items-center justify-center text-xs font-semibold shrink-0">
+                          {initials || '?'}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="font-medium text-gray-900 truncate">
+                            {patient.ime} {patient.prezime}
+                          </p>
+                          {patient.email ? (
+                            <p className="text-[11px] text-gray-400 truncate">{patient.email}</p>
+                          ) : patient.ime_roditelja ? (
+                            <p className="text-[11px] text-gray-400 truncate">Roditelj: {patient.ime_roditelja}</p>
+                          ) : null}
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 text-gray-600 whitespace-nowrap">
+                      {patient.datum_rodjenja
+                        ? new Date(patient.datum_rodjenja).toLocaleDateString('sr-Latn-ME')
+                        : '—'}
+                    </td>
+                    <td className="px-4 py-3 text-gray-600 whitespace-nowrap font-mono text-xs">{patient.telefon}</td>
+                    <td className="px-4 py-3 text-gray-600">{patient.grad || '—'}</td>
+                    <td className="px-4 py-3">
+                      {dug > 0 ? (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-red-50 text-red-700 font-semibold text-xs">
+                          {dug.toFixed(2)} €
                         </span>
-                      ))}
-                    </div>
-                  </td>
-                </tr>
-              ))}
+                      ) : (
+                        <span className="text-xs text-gray-300">—</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex gap-1 flex-wrap">
+                        {patient.tagovi.map((tag) => (
+                          <span
+                            key={tag}
+                            className={`px-2 py-0.5 rounded-full text-xs font-medium ${tagColors[tag] || 'bg-gray-100 text-gray-600'}`}
+                          >
+                            {tag}
+                          </span>
+                        ))}
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
               {pagePatients.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="px-4 py-8 text-center text-gray-400">
+                  <td colSpan={6} className="px-4 py-8 text-center text-gray-400">
                     Nema pacijenata koji odgovaraju pretrazi
                   </td>
                 </tr>

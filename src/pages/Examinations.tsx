@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { format, parseISO } from 'date-fns';
+import { srLatn as sr } from 'date-fns/locale';
 import { User, Printer, FileText, Package, Plus, Trash2, CalendarDays, Phone, ChevronRight, Search, Users } from 'lucide-react';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
@@ -308,7 +309,7 @@ function ExaminationsContent({ loggedDoctor }: { loggedDoctor: Doctor }) {
           <h2 className="text-2xl font-bold text-gray-900">Moji pregledi</h2>
           <div className="flex items-center gap-2 mt-1">
             <CalendarDays size={14} className="text-gray-400" />
-            <span className="text-sm text-gray-500">{format(today, 'EEEE, dd.MM.yyyy.')}</span>
+            <span className="text-sm text-gray-500">{format(today, 'EEEE, dd.MM.yyyy.', { locale: sr })}</span>
           </div>
         </div>
         <div className="flex items-center gap-3">
@@ -458,36 +459,63 @@ function ExaminationsContent({ loggedDoctor }: { loggedDoctor: Doctor }) {
                   </div>
                 </div>
 
-                {/* Termini ovog pacijenta */}
+                {/* Termini ovog pacijenta — detaljna istorija */}
                 {patientAppointments.length > 0 && (
                   <div className="mt-4 pt-3 border-t border-gray-100">
-                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Termini ({patientAppointments.length})</p>
-                    <div className="flex flex-wrap gap-2">
-                      {patientAppointments.slice(0, 8).map((apt) => {
+                    <div className="flex items-center justify-between mb-2">
+                      <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                        Istorija termina ({patientAppointments.length})
+                      </p>
+                      <p className="text-[11px] text-gray-400">Klikni termin za pregled</p>
+                    </div>
+                    <div className="space-y-1.5 max-h-72 overflow-y-auto pr-1">
+                      {patientAppointments.map((apt) => {
                         const aptDate = new Date(apt.pocetak);
                         const aptDateStr = `${aptDate.getFullYear()}-${String(aptDate.getMonth() + 1).padStart(2, '0')}-${String(aptDate.getDate()).padStart(2, '0')}`;
                         const isToday = aptDateStr === todayStr;
                         const isActive = selectedAppointment?.id === apt.id;
                         const svcNames = apt.services?.map((s) => s.naziv).join(', ') || '';
+                        const total = apt.services?.reduce((s, svc) => s + svc.ukupno, 0) || 0;
                         const time = `${String(aptDate.getHours()).padStart(2, '0')}:${String(aptDate.getMinutes()).padStart(2, '0')}`;
 
                         return (
                           <button
                             key={apt.id}
                             onClick={() => selectAppointmentForExam(apt)}
-                            className={`text-left px-3 py-2 rounded-lg text-xs transition-all border
+                            className={`w-full text-left px-3 py-2.5 rounded-lg text-xs transition-all border
                               ${isActive
                                 ? 'bg-primary-50 border-primary-300 ring-1 ring-primary-200'
                                 : isToday
                                   ? 'bg-green-50 border-green-200 hover:bg-green-100'
-                                  : 'bg-gray-50 border-gray-200 hover:bg-gray-100'
+                                  : 'bg-white border-gray-200 hover:bg-gray-50'
                               }`}
                           >
-                            <p className={`font-semibold ${isActive ? 'text-primary-700' : isToday ? 'text-green-700' : 'text-gray-700'}`}>
-                              {format(aptDate, 'dd.MM.yyyy.')} {time}
-                            </p>
-                            {svcNames && <p className="text-gray-400 truncate max-w-[160px]">{svcNames}</p>}
-                            {isToday && <span className="text-green-600 font-semibold">Danas</span>}
+                            <div className="flex items-center justify-between gap-2">
+                              <div className="flex items-center gap-2 min-w-0">
+                                <p className={`font-semibold whitespace-nowrap ${isActive ? 'text-primary-700' : isToday ? 'text-green-700' : 'text-gray-800'}`}>
+                                  {format(aptDate, 'dd.MM.yyyy.')} · {time}
+                                </p>
+                                {isToday && (
+                                  <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-green-100 text-green-700 font-semibold">Danas</span>
+                                )}
+                                <span
+                                  className="text-[10px] px-1.5 py-0.5 rounded-full font-medium"
+                                  style={{
+                                    backgroundColor: APPOINTMENT_STATUS_COLORS[apt.status] + '20',
+                                    color: APPOINTMENT_STATUS_COLORS[apt.status],
+                                  }}
+                                >
+                                  {APPOINTMENT_STATUS_LABELS[apt.status]}
+                                </span>
+                              </div>
+                              {total > 0 && (
+                                <span className="text-[11px] font-semibold text-gray-700 whitespace-nowrap">
+                                  {total.toFixed(0)} €
+                                </span>
+                              )}
+                            </div>
+                            {svcNames && <p className="text-gray-500 mt-1 line-clamp-2">{svcNames}</p>}
+                            {apt.napomena && <p className="text-gray-400 italic mt-1 line-clamp-1">{apt.napomena}</p>}
                           </button>
                         );
                       })}

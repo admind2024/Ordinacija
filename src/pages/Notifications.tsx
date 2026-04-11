@@ -252,7 +252,7 @@ export default function Notifications() {
     <div>
       <div className="mb-4">
         <h2 className="text-2xl font-bold text-gray-900">Notifikacije</h2>
-        <p className="text-sm text-gray-500 mt-1">SMS obavijesti za pacijente</p>
+        <p className="text-sm text-gray-500 mt-1">SMS obavjestenja za pacijente</p>
       </div>
 
       {/* Status banner */}

@@ -218,7 +218,8 @@ function IzvjestajTab() {
       .order('datum_slanja', { ascending: false });
     if (dateFrom) nq = nq.gte('datum_slanja', `${dateFrom}T00:00:00`);
     if (dateTo) nq = nq.lte('datum_slanja', `${dateTo}T23:59:59`);
-    let { data: ns, error: nsErr } = await nq;
+    const { data: nsData, error: nsErr } = await nq;
+    let ns: any[] = nsData || [];
     if (nsErr) {
       // Fallback: ako neka kolona fali (npr. prije migracije), ucitaj minimalan set kolona
       console.error('[Izvjestaj] notifications error, retrying with minimal columns:', nsErr);
@@ -230,9 +231,9 @@ function IzvjestajTab() {
       if (dateTo) fallback = fallback.lte('datum_slanja', `${dateTo}T23:59:59`);
       const { data: ns2, error: ns2Err } = await fallback;
       if (ns2Err) console.error('[Izvjestaj] notifications fallback error:', ns2Err);
-      ns = ns2 || [];
+      ns = (ns2 || []) as any[];
     }
-    setNotifs(ns || []);
+    setNotifs(ns);
 
     setLoading(false);
   }

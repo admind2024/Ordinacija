@@ -103,16 +103,20 @@ export function PatientsProvider({ children }: { children: ReactNode }) {
   const filteredPatients = useMemo(() => {
     let result = [...patients];
 
-    if (searchQuery) {
-      const q = searchQuery.toLowerCase();
-      result = result.filter(
-        (p) =>
-          p.ime.toLowerCase().includes(q) ||
-          p.prezime.toLowerCase().includes(q) ||
-          p.telefon.includes(q) ||
-          (p.email && p.email.toLowerCase().includes(q)) ||
-          (p.datum_rodjenja && p.datum_rodjenja.includes(q))
-      );
+    if (searchQuery.trim()) {
+      // Podrzi "Ime Prezime" pretragu: svaki token mora biti sadrzan u NEKOM polju
+      const tokens = searchQuery.toLowerCase().trim().split(/\s+/);
+      result = result.filter((p) => {
+        const haystack = [
+          p.ime,
+          p.prezime,
+          `${p.ime} ${p.prezime}`,
+          p.telefon,
+          p.email || '',
+          p.datum_rodjenja || '',
+        ].join(' ').toLowerCase();
+        return tokens.every((t) => haystack.includes(t));
+      });
     }
 
     result.sort((a, b) => {

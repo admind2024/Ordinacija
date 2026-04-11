@@ -37,17 +37,39 @@ export default defineConfig({
       workbox: {
         skipWaiting: true,
         clientsClaim: true,
+        cleanupOutdatedCaches: true,
         globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
+        // NE cache-uj Supabase API/auth/storage/realtime — potpuno propusti kroz mrezu.
+        // Prethodni NetworkFirst bez timeout-a je blokirao ucitavanje kad je mreza spora
+        // i bacao `no-response` kad je cache bio prazan ili je URL bio u query param-ima.
+        navigateFallbackDenylist: [/^\/api\//, /supabase\.co/],
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/.*\.supabase\.co\/.*/i,
-            handler: 'NetworkFirst',
+            handler: 'NetworkOnly',
+            method: 'GET',
+          },
+          {
+            // Slike iz Supabase Storage-a — kratak cache za performanse
+            urlPattern: /^https:\/\/.*\.supabase\.co\/storage\/v1\/object\/public\/.*\.(png|jpg|jpeg|webp|svg)$/i,
+            handler: 'StaleWhileRevalidate',
             options: {
-              cacheName: 'supabase-api',
-              expiration: { maxEntries: 50, maxAgeSeconds: 300 },
+              cacheName: 'supabase-public-images',
+              expiration: { maxEntries: 100, maxAgeSeconds: 60 * 60 * 24 * 7 }, // 7 dana
+            },
+          },
+          {
+            // Google Fonts — long cache
+            urlPattern: /^https:\/\/fonts\.(?:googleapis|gstatic)\.com\/.*/i,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'google-fonts',
+              expiration: { maxEntries: 20, maxAgeSeconds: 60 * 60 * 24 * 365 }, // 1 godina
             },
           },
         ],
+        // Nemoj precache-ovati veoma velike chunk-ove — prebrzi rast cache-a
+        maximumFileSizeToCacheInBytes: 3 * 1024 * 1024,
       },
     }),
   ],

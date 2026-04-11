@@ -329,7 +329,7 @@ export default function Reports() {
           </button>
           <button
             onClick={handleExportExcel}
-            className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg bg-gray-900 text-white hover:bg-gray-800 transition-colors"
+            className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg bg-primary-600 text-white hover:bg-primary-700 transition-colors"
             title="Preuzmi izvjestaj kao Excel"
           >
             <Download size={13} /> Excel
@@ -337,14 +337,14 @@ export default function Reports() {
         </div>
       </div>
 
-      {/* Sumarne metrike — neutralno, samo linija + tekst */}
+      {/* Sumarne metrike — primary teal + accent peach iz brand palete */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
-        <KpiTile icon={<Calendar size={16} />}   label="Termini"            value={stats.total} />
-        <KpiTile icon={<TrendingUp size={16} />} label="Realizovano"        value={stats.completed} />
-        <KpiTile icon={<CreditCard size={16} />} label="Prihod"             value={`${stats.revenue.toFixed(0)} €`} accent />
-        <KpiTile icon={<Calendar size={16} />}   label="Ukupno zakazano"    value={`${stats.allRevenue.toFixed(0)} €`} />
-        <KpiTile icon={<Users size={16} />}      label="Pacijenata"         value={stats.uniquePatients} />
-        <KpiTile icon={<FileText size={16} />}   label="Pregleda"           value={examCount} />
+        <KpiTile icon={<Calendar size={18} />}   label="Termini"         value={stats.total}                              variant="primary" />
+        <KpiTile icon={<TrendingUp size={18} />} label="Realizovano"     value={stats.completed}                          variant="primary" />
+        <KpiTile icon={<CreditCard size={18} />} label="Prihod"          value={`${stats.revenue.toFixed(0)} €`}          variant="accent"  />
+        <KpiTile icon={<Calendar size={18} />}   label="Ukupno zakazano" value={`${stats.allRevenue.toFixed(0)} €`}       variant="primary" />
+        <KpiTile icon={<Users size={18} />}      label="Pacijenata"      value={stats.uniquePatients}                     variant="primary" />
+        <KpiTile icon={<FileText size={18} />}   label="Pregleda"        value={examCount}                                variant="primary" />
       </div>
 
       {/* Realizacija + prosjek + materijali ukupno */}
@@ -354,13 +354,13 @@ export default function Reports() {
           <div className="flex items-end gap-2">
             <p className="text-2xl font-bold text-gray-900">{stats.realizationRate}%</p>
           </div>
-          <div className="w-full bg-gray-100 rounded-full h-1.5 mt-2">
-            <div className="bg-gray-700 h-1.5 rounded-full" style={{ width: `${stats.realizationRate}%` }} />
+          <div className="w-full bg-primary-50 rounded-full h-1.5 mt-2">
+            <div className="bg-primary-500 h-1.5 rounded-full" style={{ width: `${stats.realizationRate}%` }} />
           </div>
         </Card>
         <Card>
           <p className="text-[11px] uppercase tracking-wider text-gray-400 font-semibold mb-1">Prosj. vrijednost termina</p>
-          <p className="text-2xl font-bold text-gray-900">{stats.avgValue} €</p>
+          <p className="text-2xl font-bold text-primary-700">{stats.avgValue} €</p>
         </Card>
         <Card>
           <p className="text-[11px] uppercase tracking-wider text-gray-400 font-semibold mb-1">Otkazano / No-show</p>
@@ -370,7 +370,7 @@ export default function Reports() {
         </Card>
         <Card>
           <p className="text-[11px] uppercase tracking-wider text-gray-400 font-semibold mb-1">Materijali (vrijednost)</p>
-          <p className="text-2xl font-bold text-gray-900">{materialTotals.ukupnoVrijednost.toFixed(0)} €</p>
+          <p className="text-2xl font-bold text-accent-600">{materialTotals.ukupnoVrijednost.toFixed(0)} €</p>
           <p className="text-[11px] text-gray-400 mt-1">{materialTotals.ukupnoStavki} stavki</p>
         </Card>
       </div>
@@ -378,16 +378,16 @@ export default function Reports() {
       {/* Top usluge */}
       {topServices.length > 0 && (
         <Card padding={false} className="mb-6">
-          <div className="px-6 py-4 border-b border-border">
-            <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wider">Top usluge po prihodu</h3>
+          <div className="px-6 py-4 border-b border-border bg-primary-50/30">
+            <h3 className="text-sm font-semibold text-primary-700 uppercase tracking-wider">Top usluge po prihodu</h3>
           </div>
           <div className="divide-y divide-border">
             {topServices.map((svc, i) => (
               <div key={svc.naziv} className="px-6 py-3 flex items-center gap-4">
-                <span className="text-xs font-semibold text-gray-400 w-6">{i + 1}.</span>
+                <span className={`text-xs font-bold w-6 ${i < 3 ? 'text-primary-600' : 'text-gray-400'}`}>{i + 1}.</span>
                 <span className="text-sm font-medium text-gray-900 flex-1 truncate">{svc.naziv}</span>
                 <span className="text-xs text-gray-500 whitespace-nowrap">{svc.count}x</span>
-                <span className="text-sm font-semibold text-gray-900 whitespace-nowrap">{svc.revenue.toFixed(0)} €</span>
+                <span className="text-sm font-bold text-primary-700 whitespace-nowrap tabular-nums">{svc.revenue.toFixed(0)} €</span>
               </div>
             ))}
           </div>
@@ -396,13 +396,13 @@ export default function Reports() {
 
       {/* Materijali (NOVO) */}
       <Card padding={false} className="mb-6">
-        <div className="px-6 py-4 border-b border-border flex items-center justify-between">
+        <div className="px-6 py-4 border-b border-border bg-accent-50/40 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Package size={16} className="text-gray-500" />
-            <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wider">Utroseni materijali</h3>
+            <Package size={16} className="text-accent-600" />
+            <h3 className="text-sm font-semibold text-accent-700 uppercase tracking-wider">Utroseni materijali</h3>
           </div>
           <span className="text-xs text-gray-500">
-            Ukupno: <strong className="text-gray-900">{materialTotals.ukupnoVrijednost.toFixed(2)} €</strong> · {materialTotals.ukupnoStavki} stavki
+            Ukupno: <strong className="text-accent-700">{materialTotals.ukupnoVrijednost.toFixed(2)} €</strong> · {materialTotals.ukupnoStavki} stavki
           </span>
         </div>
         {materialLoading ? (
@@ -425,19 +425,19 @@ export default function Reports() {
               </thead>
               <tbody className="divide-y divide-border">
                 {materialStats.map((m) => (
-                  <tr key={m.material_id} className="hover:bg-gray-50">
+                  <tr key={m.material_id} className="hover:bg-accent-50/30">
                     <td className="px-4 py-3 text-gray-900 font-medium">{m.naziv}</td>
                     <td className="px-4 py-3 text-right text-gray-700 tabular-nums">{m.kolicina.toFixed(2)}</td>
                     <td className="px-4 py-3 text-gray-500 text-xs">{m.jedinica}</td>
                     <td className="px-4 py-3 text-right text-gray-600 tabular-nums">{m.cijena.toFixed(2)}</td>
-                    <td className="px-4 py-3 text-right text-gray-900 font-semibold tabular-nums">{m.vrijednost.toFixed(2)}</td>
+                    <td className="px-4 py-3 text-right text-accent-700 font-semibold tabular-nums">{m.vrijednost.toFixed(2)}</td>
                   </tr>
                 ))}
               </tbody>
               <tfoot>
-                <tr className="bg-gray-50 border-t border-border">
-                  <td className="px-4 py-3 text-[10px] uppercase tracking-wider text-gray-500 font-semibold" colSpan={4}>Ukupno</td>
-                  <td className="px-4 py-3 text-right text-gray-900 font-bold tabular-nums">{materialTotals.ukupnoVrijednost.toFixed(2)}</td>
+                <tr className="bg-accent-50/40 border-t border-accent-100">
+                  <td className="px-4 py-3 text-[10px] uppercase tracking-wider text-accent-700 font-semibold" colSpan={4}>Ukupno</td>
+                  <td className="px-4 py-3 text-right text-accent-700 font-bold tabular-nums">{materialTotals.ukupnoVrijednost.toFixed(2)}</td>
                 </tr>
               </tfoot>
             </table>
@@ -447,8 +447,8 @@ export default function Reports() {
 
       {/* Komparativna tabela ljekara */}
       <Card padding={false} className="mb-6">
-        <div className="px-6 py-4 border-b border-border">
-          <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wider">Komparativni izvjestaj — ljekari</h3>
+        <div className="px-6 py-4 border-b border-border bg-primary-50/30">
+          <h3 className="text-sm font-semibold text-primary-700 uppercase tracking-wider">Komparativni izvjestaj — ljekari</h3>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
@@ -468,22 +468,22 @@ export default function Reports() {
             </thead>
             <tbody className="divide-y divide-border">
               {doctorStats.map((row) => (
-                <tr key={row.doctor.id} className="hover:bg-gray-50">
+                <tr key={row.doctor.id} className="hover:bg-primary-50/30">
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
-                      <span className="w-1.5 h-1.5 rounded-full bg-gray-400" />
+                      <span className="w-2 h-2 rounded-full bg-primary-500" />
                       <span className="font-medium text-gray-900">
                         {row.doctor.titula} {row.doctor.ime} {row.doctor.prezime}
                       </span>
                     </div>
                   </td>
                   <td className="px-4 py-3 text-right text-gray-700 tabular-nums">{row.total}</td>
-                  <td className="px-4 py-3 text-right text-gray-900 font-medium tabular-nums">{row.completed}</td>
-                  <td className="px-4 py-3 text-right text-gray-900 font-semibold tabular-nums">{row.revenue.toFixed(0)}</td>
+                  <td className="px-4 py-3 text-right text-primary-700 font-medium tabular-nums">{row.completed}</td>
+                  <td className="px-4 py-3 text-right text-primary-700 font-bold tabular-nums">{row.revenue.toFixed(0)}</td>
                   <td className="px-4 py-3 text-right text-gray-600 tabular-nums">{row.allRevenue.toFixed(0)}</td>
                   <td className="px-4 py-3 text-right text-gray-600 tabular-nums">{row.avgValue.toFixed(0)}</td>
                   <td className="px-4 py-3 text-right tabular-nums">
-                    <span className={`font-medium ${row.realizationRate >= 80 ? 'text-gray-900' : row.realizationRate >= 60 ? 'text-gray-500' : 'text-gray-400'}`}>
+                    <span className={`font-semibold ${row.realizationRate >= 80 ? 'text-primary-700' : row.realizationRate >= 60 ? 'text-accent-600' : 'text-gray-400'}`}>
                       {row.realizationRate.toFixed(0)}%
                     </span>
                   </td>
@@ -501,23 +501,37 @@ export default function Reports() {
 }
 
 // ============================================================
-// KPI tile — neutralna jednoredna kartica
-// Akcent je samo jedna tanka linija ispod vrijednosti kad je accent=true
+// KPI tile — brand boje (primary teal ili accent peach)
 // ============================================================
-function KpiTile({ icon, label, value, accent }: {
+function KpiTile({ icon, label, value, variant = 'primary' }: {
   icon: React.ReactNode;
   label: string;
   value: string | number;
-  accent?: boolean;
+  variant?: 'primary' | 'accent';
 }) {
+  const styles = variant === 'accent'
+    ? {
+        iconBg: 'bg-accent-50',
+        iconText: 'text-accent-600',
+        valueText: 'text-accent-700',
+        border: 'border-accent-100',
+      }
+    : {
+        iconBg: 'bg-primary-50',
+        iconText: 'text-primary-600',
+        valueText: 'text-primary-700',
+        border: 'border-primary-100',
+      };
+
   return (
-    <div className="bg-white border border-gray-200 rounded-xl px-4 py-3">
-      <div className="flex items-center gap-2 text-gray-500 mb-1">
+    <div className={`bg-white border ${styles.border} rounded-xl px-4 py-3 flex items-center gap-3`}>
+      <div className={`w-10 h-10 rounded-lg ${styles.iconBg} ${styles.iconText} flex items-center justify-center shrink-0`}>
         {icon}
-        <p className="text-[11px] uppercase tracking-wider font-semibold truncate">{label}</p>
       </div>
-      <p className={`text-xl font-bold truncate ${accent ? 'text-gray-900' : 'text-gray-800'}`}>{value}</p>
-      {accent && <div className="h-0.5 w-8 bg-gray-900 rounded-full mt-1.5" />}
+      <div className="min-w-0">
+        <p className="text-[11px] uppercase tracking-wider text-gray-500 font-semibold truncate">{label}</p>
+        <p className={`text-xl font-bold ${styles.valueText} truncate`}>{value}</p>
+      </div>
     </div>
   );
 }

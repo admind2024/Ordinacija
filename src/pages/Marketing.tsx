@@ -193,17 +193,19 @@ function IzvjestajTab() {
     let cq = supabase.from('campaigns').select('*').order('created_at', { ascending: false });
     if (dateFrom) cq = cq.gte('created_at', `${dateFrom}T00:00:00`);
     if (dateTo) cq = cq.lte('created_at', `${dateTo}T23:59:59`);
-    const { data: camps } = await cq;
+    const { data: camps, error: campsErr } = await cq;
+    if (campsErr) console.error('[Izvjestaj] campaigns error:', campsErr);
     setCampaigns((camps || []) as Campaign[]);
 
     // 2. Campaign recipients za hronoloski feed
     const ids = (camps || []).map((c: any) => c.id);
     if (ids.length > 0) {
-      const { data: recs } = await supabase
+      const { data: recs, error: recsErr } = await supabase
         .from('campaign_recipients')
         .select('id, campaign_id, ime, telefon, channel_used, viber_dlr, viber_message_status, sms_dlr, fallbacked, clicked, error, created_at')
         .in('campaign_id', ids)
         .order('created_at', { ascending: false });
+      if (recsErr) console.error('[Izvjestaj] campaign_recipients error:', recsErr);
       setRecipients(recs || []);
     } else {
       setRecipients([]);
@@ -216,7 +218,20 @@ function IzvjestajTab() {
       .order('datum_slanja', { ascending: false });
     if (dateFrom) nq = nq.gte('datum_slanja', `${dateFrom}T00:00:00`);
     if (dateTo) nq = nq.lte('datum_slanja', `${dateTo}T23:59:59`);
-    const { data: ns } = await nq;
+    let { data: ns, error: nsErr } = await nq;
+    if (nsErr) {
+      // Fallback: ako neka kolona fali (npr. prije migracije), ucitaj minimalan set kolona
+      console.error('[Izvjestaj] notifications error, retrying with minimal columns:', nsErr);
+      let fallback = supabase
+        .from('notifications')
+        .select('id, tip, kanal, status, sadrzaj, patient_ime, patient_telefon, error, datum_slanja')
+        .order('datum_slanja', { ascending: false });
+      if (dateFrom) fallback = fallback.gte('datum_slanja', `${dateFrom}T00:00:00`);
+      if (dateTo) fallback = fallback.lte('datum_slanja', `${dateTo}T23:59:59`);
+      const { data: ns2, error: ns2Err } = await fallback;
+      if (ns2Err) console.error('[Izvjestaj] notifications fallback error:', ns2Err);
+      ns = ns2 || [];
+    }
     setNotifs(ns || []);
 
     setLoading(false);
@@ -1316,7 +1331,7 @@ function NovaKampanjaTab({ onDone }: { onDone: () => void }) {
   }
 
   return (
-    <div className="max-w-3xl space-y-6">
+    <div className="w-full space-y-6">
       {/* 1. Naziv + kanal */}
       <Card>
         <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">1. Osnovno</h3>

@@ -32,6 +32,10 @@ function PatientsContent() {
     }
   }
 
+  // Remount form svaki put kad se otvori / promijeni pacijent — inace useState
+  // initializer ne refresuje inicijalne vrijednosti iz editPatient prop-a.
+  const formKey = formOpen ? (editingPatient?.id ?? 'new') : 'closed';
+
   if (selectedPatient) {
     return (
       <>
@@ -43,6 +47,7 @@ function PatientsContent() {
           onDelete={handleDelete}
         />
         <PatientForm
+          key={formKey}
           isOpen={formOpen}
           onClose={() => {
             setFormOpen(false);
@@ -64,6 +69,7 @@ function PatientsContent() {
       <PatientList onSelect={setSelectedPatient} onNew={handleNew} />
 
       <PatientForm
+        key={formKey}
         isOpen={formOpen}
         onClose={() => {
           setFormOpen(false);

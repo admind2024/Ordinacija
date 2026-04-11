@@ -252,7 +252,24 @@ export default function Notifications() {
     <div>
       <div className="mb-4">
         <h2 className="text-2xl font-bold text-gray-900">Notifikacije</h2>
-        <p className="text-sm text-gray-500 mt-1">SMS obavjestenja za pacijente</p>
+        <p className="text-sm text-gray-500 mt-1">SMS/Viber log i izvjestaj poruka</p>
+      </div>
+
+      {/* Banner: podesavanja su premjestena u Settings */}
+      <div className="bg-primary-50 border border-primary-200 rounded-xl p-4 mb-6 flex items-center justify-between gap-4 flex-wrap">
+        <div className="flex items-center gap-3">
+          <Settings size={20} className="text-primary-600" />
+          <div>
+            <p className="text-sm font-semibold text-primary-900">Konfiguracija, Podsjetnici i Sabloni poruka su premjesteni u Podesavanja</p>
+            <p className="text-xs text-primary-700 mt-0.5">SMS/Viber kredencijali, timing podsjetnika i uredjivanje template-a dostupni su na stranici Podesavanja (sifrom zasticeno).</p>
+          </div>
+        </div>
+        <a
+          href="/settings"
+          className="px-4 py-2 text-xs font-semibold rounded-lg bg-primary-600 text-white hover:bg-primary-700 transition-colors whitespace-nowrap"
+        >
+          Otvori Podesavanja →
+        </a>
       </div>
 
       {/* Status banner */}

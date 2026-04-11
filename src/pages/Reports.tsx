@@ -1,10 +1,11 @@
 import { useState, useMemo, useEffect } from 'react';
-import { BarChart3, TrendingUp, Users, Calendar, CreditCard, FileText } from 'lucide-react';
+import { BarChart3, TrendingUp, Users, Calendar, CreditCard, FileText, Printer, Download } from 'lucide-react';
 import Card from '../components/ui/Card';
 import { useCalendar } from '../contexts/CalendarContext';
 
 import { supabase } from '../lib/supabase';
-import { APPOINTMENT_STATUS_COLORS } from '../types';
+import { APPOINTMENT_STATUS_COLORS, APPOINTMENT_STATUS_LABELS } from '../types';
+import { exportToExcel, printToPdf, type ReportExport } from '../lib/exportReport';
 
 export default function Reports() {
   const { appointments, doctors } = useCalendar();
@@ -90,6 +91,120 @@ export default function Reports() {
     }).sort((a, b) => b.revenue - a.revenue);
   }, [doctors, filtered]);
 
+  // Build export payload sa svim dostupnim sheet-ovima za PDF/Excel
+  function buildReportExport(): ReportExport {
+    const doctorLabel = selectedDoctor === 'all'
+      ? 'Svi ljekari'
+      : doctors.find((d) => d.id === selectedDoctor)?.ime + ' ' + doctors.find((d) => d.id === selectedDoctor)?.prezime;
+    const subtitle = `Period: ${dateFrom} — ${dateTo}  |  Ljekar: ${doctorLabel}`;
+
+    return {
+      title: 'Izvjestaj — Ministry of Aesthetics',
+      subtitle,
+      sheets: [
+        // 1. Sumarni pregled
+        {
+          name: 'Sumarni pregled',
+          columns: [
+            { key: 'metric', label: 'Metrika' },
+            { key: 'value', label: 'Vrijednost', format: 'number' },
+          ],
+          rows: [
+            { metric: 'Ukupno termina',              value: stats.total },
+            { metric: 'Realizovano (zavrseno)',      value: stats.completed },
+            { metric: 'Otkazano',                    value: stats.cancelled },
+            { metric: 'No-show',                     value: stats.noShow },
+            { metric: 'Prihod (realizovano) EUR',    value: Number(stats.revenue.toFixed(2)) },
+            { metric: 'Ukupno zakazano EUR',         value: Number(stats.allRevenue.toFixed(2)) },
+            { metric: 'Jedinstvenih pacijenata',     value: stats.uniquePatients },
+            { metric: 'Pregleda (examinations)',     value: examCount },
+            { metric: 'Stopa realizacije %',         value: Number(stats.realizationRate) },
+            { metric: 'Prosjecna vrijednost termina EUR', value: Number(stats.avgValue) },
+          ],
+        },
+        // 2. Top usluge
+        {
+          name: 'Top usluge',
+          columns: [
+            { key: 'rank',    label: '#' },
+            { key: 'naziv',   label: 'Usluga' },
+            { key: 'count',   label: 'Kolicina', format: 'number' },
+            { key: 'revenue', label: 'Prihod (EUR)', format: 'currency' },
+          ],
+          rows: topServices.map((s, i) => ({
+            rank: i + 1,
+            naziv: s.naziv,
+            count: s.count,
+            revenue: Number(s.revenue.toFixed(2)),
+          })),
+        },
+        // 3. Ljekari (komparativni)
+        {
+          name: 'Ljekari komparativno',
+          columns: [
+            { key: 'ime',          label: 'Ljekar' },
+            { key: 'total',        label: 'Termini', format: 'number' },
+            { key: 'completed',    label: 'Realizovano', format: 'number' },
+            { key: 'revenue',      label: 'Prihod (EUR)', format: 'currency' },
+            { key: 'allRevenue',   label: 'Zakazano (EUR)', format: 'currency' },
+            { key: 'avgValue',     label: 'Prosjek (EUR)', format: 'currency' },
+            { key: 'realization',  label: 'Realizacija %', format: 'percent' },
+            { key: 'cancelled',    label: 'Otkazano', format: 'number' },
+            { key: 'noShow',       label: 'No-show', format: 'number' },
+            { key: 'patients',     label: 'Pacijenata', format: 'number' },
+          ],
+          rows: doctorStats.map((r) => ({
+            ime: `${r.doctor.titula || ''} ${r.doctor.ime} ${r.doctor.prezime}`.trim(),
+            total: r.total,
+            completed: r.completed,
+            revenue: Number(r.revenue.toFixed(2)),
+            allRevenue: Number(r.allRevenue.toFixed(2)),
+            avgValue: Number(r.avgValue.toFixed(2)),
+            realization: Number(r.realizationRate.toFixed(1)),
+            cancelled: r.cancelled,
+            noShow: r.noShow,
+            patients: r.uniquePatients,
+          })),
+        },
+        // 4. Detaljan spisak termina
+        {
+          name: 'Detalji termina',
+          columns: [
+            { key: 'datum',    label: 'Datum' },
+            { key: 'vrijeme',  label: 'Vrijeme' },
+            { key: 'pacijent', label: 'Pacijent' },
+            { key: 'ljekar',   label: 'Ljekar' },
+            { key: 'usluge',   label: 'Usluge' },
+            { key: 'status',   label: 'Status' },
+            { key: 'iznos',    label: 'Iznos (EUR)', format: 'currency' },
+          ],
+          rows: filtered.map((a) => {
+            const d = new Date(a.pocetak);
+            const doc = doctors.find((x) => x.id === a.doctor_id);
+            const patient = a.patient as any;
+            return {
+              datum: `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}.${d.getFullYear()}.`,
+              vrijeme: `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`,
+              pacijent: patient ? `${patient.ime || ''} ${patient.prezime || ''}`.trim() : '—',
+              ljekar: doc ? `${doc.titula || ''} ${doc.ime} ${doc.prezime}`.trim() : '—',
+              usluge: (a.services || []).map((s) => s.naziv).join(', ') || '—',
+              status: APPOINTMENT_STATUS_LABELS[a.status] || a.status,
+              iznos: Number(((a.services || []).reduce((sum, s) => sum + s.ukupno, 0)).toFixed(2)),
+            };
+          }),
+        },
+      ],
+    };
+  }
+
+  function handleExportExcel() {
+    exportToExcel(buildReportExport());
+  }
+
+  function handlePrintPdf() {
+    printToPdf(buildReportExport());
+  }
+
   // Top usluge
   const topServices = useMemo(() => {
     const map: Record<string, { naziv: string; count: number; revenue: number }> = {};
@@ -110,7 +225,7 @@ export default function Reports() {
           <h2 className="text-2xl font-bold text-gray-900">Izvjestaji</h2>
           <p className="text-sm text-gray-500 mt-1">Statistika, finansije i performanse</p>
         </div>
-        <div className="flex gap-2 flex-wrap">
+        <div className="flex gap-2 flex-wrap items-center">
           <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)}
             className="px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" />
           <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)}
@@ -122,6 +237,21 @@ export default function Reports() {
               <option key={d.id} value={d.id}>{d.titula} {d.ime} {d.prezime}</option>
             ))}
           </select>
+          <div className="h-6 w-px bg-gray-200 mx-1" />
+          <button
+            onClick={handlePrintPdf}
+            className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 transition-colors"
+            title="Stampaj izvjestaj kao PDF"
+          >
+            <Printer size={13} /> PDF
+          </button>
+          <button
+            onClick={handleExportExcel}
+            className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 transition-colors"
+            title="Preuzmi izvjestaj kao Excel"
+          >
+            <Download size={13} /> Excel
+          </button>
         </div>
       </div>
 

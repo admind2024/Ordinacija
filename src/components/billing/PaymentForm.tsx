@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { AlertTriangle, Receipt } from 'lucide-react';
+import { useState, useMemo } from 'react';
+import { AlertTriangle, Receipt, Tag } from 'lucide-react';
 import Modal from '../ui/Modal';
 import Button from '../ui/Button';
 import Input from '../ui/Input';
@@ -20,13 +20,28 @@ export default function PaymentForm({ isOpen, onClose, appointment }: PaymentFor
   const balance = getAppointmentBalance(appointment);
   const patient = patients.find((p) => p.id === appointment.patient_id);
 
-  const [iznos, setIznos] = useState(balance.remaining > 0 ? balance.remaining : 0);
+  // Bruto (bez ikakvog popusta) = sum(cijena * kolicina) — ignorise vec primijenjeni popust
+  // u svc.ukupno jer omoguci ljekaru da override popusta pri naplati.
+  const bruto = useMemo(() =>
+    (appointment.services || []).reduce((s, svc) => s + (svc.cijena * (svc.kolicina || 1)), 0),
+    [appointment.services],
+  );
+
+  // Popust: default = patient.popust (npr. 10%), editabilan u formi
+  const [popust, setPopust] = useState<number>(patient?.popust || 0);
+  const popustIznos = bruto * (popust / 100);
+  // Za naplatu = bruto - popust (umjesto balance.total koji je koristio svc.ukupno koji moze
+  // biti zastarjeli popust snimljen pri kreiranju termina).
+  const zaNaplatu = Math.max(0, bruto - popustIznos);
+  const preostaloZaNaplatu = Math.max(0, zaNaplatu - balance.paid);
+
+  const [iznos, setIznos] = useState(preostaloZaNaplatu > 0 ? preostaloZaNaplatu : 0);
   const [nacinPlacanja, setNacinPlacanja] = useState<'gotovina' | 'kartica'>('gotovina');
   const [fiskalizuj, setFiskalizuj] = useState(false);
   const [napomena, setNapomena] = useState('');
   const [saving, setSaving] = useState(false);
 
-  const remaining = balance.remaining - iznos;
+  const remaining = preostaloZaNaplatu - iznos;
   const willCreateDebt = remaining > 0.01;
 
   function getPaymentMethod(): PaymentMethod {
@@ -43,6 +58,22 @@ export default function PaymentForm({ isOpen, onClose, appointment }: PaymentFor
 
     const metoda = getPaymentMethod();
 
+    // Ako je popust pri naplati drugaciji od onog u appointment_services, sinhronizuj ga u DB
+    // tako da buduci izvjestaji i istorija pacijenta prikazuju tacnu vrijednost.
+    if (appointment.services && appointment.services.length > 0) {
+      const servicesUpdated = appointment.services.map((svc) => ({
+        id: svc.id,
+        popust,
+        ukupno: svc.cijena * (svc.kolicina || 1) * (1 - popust / 100),
+      }));
+      for (const s of servicesUpdated) {
+        await supabase
+          .from('appointment_services')
+          .update({ popust: s.popust, ukupno: s.ukupno })
+          .eq('id', s.id);
+      }
+    }
+
     addPayment({
       id: `pay-${Date.now()}`,
       appointment_id: appointment.id,
@@ -58,9 +89,9 @@ export default function PaymentForm({ isOpen, onClose, appointment }: PaymentFor
       const serviceNames = appointment.services?.map((s) => s.naziv).join(', ') || 'Usluge';
       await supabase.from('dugovanja').insert({
         patient_id: appointment.patient_id,
-        iznos: balance.remaining,
+        iznos: zaNaplatu,
         preostalo: remaining,
-        opis: `${serviceNames} — placeno ${iznos.toFixed(0)}e od ${balance.remaining.toFixed(0)}e`,
+        opis: `${serviceNames} — placeno ${iznos.toFixed(0)}e od ${zaNaplatu.toFixed(0)}e${popust > 0 ? ` (popust ${popust}%)` : ''}`,
         datum_nastanka: new Date().toISOString().slice(0, 10),
         status: 'aktivan',
         napomena: napomena || null,
@@ -78,20 +109,35 @@ export default function PaymentForm({ isOpen, onClose, appointment }: PaymentFor
         <div className="bg-gray-50 rounded-lg p-3 text-sm space-y-1">
           <p className="font-medium text-gray-900">
             {patient ? `${patient.ime} ${patient.prezime}` : 'Pacijent'}
+            {patient && patient.popust > 0 && (
+              <span className="ml-2 text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-semibold">
+                Stalni popust {patient.popust}%
+              </span>
+            )}
           </p>
           {appointment.services && (
             <div className="space-y-0.5">
               {appointment.services.map((svc) => (
                 <div key={svc.id} className="flex justify-between text-gray-600">
                   <span>{svc.naziv} {svc.kolicina > 1 ? `x${svc.kolicina}` : ''}</span>
-                  <span>{svc.ukupno.toFixed(2)} EUR</span>
+                  <span>{(svc.cijena * (svc.kolicina || 1)).toFixed(2)} EUR</span>
                 </div>
               ))}
             </div>
           )}
-          <div className="border-t border-border pt-1 mt-2 flex justify-between font-medium">
-            <span>Ukupno:</span>
-            <span>{balance.total.toFixed(2)} EUR</span>
+          <div className="border-t border-border pt-1 mt-2 flex justify-between text-gray-600">
+            <span>Osnovica:</span>
+            <span>{bruto.toFixed(2)} EUR</span>
+          </div>
+          {popust > 0 && (
+            <div className="flex justify-between text-emerald-600">
+              <span>Popust {popust}%:</span>
+              <span>−{popustIznos.toFixed(2)} EUR</span>
+            </div>
+          )}
+          <div className="flex justify-between font-semibold text-gray-900 border-t border-border pt-1 mt-1">
+            <span>Ukupno sa popustom:</span>
+            <span>{zaNaplatu.toFixed(2)} EUR</span>
           </div>
           {balance.paid > 0 && (
             <div className="flex justify-between text-green-600">
@@ -99,9 +145,41 @@ export default function PaymentForm({ isOpen, onClose, appointment }: PaymentFor
               <span>{balance.paid.toFixed(2)} EUR</span>
             </div>
           )}
-          <div className="flex justify-between font-semibold text-gray-900">
+          <div className="flex justify-between font-bold text-gray-900">
             <span>Za naplatu:</span>
-            <span>{balance.remaining.toFixed(2)} EUR</span>
+            <span>{preostaloZaNaplatu.toFixed(2)} EUR</span>
+          </div>
+        </div>
+
+        {/* Popust — editabilan */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1.5">
+            <Tag size={13} className="text-emerald-600" /> Popust (%)
+          </label>
+          <div className="flex items-center gap-2">
+            <input
+              type="number"
+              min={0}
+              max={100}
+              step={1}
+              value={popust}
+              onChange={(e) => {
+                const val = Math.max(0, Math.min(100, Number(e.target.value) || 0));
+                setPopust(val);
+                // Automatski ažuriraj iznos na novi "preostalo za naplatu"
+                const newZaNaplatu = bruto * (1 - val / 100);
+                const newPreostalo = Math.max(0, newZaNaplatu - balance.paid);
+                setIznos(newPreostalo);
+              }}
+              className="w-24 px-3 py-2 border border-border rounded-lg text-sm text-center font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            />
+            <span className="text-xs text-gray-500">
+              {patient && patient.popust > 0 && popust !== patient.popust
+                ? `(pacijent ima stalni popust ${patient.popust}%)`
+                : patient && patient.popust > 0
+                  ? 'primijenjen stalni popust pacijenta'
+                  : 'pacijent nema stalni popust'}
+            </span>
           </div>
         </div>
 

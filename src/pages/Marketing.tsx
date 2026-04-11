@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import {
   Megaphone, Users, Tags, Plus, Send, Trash2, Edit, Upload,
-  CheckCircle, XCircle, Loader2, ChevronRight,
+  CheckCircle, XCircle, Loader2, ChevronRight, BarChart3, Eye, MousePointer,
   Type as TypeIcon, Square, Image as ImageIcon, Video, Layers,
 } from 'lucide-react';
 import Card from '../components/ui/Card';
@@ -16,7 +16,7 @@ import {
 // ============================================================
 // Tipovi
 // ============================================================
-type MarketingTab = 'kontakti' | 'grupe' | 'nova_kampanja' | 'kampanje';
+type MarketingTab = 'kontakti' | 'grupe' | 'nova_kampanja' | 'kampanje' | 'izvjestaj';
 
 interface Contact {
   id: string;
@@ -45,12 +45,22 @@ interface Campaign {
   channel_mode: ChannelMode;
   sms_text: string | null;
   viber_text: string | null;
+  viber_caption: string | null;
+  viber_action_url: string | null;
+  viber_image_url: string | null;
+  viber_video_url: string | null;
+  viber_type: string | null;
   target_type: string;
   status: string;
   total_recipients: number;
   sent_viber: number;
   sent_sms: number;
   delivered_count: number;
+  viber_delivered_count: number;
+  sms_delivered_count: number;
+  seen_count: number;
+  clicked_count: number;
+  fallback_count: number;
   failed_count: number;
   cost_estimation: number | null;
   cost_actual: number | null;
@@ -117,6 +127,7 @@ export default function Marketing() {
         {[
           { key: 'kampanje' as const, label: 'Kampanje', icon: Megaphone },
           { key: 'nova_kampanja' as const, label: 'Nova kampanja', icon: Plus },
+          { key: 'izvjestaj' as const, label: 'Izvjestaj', icon: BarChart3 },
           { key: 'kontakti' as const, label: 'Kontakti', icon: Users },
           { key: 'grupe' as const, label: 'Grupe', icon: Tags },
         ].map((t) => (
@@ -136,6 +147,209 @@ export default function Marketing() {
       {tab === 'grupe' && <GrupeTab />}
       {tab === 'nova_kampanja' && <NovaKampanjaTab onDone={() => setTab('kampanje')} />}
       {tab === 'kampanje' && <KampanjeTab />}
+      {tab === 'izvjestaj' && <IzvjestajTab />}
+    </div>
+  );
+}
+
+// ============================================================
+// TAB: IZVJESTAJ — Viber DLR statistika i breakdown
+// ============================================================
+function IzvjestajTab() {
+  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
+  const [recipients, setRecipients] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+
+  async function load() {
+    setLoading(true);
+    let cq = supabase.from('campaigns').select('*').order('created_at', { ascending: false });
+    if (dateFrom) cq = cq.gte('created_at', `${dateFrom}T00:00:00`);
+    if (dateTo) cq = cq.lte('created_at', `${dateTo}T23:59:59`);
+    const { data: camps } = await cq;
+    setCampaigns((camps || []) as Campaign[]);
+
+    // Svi primaoci za izracun breakdown-a
+    const ids = (camps || []).map((c: any) => c.id);
+    if (ids.length > 0) {
+      const { data: recs } = await supabase
+        .from('campaign_recipients')
+        .select('campaign_id, channel_used, viber_dlr, viber_message_status, sms_dlr, fallbacked, clicked')
+        .in('campaign_id', ids);
+      setRecipients(recs || []);
+    } else {
+      setRecipients([]);
+    }
+    setLoading(false);
+  }
+
+  useEffect(() => { load(); }, [dateFrom, dateTo]);
+
+  // Ukupna statistika preko svih kampanja
+  const stats = useMemo(() => {
+    const total = campaigns.reduce((s, c) => s + (c.total_recipients || 0), 0);
+    const viberDelivered = recipients.filter((r) => r.viber_dlr === 'delivered').length;
+    const smsDelivered = recipients.filter((r) => r.sms_dlr === 'delivered' || r.sms_dlr === 'submitted').length;
+    const seen = recipients.filter((r) => r.viber_message_status === 'seen').length;
+    const clicked = recipients.filter((r) => r.clicked === true).length;
+    const fallback = recipients.filter((r) => r.fallbacked === true).length;
+    const notViberUser = recipients.filter((r) => r.viber_dlr === 'not_viber_user').length;
+    const noSuitableDevice = recipients.filter((r) => r.viber_dlr === 'no_suitable_device').length;
+    const blocked = recipients.filter((r) => r.viber_dlr === 'blocked').length;
+    const expired = recipients.filter((r) => r.viber_dlr === 'expired').length;
+    const failed = recipients.filter((r) => r.viber_dlr === 'failed').length;
+
+    return {
+      total, viberDelivered, smsDelivered, seen, clicked, fallback,
+      viberFailReasons: { notViberUser, noSuitableDevice, blocked, expired, failed },
+    };
+  }, [campaigns, recipients]);
+
+  const pct = (num: number, denom: number) => denom > 0 ? Math.round((num / denom) * 100) : 0;
+
+  return (
+    <div className="space-y-4">
+      {/* Filter po datumu */}
+      <Card>
+        <div className="flex items-center gap-3 flex-wrap">
+          <BarChart3 size={18} className="text-gray-500" />
+          <h3 className="text-sm font-semibold text-gray-600">Izvjestaj Viber/SMS kampanja</h3>
+          <div className="flex items-center gap-2 ml-auto">
+            <label className="text-xs text-gray-500">Od</label>
+            <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="px-2 py-1 border border-border rounded text-xs" />
+            <label className="text-xs text-gray-500">Do</label>
+            <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="px-2 py-1 border border-border rounded text-xs" />
+            <Button variant="secondary" onClick={load}>Osvjezi</Button>
+          </div>
+        </div>
+      </Card>
+
+      {loading ? (
+        <Card><div className="py-8 text-center text-gray-400">Ucitavam...</div></Card>
+      ) : (
+        <>
+          {/* Summary stats — 6 cards */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+            <Card>
+              <p className="text-xs text-gray-500">Ukupno primalaca</p>
+              <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
+              <p className="text-xs text-gray-400 mt-1">{campaigns.length} kampanja</p>
+            </Card>
+            <Card>
+              <div className="flex items-center gap-1 mb-1">
+                <CheckCircle size={14} className="text-purple-600" />
+                <p className="text-xs text-purple-600 font-medium">Viber isporuceno</p>
+              </div>
+              <p className="text-2xl font-bold text-purple-700">{stats.viberDelivered}</p>
+              <p className="text-xs text-gray-400 mt-1">{pct(stats.viberDelivered, stats.total)}% ukupnog</p>
+            </Card>
+            <Card>
+              <div className="flex items-center gap-1 mb-1">
+                <Eye size={14} className="text-green-600" />
+                <p className="text-xs text-green-600 font-medium">Viber seen</p>
+              </div>
+              <p className="text-2xl font-bold text-green-700">{stats.seen}</p>
+              <p className="text-xs text-gray-400 mt-1">{pct(stats.seen, stats.viberDelivered)}% od delivered</p>
+            </Card>
+            <Card>
+              <div className="flex items-center gap-1 mb-1">
+                <MousePointer size={14} className="text-blue-600" />
+                <p className="text-xs text-blue-600 font-medium">Viber kliknuto</p>
+              </div>
+              <p className="text-2xl font-bold text-blue-700">{stats.clicked}</p>
+              <p className="text-xs text-gray-400 mt-1">{pct(stats.clicked, stats.viberDelivered)}% od delivered</p>
+            </Card>
+            <Card>
+              <div className="flex items-center gap-1 mb-1">
+                <Send size={14} className="text-amber-600" />
+                <p className="text-xs text-amber-600 font-medium">SMS fallback</p>
+              </div>
+              <p className="text-2xl font-bold text-amber-700">{stats.fallback}</p>
+              <p className="text-xs text-gray-400 mt-1">{pct(stats.fallback, stats.total)}% ukupnog</p>
+            </Card>
+            <Card>
+              <div className="flex items-center gap-1 mb-1">
+                <CheckCircle size={14} className="text-sky-600" />
+                <p className="text-xs text-sky-600 font-medium">SMS isporuceno</p>
+              </div>
+              <p className="text-2xl font-bold text-sky-700">{stats.smsDelivered}</p>
+              <p className="text-xs text-gray-400 mt-1">ukupno SMS</p>
+            </Card>
+          </div>
+
+          {/* Viber fail reasons breakdown */}
+          <Card>
+            <h3 className="text-sm font-semibold text-gray-600 mb-3">Viber neisporuceno — razlozi</h3>
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+              {[
+                { label: 'Not Viber user', value: stats.viberFailReasons.notViberUser, color: 'bg-gray-100 text-gray-700' },
+                { label: 'No suitable device', value: stats.viberFailReasons.noSuitableDevice, color: 'bg-gray-100 text-gray-700' },
+                { label: 'Blocked', value: stats.viberFailReasons.blocked, color: 'bg-red-100 text-red-700' },
+                { label: 'Expired', value: stats.viberFailReasons.expired, color: 'bg-amber-100 text-amber-700' },
+                { label: 'Failed', value: stats.viberFailReasons.failed, color: 'bg-red-100 text-red-700' },
+              ].map((r) => (
+                <div key={r.label} className={`rounded-lg p-3 ${r.color}`}>
+                  <p className="text-xs font-medium">{r.label}</p>
+                  <p className="text-xl font-bold">{r.value}</p>
+                </div>
+              ))}
+            </div>
+            <p className="text-[11px] text-gray-400 mt-3">
+              Za sve nabrojane razloge koji su u kampanji <strong>Viber + SMS fallback</strong>, SMS je automatski poslat preko rakunat-a.
+              Kolona "Fallback" gore pokazuje koliko ih je realno prebaceno.
+            </p>
+          </Card>
+
+          {/* Tabela kampanja sa stats */}
+          <Card padding={false}>
+            <div className="px-4 py-3 border-b border-border">
+              <h3 className="text-sm font-semibold text-gray-600">Kampanje sa statistikom</h3>
+            </div>
+            {campaigns.length === 0 ? (
+              <div className="py-12 text-center text-gray-400">
+                <Megaphone size={48} className="mx-auto mb-3" />
+                <p>Nema kampanja u izabranom periodu</p>
+              </div>
+            ) : (
+              <div className="divide-y divide-border">
+                <div className="px-4 py-2 bg-gray-50 text-[11px] text-gray-500 font-medium flex items-center gap-3">
+                  <span className="flex-1">Naziv</span>
+                  <span className="w-16 text-right">Poslato</span>
+                  <span className="w-16 text-right">Viber ✓</span>
+                  <span className="w-16 text-right">Seen</span>
+                  <span className="w-16 text-right">Click</span>
+                  <span className="w-16 text-right">Fallback</span>
+                  <span className="w-16 text-right">SMS ✓</span>
+                  <span className="w-16 text-right">Failed</span>
+                </div>
+                {campaigns.map((c) => (
+                  <div
+                    key={c.id}
+                    onClick={() => setSelectedId(c.id)}
+                    className="px-4 py-2 flex items-center gap-3 text-sm hover:bg-gray-50 cursor-pointer"
+                  >
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-gray-900 truncate">{c.naziv}</p>
+                      <p className="text-xs text-gray-400">{c.channel_mode} · {new Date(c.created_at).toLocaleDateString('sr-Latn-ME')}</p>
+                    </div>
+                    <span className="w-16 text-right text-gray-600">{c.total_recipients}</span>
+                    <span className="w-16 text-right text-purple-700 font-medium">{c.viber_delivered_count || 0}</span>
+                    <span className="w-16 text-right text-green-700 font-medium">{c.seen_count || 0}</span>
+                    <span className="w-16 text-right text-blue-700 font-medium">{c.clicked_count || 0}</span>
+                    <span className="w-16 text-right text-amber-700 font-medium">{c.fallback_count || 0}</span>
+                    <span className="w-16 text-right text-sky-700 font-medium">{c.sms_delivered_count || 0}</span>
+                    <span className="w-16 text-right text-red-700 font-medium">{c.failed_count || 0}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </Card>
+        </>
+      )}
+
+      {selectedId && <CampaignDetails campaignId={selectedId} onClose={() => setSelectedId(null)} />}
     </div>
   );
 }
@@ -1245,37 +1459,46 @@ function KampanjeTab() {
           </div>
         ) : (
           <div className="divide-y divide-border">
-            <div className="px-6 py-2 bg-gray-50 text-xs text-gray-500 font-medium flex items-center gap-4">
+            <div className="px-4 py-2 bg-gray-50 text-[11px] text-gray-500 font-medium flex items-center gap-2">
               <span className="flex-1">Naziv</span>
-              <span className="w-32">Kanal</span>
               <span className="w-24 text-center">Status</span>
-              <span className="w-20 text-center">Primaoci</span>
-              <span className="w-24 text-center">Viber/SMS</span>
-              <span className="w-32 text-right">Kreirano</span>
-              <span className="w-24 text-right">Akcije</span>
+              <span className="w-12 text-right" title="Ukupno primalaca">∑</span>
+              <span className="w-12 text-right text-purple-700" title="Viber isporuceno">V✓</span>
+              <span className="w-12 text-right text-green-700" title="Viber seen">Seen</span>
+              <span className="w-12 text-right text-blue-700" title="Viber kliknuto">Click</span>
+              <span className="w-14 text-right text-amber-700" title="SMS fallback">Fall</span>
+              <span className="w-12 text-right text-sky-700" title="SMS isporuceno">S✓</span>
+              <span className="w-12 text-right text-red-700" title="Neuspjesno">Fail</span>
+              <span className="w-28 text-right">Kreirano</span>
+              <span className="w-20 text-right">Akcije</span>
             </div>
             {campaigns.map((c) => (
               <div
                 key={c.id}
                 onClick={() => setSelectedId(c.id)}
-                className="px-6 py-3 flex items-center gap-4 hover:bg-gray-50 cursor-pointer"
+                className="px-4 py-2.5 flex items-center gap-2 hover:bg-gray-50 cursor-pointer"
               >
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-gray-900 truncate">{c.naziv}</p>
-                  {c.error && <p className="text-xs text-red-500 truncate">{c.error}</p>}
+                  <p className="text-[11px] text-gray-400 truncate">{c.channel_mode}{c.viber_type ? ` · ${c.viber_type}` : ''}</p>
+                  {c.error && <p className="text-[11px] text-red-500 truncate">{c.error}</p>}
                 </div>
-                <div className="w-32 text-xs text-gray-600">{c.channel_mode}</div>
                 <div className="w-24 text-center">
-                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${statusColors[c.status] || 'bg-gray-100'}`}>
+                  <span className={`text-[11px] px-2 py-0.5 rounded-full font-medium ${statusColors[c.status] || 'bg-gray-100'}`}>
                     {statusLabels[c.status] || c.status}
                   </span>
                 </div>
-                <div className="w-20 text-center text-sm">{c.total_recipients}</div>
-                <div className="w-24 text-center text-xs text-gray-600">{c.sent_viber}/{c.sent_sms}</div>
-                <div className="w-32 text-right text-xs text-gray-400">
+                <span className="w-12 text-right text-sm text-gray-600">{c.total_recipients}</span>
+                <span className="w-12 text-right text-sm text-purple-700 font-medium">{c.viber_delivered_count || 0}</span>
+                <span className="w-12 text-right text-sm text-green-700 font-medium">{c.seen_count || 0}</span>
+                <span className="w-12 text-right text-sm text-blue-700 font-medium">{c.clicked_count || 0}</span>
+                <span className="w-14 text-right text-sm text-amber-700 font-medium">{c.fallback_count || 0}</span>
+                <span className="w-12 text-right text-sm text-sky-700 font-medium">{c.sms_delivered_count || 0}</span>
+                <span className="w-12 text-right text-sm text-red-700 font-medium">{c.failed_count || 0}</span>
+                <div className="w-28 text-right text-[11px] text-gray-400">
                   {new Date(c.created_at).toLocaleString('sr-Latn-ME', { dateStyle: 'short', timeStyle: 'short' })}
                 </div>
-                <div className="w-24 flex justify-end gap-1">
+                <div className="w-20 flex justify-end gap-1">
                   {(c.status === 'scheduled' || c.status === 'sending') && (
                     <button
                       onClick={(e) => handleCancel(c.id, e)}
@@ -1331,12 +1554,87 @@ function CampaignDetails({ campaignId, onClose }: { campaignId: string; onClose:
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600">&times;</button>
         </div>
 
-        <div className="grid grid-cols-4 gap-3">
-          <div className="bg-gray-50 rounded p-3"><p className="text-xs text-gray-500">Primaoca</p><p className="text-lg font-bold">{campaign.total_recipients}</p></div>
-          <div className="bg-purple-50 rounded p-3"><p className="text-xs text-purple-600">Viber poslato</p><p className="text-lg font-bold">{campaign.sent_viber}</p></div>
-          <div className="bg-blue-50 rounded p-3"><p className="text-xs text-blue-600">SMS poslato</p><p className="text-lg font-bold">{campaign.sent_sms}</p></div>
-          <div className="bg-green-50 rounded p-3"><p className="text-xs text-green-600">Isporuceno</p><p className="text-lg font-bold">{campaign.delivered_count}</p></div>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div className="bg-gray-50 rounded p-3"><p className="text-xs text-gray-500">Primaoca</p><p className="text-xl font-bold">{campaign.total_recipients}</p></div>
+          <div className="bg-purple-50 rounded p-3">
+            <p className="text-xs text-purple-600">Viber isporuceno</p>
+            <p className="text-xl font-bold text-purple-700">{campaign.viber_delivered_count || 0}</p>
+          </div>
+          <div className="bg-green-50 rounded p-3">
+            <p className="text-xs text-green-600 flex items-center gap-1"><Eye size={11} /> Viber seen</p>
+            <p className="text-xl font-bold text-green-700">{campaign.seen_count || 0}</p>
+          </div>
+          <div className="bg-blue-50 rounded p-3">
+            <p className="text-xs text-blue-600 flex items-center gap-1"><MousePointer size={11} /> Kliknuto</p>
+            <p className="text-xl font-bold text-blue-700">{campaign.clicked_count || 0}</p>
+          </div>
         </div>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div className="bg-amber-50 rounded p-3">
+            <p className="text-xs text-amber-600">SMS fallback</p>
+            <p className="text-xl font-bold text-amber-700">{campaign.fallback_count || 0}</p>
+          </div>
+          <div className="bg-sky-50 rounded p-3">
+            <p className="text-xs text-sky-600">SMS isporuceno</p>
+            <p className="text-xl font-bold text-sky-700">{campaign.sms_delivered_count || 0}</p>
+          </div>
+          <div className="bg-red-50 rounded p-3">
+            <p className="text-xs text-red-600">Neuspjesno</p>
+            <p className="text-xl font-bold text-red-700">{campaign.failed_count || 0}</p>
+          </div>
+          <div className="bg-gray-50 rounded p-3">
+            <p className="text-xs text-gray-500">Cost</p>
+            <p className="text-xl font-bold text-gray-700">{campaign.cost_estimation ? `€${Number(campaign.cost_estimation).toFixed(3)}` : '—'}</p>
+          </div>
+        </div>
+
+        {/* DLR breakdown — Viber razlozi neuspjeha */}
+        {(() => {
+          const dlrGroups = recipients.reduce((acc: Record<string, number>, r: any) => {
+            const k = r.viber_dlr || 'nema_dlr';
+            acc[k] = (acc[k] || 0) + 1;
+            return acc;
+          }, {});
+          const total = recipients.length;
+          if (total === 0) return null;
+          return (
+            <div>
+              <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">Viber DLR breakdown</p>
+              <div className="flex h-6 rounded-full overflow-hidden border border-border">
+                {Object.entries(dlrGroups).map(([k, v]: [string, any]) => {
+                  const pctVal = (v / total) * 100;
+                  const colorMap: Record<string, string> = {
+                    delivered: 'bg-green-500',
+                    pending: 'bg-amber-400',
+                    expired: 'bg-amber-600',
+                    failed: 'bg-red-600',
+                    blocked: 'bg-red-700',
+                    no_suitable_device: 'bg-gray-400',
+                    not_viber_user: 'bg-gray-500',
+                    nema_dlr: 'bg-gray-200',
+                  };
+                  return (
+                    <div
+                      key={k}
+                      className={`${colorMap[k] || 'bg-gray-300'} flex items-center justify-center text-[10px] text-white font-medium`}
+                      style={{ width: `${pctVal}%` }}
+                      title={`${k}: ${v} (${Math.round(pctVal)}%)`}
+                    >
+                      {pctVal > 8 ? `${Math.round(pctVal)}%` : ''}
+                    </div>
+                  );
+                })}
+              </div>
+              <div className="flex flex-wrap gap-2 mt-2 text-[11px]">
+                {Object.entries(dlrGroups).map(([k, v]: [string, any]) => (
+                  <span key={k} className="px-2 py-0.5 bg-gray-100 rounded">
+                    <strong>{k}:</strong> {v}
+                  </span>
+                ))}
+              </div>
+            </div>
+          );
+        })()}
 
         {campaign.viber_text && (
           <div className="bg-purple-50 p-3 rounded">

@@ -279,26 +279,51 @@ Deno.serve(async (req) => {
         }
       }
 
-      // 4. Proveri da li je cela kampanja gotova i update status
+      // 4. Rekalkulisi aggregate stats iz campaign_recipients (idempotentno)
       const camp = (activeCampaigns || []).find((c) => c.omni_sending_id === sid);
       if (camp) {
-        const allDone = (recipients as any[]).every((r) => {
-          const vdlr = r.messages?.viber?.dlr;
-          const sdlr = r.messages?.sms?.dlr;
-          return (
-            (!vdlr || VIBER_FINAL_STATES.has(vdlr)) &&
-            (!sdlr || SMS_FINAL_STATES.has(sdlr))
-          );
-        });
-        if (allDone) {
-          const deliveredCount = (recipients as any[]).filter(
-            (r) => r.messages?.viber?.dlr === 'delivered' || r.messages?.sms?.dlr === 'delivered',
+        const { data: allRec } = await supabase
+          .from('campaign_recipients')
+          .select('viber_dlr, viber_message_status, sms_dlr, channel_used, fallbacked, clicked')
+          .eq('campaign_id', camp.id);
+
+        if (allRec) {
+          const viberDelivered = allRec.filter((r: any) => r.viber_dlr === 'delivered').length;
+          const smsDelivered = allRec.filter((r: any) => r.sms_dlr === 'delivered' || r.sms_dlr === 'submitted').length;
+          const seen = allRec.filter((r: any) => r.viber_message_status === 'seen').length;
+          const clicked = allRec.filter((r: any) => r.clicked === true).length;
+          const fallback = allRec.filter((r: any) => r.fallbacked === true).length;
+          const failed = allRec.filter((r: any) =>
+            (r.viber_dlr && VIBER_FAIL_STATES.has(r.viber_dlr) && !r.fallbacked) ||
+            (r.sms_dlr && ['not_delivered', 'invalid_msisdn', 'expired', 'call_barred'].includes(r.sms_dlr))
           ).length;
-          await supabase.from('campaigns').update({
-            status: 'completed',
-            completed_at: new Date().toISOString(),
-            delivered_count: deliveredCount,
-          }).eq('id', camp.id);
+          const deliveredTotal = viberDelivered + smsDelivered;
+
+          const allDone = (recipients as any[]).every((r) => {
+            const vdlr = r.messages?.viber?.dlr;
+            const sdlr = r.messages?.sms?.dlr;
+            return (
+              (!vdlr || VIBER_FINAL_STATES.has(vdlr)) &&
+              (!sdlr || SMS_FINAL_STATES.has(sdlr))
+            );
+          });
+
+          const updates: any = {
+            delivered_count: deliveredTotal,
+            viber_delivered_count: viberDelivered,
+            sms_delivered_count: smsDelivered,
+            seen_count: seen,
+            clicked_count: clicked,
+            fallback_count: fallback,
+            failed_count: failed,
+          };
+
+          if (allDone) {
+            updates.status = 'completed';
+            updates.completed_at = new Date().toISOString();
+          }
+
+          await supabase.from('campaigns').update(updates).eq('id', camp.id);
         }
       }
     }

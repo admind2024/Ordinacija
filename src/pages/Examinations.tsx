@@ -1,16 +1,13 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { format, parseISO } from 'date-fns';
+import { format } from 'date-fns';
 import { srLatn as sr } from 'date-fns/locale';
-import { User, Printer, FileText, Package, Plus, Trash2, CalendarDays, Phone, ChevronRight, Search, Users } from 'lucide-react';
+import { CalendarDays, Phone, ChevronRight, Search, Users } from 'lucide-react';
 import Card from '../components/ui/Card';
-import Button from '../components/ui/Button';
 import DoctorLogin from '../components/ui/DoctorLogin';
-import ExaminationForm from '../components/examinations/ExaminationForm';
-import ExaminationHistory from '../components/examinations/ExaminationHistory';
+import PatientKarton from '../components/examinations/PatientKarton';
 import { openPrintReport } from '../components/examinations/PrintReport';
 import { useCalendar } from '../contexts/CalendarContext';
 import { supabase } from '../lib/supabase';
-import { APPOINTMENT_STATUS_COLORS, APPOINTMENT_STATUS_LABELS } from '../types';
 import type { Appointment, Doctor, Examination, Patient, Establishment } from '../types';
 
 interface UsedMaterial {
@@ -50,8 +47,6 @@ function ExaminationsContent({ loggedDoctor }: { loggedDoctor: Doctor }) {
   const [establishment, setEstablishment] = useState<Establishment | null>(null);
   const [saving, setSaving] = useState(false);
   const [usedMaterials, setUsedMaterials] = useState<UsedMaterial[]>([]);
-  const [selectedMaterialId, setSelectedMaterialId] = useState('');
-  const [materialQty, setMaterialQty] = useState('1');
   const [searchQuery, setSearchQuery] = useState('');
   const [patientAppointments, setPatientAppointments] = useState<Appointment[]>([]);
 
@@ -241,20 +236,16 @@ function ExaminationsContent({ loggedDoctor }: { loggedDoctor: Doctor }) {
     });
   }
 
-  const aptServices = selectedAppointment?.services || [];
-  const aptTotal = aptServices.reduce((sum, s) => sum + s.ukupno, 0);
-
-  async function handleAddMaterial() {
-    if (!selectedMaterialId || !currentExam || !selectedAppointment) return;
-    const mat = materials.find((m) => m.id === selectedMaterialId);
+  async function addMaterialFromKarton(materialId: string, kolicina: number) {
+    if (!currentExam || !selectedAppointment) return;
+    const mat = materials.find((m) => m.id === materialId);
     if (!mat) return;
-    const qty = Number(materialQty) || 1;
 
     const { data } = await supabase.from('material_usage').insert({
       examination_id: currentExam.id,
       appointment_id: selectedAppointment.id,
       material_id: mat.id,
-      kolicina: qty,
+      kolicina,
       ljekar_id: selectedAppointment.doctor_id,
       patient_id: patient?.id,
       datum: new Date().toISOString().slice(0, 10),
@@ -265,11 +256,9 @@ function ExaminationsContent({ loggedDoctor }: { loggedDoctor: Doctor }) {
         id: data.id,
         material_id: mat.id,
         naziv: mat.naziv,
-        kolicina: qty,
+        kolicina,
         jedinica: mat.jedinica_mjere,
       }]);
-      setSelectedMaterialId('');
-      setMaterialQty('1');
     }
   }
 
@@ -325,8 +314,8 @@ function ExaminationsContent({ loggedDoctor }: { loggedDoctor: Doctor }) {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Lijevi panel — lista pacijenata */}
-        <div className="lg:col-span-4 xl:col-span-3">
+        {/* Lijevi panel — lista pacijenata (zauzima vise sirine sada kada je desni panel zamijenjen kartonom) */}
+        <div className="lg:col-span-12">
           <div className="sticky top-4 space-y-3">
             {/* Pretraga */}
             <div className="relative">
@@ -400,247 +389,38 @@ function ExaminationsContent({ loggedDoctor }: { loggedDoctor: Doctor }) {
           </div>
         </div>
 
-        {/* Desni panel */}
-        <div className="lg:col-span-8 xl:col-span-9">
-          {!selectedPatientId ? (
-            <div className="flex items-center justify-center min-h-[50vh]">
-              <div className="text-center text-gray-300">
-                <div className="w-20 h-20 bg-gray-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                  <User size={36} className="text-gray-300" />
-                </div>
-                <p className="text-lg font-medium text-gray-400">Odaberite pacijenta</p>
-                <p className="text-sm text-gray-300 mt-1">Izaberite pacijenta sa lijeve strane</p>
-              </div>
-            </div>
-          ) : patient ? (
-            <div className="space-y-5">
-              {/* Patient info header */}
-              <div className="bg-white rounded-xl border border-border p-5">
-                <div className="flex items-start justify-between flex-wrap gap-4">
-                  <div className="flex items-center gap-4">
-                    <div className="w-14 h-14 bg-primary-100 rounded-2xl flex items-center justify-center">
-                      <span className="text-lg font-bold text-primary-700">
-                        {patient.ime.charAt(0)}{patient.prezime.charAt(0)}
-                      </span>
-                    </div>
-                    <div>
-                      <h3 className="text-xl font-bold text-gray-900">{patient.ime} {patient.prezime}</h3>
-                      <div className="flex flex-wrap items-center gap-3 mt-1">
-                        {patient.datum_rodjenja && (
-                          <span className="text-xs text-gray-400">
-                            {format(parseISO(patient.datum_rodjenja), 'dd.MM.yyyy.')}
-                          </span>
-                        )}
-                        {patient.telefon && (
-                          <a href={`tel:${patient.telefon}`} className="flex items-center gap-1 text-xs text-primary-600 hover:text-primary-700">
-                            <Phone size={11} /> {patient.telefon}
-                          </a>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {selectedAppointment && (
-                      <span
-                        className="text-xs px-2.5 py-1 rounded-full font-medium"
-                        style={{
-                          backgroundColor: APPOINTMENT_STATUS_COLORS[selectedAppointment.status] + '15',
-                          color: APPOINTMENT_STATUS_COLORS[selectedAppointment.status],
-                        }}
-                      >
-                        {APPOINTMENT_STATUS_LABELS[selectedAppointment.status]}
-                      </span>
-                    )}
-                    {currentExam && currentExam.status === 'zavrsen' && (
-                      <Button variant="secondary" size="sm" onClick={() => handlePrint(currentExam)}>
-                        <Printer size={14} /> Stampaj
-                      </Button>
-                    )}
-                  </div>
-                </div>
-
-                {/* Termini ovog pacijenta — detaljna istorija */}
-                {patientAppointments.length > 0 && (
-                  <div className="mt-4 pt-3 border-t border-gray-100">
-                    <div className="flex items-center justify-between mb-2">
-                      <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
-                        Istorija termina ({patientAppointments.length})
-                      </p>
-                      <p className="text-[11px] text-gray-400">Klikni termin za pregled</p>
-                    </div>
-                    <div className="space-y-1.5 max-h-72 overflow-y-auto pr-1">
-                      {patientAppointments.map((apt) => {
-                        const aptDate = new Date(apt.pocetak);
-                        const aptDateStr = `${aptDate.getFullYear()}-${String(aptDate.getMonth() + 1).padStart(2, '0')}-${String(aptDate.getDate()).padStart(2, '0')}`;
-                        const isToday = aptDateStr === todayStr;
-                        const isActive = selectedAppointment?.id === apt.id;
-                        const svcNames = apt.services?.map((s) => s.naziv).join(', ') || '';
-                        const total = apt.services?.reduce((s, svc) => s + svc.ukupno, 0) || 0;
-                        const time = `${String(aptDate.getHours()).padStart(2, '0')}:${String(aptDate.getMinutes()).padStart(2, '0')}`;
-
-                        return (
-                          <button
-                            key={apt.id}
-                            onClick={() => selectAppointmentForExam(apt)}
-                            className={`w-full text-left px-3 py-2.5 rounded-lg text-xs transition-all border
-                              ${isActive
-                                ? 'bg-primary-50 border-primary-300 ring-1 ring-primary-200'
-                                : isToday
-                                  ? 'bg-green-50 border-green-200 hover:bg-green-100'
-                                  : 'bg-white border-gray-200 hover:bg-gray-50'
-                              }`}
-                          >
-                            <div className="flex items-center justify-between gap-2">
-                              <div className="flex items-center gap-2 min-w-0">
-                                <p className={`font-semibold whitespace-nowrap ${isActive ? 'text-primary-700' : isToday ? 'text-green-700' : 'text-gray-800'}`}>
-                                  {format(aptDate, 'dd.MM.yyyy.')} · {time}
-                                </p>
-                                {isToday && (
-                                  <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-green-100 text-green-700 font-semibold">Danas</span>
-                                )}
-                                <span
-                                  className="text-[10px] px-1.5 py-0.5 rounded-full font-medium"
-                                  style={{
-                                    backgroundColor: APPOINTMENT_STATUS_COLORS[apt.status] + '20',
-                                    color: APPOINTMENT_STATUS_COLORS[apt.status],
-                                  }}
-                                >
-                                  {APPOINTMENT_STATUS_LABELS[apt.status]}
-                                </span>
-                              </div>
-                              {total > 0 && (
-                                <span className="text-[11px] font-semibold text-gray-700 whitespace-nowrap">
-                                  {total.toFixed(0)} €
-                                </span>
-                              )}
-                            </div>
-                            {svcNames && <p className="text-gray-500 mt-1 line-clamp-2">{svcNames}</p>}
-                            {apt.napomena && <p className="text-gray-400 italic mt-1 line-clamp-1">{apt.napomena}</p>}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
-
-                {/* Usluge za odabrani termin */}
-                {aptServices.length > 0 && (
-                  <div className="mt-3 pt-3 border-t border-gray-100">
-                    <div className="flex items-center justify-between">
-                      <div className="flex flex-wrap gap-1.5">
-                        {aptServices.map((s, i) => (
-                          <span key={i} className="text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded-md">
-                            {s.naziv}
-                          </span>
-                        ))}
-                      </div>
-                      <span className="text-sm font-bold text-gray-700">{aptTotal.toFixed(2)} EUR</span>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Formular - samo ako je odabran termin */}
-              {selectedAppointment && (
-                <div className="bg-white rounded-xl border border-border p-5">
-                  <div className="flex items-center gap-2 mb-4">
-                    <FileText size={18} className="text-primary-600" />
-                    <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider">
-                      {currentExam ? (currentExam.status === 'zavrsen' ? 'Zavrsen pregled' : 'Nastavi pregled') : 'Novi pregled'}
-                    </h3>
-                    {currentExam?.status === 'zavrsen' && (
-                      <span className="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700 font-medium">Zavrsen</span>
-                    )}
-                  </div>
-                  <ExaminationForm
-                    key={currentExam?.id || selectedAppointment.id}
-                    initialData={currentExam || undefined}
-                    onSave={handleSave}
-                    saving={saving}
-                    appointmentServices={aptServices}
-                    appointmentNapomena={selectedAppointment.napomena ?? undefined}
-                  />
-                </div>
-              )}
-
-              {/* Poruka ako nema odabranog termina */}
-              {!selectedAppointment && (
-                <div className="bg-white rounded-xl border border-border p-8 text-center">
-                  <CalendarDays size={32} className="mx-auto mb-3 text-gray-300" />
-                  <p className="text-sm font-medium text-gray-400">Odaberite termin iznad za pregled</p>
-                  <p className="text-xs text-gray-300 mt-1">Kliknite na neki od termina pacijenta</p>
-                </div>
-              )}
-
-              {/* Materijali */}
-              {currentExam && selectedAppointment && (
-                <div className="bg-white rounded-xl border border-border p-5">
-                  <div className="flex items-center gap-2 mb-4">
-                    <Package size={18} className="text-purple-600" />
-                    <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider">Utroseni materijali</h3>
-                  </div>
-
-                  <div className="flex gap-2 mb-3">
-                    <select
-                      value={selectedMaterialId}
-                      onChange={(e) => setSelectedMaterialId(e.target.value)}
-                      className="flex-1 px-3 py-2.5 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 bg-gray-50"
-                    >
-                      <option value="">Odaberi materijal...</option>
-                      {materials.map((m) => (
-                        <option key={m.id} value={m.id}>{m.naziv} ({m.jedinica_mjere})</option>
-                      ))}
-                    </select>
-                    <input
-                      type="number"
-                      min="0.1"
-                      step="0.1"
-                      value={materialQty}
-                      onChange={(e) => setMaterialQty(e.target.value)}
-                      className="w-20 px-3 py-2.5 border border-border rounded-lg text-sm text-center focus:outline-none focus:ring-2 focus:ring-primary-500 bg-gray-50"
-                      placeholder="Kol."
-                    />
-                    <Button size="sm" onClick={handleAddMaterial} disabled={!selectedMaterialId}>
-                      <Plus size={14} /> Dodaj
-                    </Button>
-                  </div>
-
-                  {usedMaterials.length === 0 ? (
-                    <p className="text-sm text-gray-300 text-center py-4">Nema unesenih materijala</p>
-                  ) : (
-                    <div className="space-y-1.5">
-                      {usedMaterials.map((um) => (
-                        <div key={um.id} className="flex items-center justify-between bg-purple-50 rounded-lg px-3 py-2.5">
-                          <span className="text-sm text-purple-800 font-medium">{um.naziv}</span>
-                          <div className="flex items-center gap-3">
-                            <span className="text-sm font-semibold text-purple-900">{um.kolicina} {um.jedinica}</span>
-                            <button onClick={() => handleRemoveMaterial(um.id)} className="text-gray-400 hover:text-red-500 transition-colors">
-                              <Trash2 size={14} />
-                            </button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* Istorija pregleda */}
-              {patientExams.filter((e) => e.id !== currentExam?.id).length > 0 && (
-                <div className="bg-white rounded-xl border border-border p-5">
-                  <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">
-                    Istorija pregleda ({patientExams.filter((e) => e.id !== currentExam?.id).length})
-                  </h3>
-                  <ExaminationHistory
-                    examinations={patientExams.filter((e) => e.id !== currentExam?.id)}
-                    doctors={doctors}
-                  />
-                </div>
-              )}
-            </div>
-          ) : null}
-        </div>
       </div>
+
+      {/* ================= FULL-SCREEN KARTON ================= */}
+      {/* Prikazuje se preko cijele aplikacije (uklj. lijevi meni) kad je pacijent odabran. */}
+      {selectedPatientId && patient && (
+        <PatientKarton
+          patient={patient}
+          loggedDoctor={loggedDoctor}
+          allDoctors={doctors}
+          materials={materials}
+          appointments={patientAppointments}
+          exams={patientExams}
+          selectedAppointment={selectedAppointment}
+          currentExam={currentExam}
+          usedMaterials={usedMaterials}
+          saving={saving}
+          onBack={() => {
+            setSelectedPatientId(null);
+            setSelectedAppointment(null);
+            setCurrentExam(null);
+            setPatient(null);
+            setPatientExams([]);
+            setPatientAppointments([]);
+            setUsedMaterials([]);
+          }}
+          onSelectAppointment={selectAppointmentForExam}
+          onSaveExam={handleSave}
+          onPrintExam={handlePrint}
+          onAddMaterial={addMaterialFromKarton}
+          onRemoveMaterial={handleRemoveMaterial}
+        />
+      )}
     </div>
   );
 }

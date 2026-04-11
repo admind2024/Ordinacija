@@ -295,17 +295,39 @@ Deno.serve(async (req) => {
       }));
 
       const viberText = (campaign.viber_text || '').replaceAll('{ime}', '{tag 1}').replaceAll('{prezime}', '{tag 2}');
+      const viberType: string = campaign.viber_type || 'text_image_button';
+
+      // Per-tip Viber payload
+      const viberMessage: any = {};
+
+      if (viberType === 'text_only') {
+        viberMessage.text = viberText;
+      } else if (viberType === 'text_button') {
+        viberMessage.text = viberText;
+        if (campaign.viber_caption) viberMessage.caption = campaign.viber_caption;
+        if (campaign.viber_action_url) viberMessage.action = campaign.viber_action_url;
+      } else if (viberType === 'text_image_button') {
+        viberMessage.text = viberText;
+        if (campaign.viber_caption) viberMessage.caption = campaign.viber_caption;
+        if (campaign.viber_action_url) viberMessage.action = campaign.viber_action_url;
+        if (campaign.viber_image_url) viberMessage.image = campaign.viber_image_url;
+      } else if (viberType === 'video_text') {
+        viberMessage.text = viberText;
+        if (campaign.viber_video_url) viberMessage.video = campaign.viber_video_url;
+      } else if (viberType === 'media_only') {
+        // Media only — samo slika ili video; Omni API obicno zahtijeva bar text polje
+        if (campaign.viber_image_url) viberMessage.image = campaign.viber_image_url;
+        if (campaign.viber_video_url) viberMessage.video = campaign.viber_video_url;
+        viberMessage.text = viberText || ' ';
+      }
 
       const viberChannel: any = {
         viber: {
-          message: { text: viberText },
-          validity_period: 5, // 5 min min — ako ne stigne, webhook reaguje i fallbacku kroz rakunat
+          message: viberMessage,
+          validity_period: 5, // 5 min — poll-omni-status ce pokupiti failed DLR-ove i trigerovati SMS fallback
           action_tracking: !!campaign.viber_action_url,
         },
       };
-      if (campaign.viber_caption) viberChannel.viber.message.caption = campaign.viber_caption;
-      if (campaign.viber_action_url) viberChannel.viber.message.action = campaign.viber_action_url;
-      if (campaign.viber_image_url) viberChannel.viber.message.image = campaign.viber_image_url;
 
       const omniPayload: any = {
         transaction_id: campaign.omni_transaction_id,

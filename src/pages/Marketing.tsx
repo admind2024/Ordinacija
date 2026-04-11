@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import {
   Megaphone, Users, Tags, Plus, Send, Trash2, Edit, Upload,
   CheckCircle, XCircle, Loader2, ChevronRight,
+  Type as TypeIcon, Square, Image as ImageIcon, Video, Layers,
 } from 'lucide-react';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
@@ -610,15 +611,23 @@ function GroupForm({ onClose, onSaved }: { onClose: () => void; onSaved: () => v
 // ============================================================
 // Viber bubble preview — simulira kako ce poruka izgledati u Viber-u
 // ============================================================
-function ViberPreview({ text, caption, actionUrl, imageUrl }: {
+function ViberPreview({ viberType = 'text_image_button', text, caption, actionUrl, imageUrl, videoUrl }: {
+  viberType?: 'text_only' | 'text_button' | 'text_image_button' | 'video_text' | 'media_only';
   text: string;
   caption?: string;
   actionUrl?: string;
   imageUrl?: string;
+  videoUrl?: string;
 }) {
-  const hasButton = !!(caption && actionUrl);
-  const hasImage = !!imageUrl;
-  const isEmpty = !text && !hasImage && !hasButton;
+  const showText = viberType !== 'media_only';
+  const showButton = viberType === 'text_button' || viberType === 'text_image_button';
+  const showImage = viberType === 'text_image_button' || (viberType === 'media_only' && !videoUrl);
+  const showVideo = viberType === 'video_text' || (viberType === 'media_only' && !!videoUrl);
+
+  const hasButton = showButton && !!(caption && actionUrl);
+  const hasImage = showImage && !!imageUrl;
+  const hasVideo = showVideo && !!videoUrl;
+  const isEmpty = (!showText || !text) && !hasImage && !hasButton && !hasVideo;
 
   return (
     <div>
@@ -662,8 +671,27 @@ function ViberPreview({ text, caption, actionUrl, imageUrl }: {
               </div>
             )}
 
+            {/* Video */}
+            {hasVideo && (
+              <div className="aspect-video bg-black relative">
+                <video
+                  src={videoUrl}
+                  controls
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    (e.target as HTMLVideoElement).style.display = 'none';
+                    const fallback = (e.target as HTMLVideoElement).nextElementSibling as HTMLElement | null;
+                    if (fallback) fallback.style.display = 'flex';
+                  }}
+                />
+                <div className="absolute inset-0 hidden items-center justify-center text-xs text-gray-400 bg-gray-800">
+                  Video se ne ucitava
+                </div>
+              </div>
+            )}
+
             {/* Text */}
-            {text && (
+            {showText && text && (
               <div className="px-3 py-2">
                 <p className="text-sm text-gray-900 whitespace-pre-wrap leading-snug">{text}</p>
               </div>
@@ -700,15 +728,27 @@ function ViberPreview({ text, caption, actionUrl, imageUrl }: {
 // ============================================================
 // TAB: NOVA KAMPANJA (wizard)
 // ============================================================
+type ViberType = 'text_only' | 'text_button' | 'text_image_button' | 'video_text' | 'media_only';
+
+const VIBER_TYPES: Array<{ value: ViberType; label: string; icon: any; needsText: boolean; needsButton: boolean; needsImage: boolean; needsVideo: boolean }> = [
+  { value: 'text_only',         label: 'Text only',          icon: TypeIcon,  needsText: true,  needsButton: false, needsImage: false, needsVideo: false },
+  { value: 'text_button',       label: 'Text & Button',      icon: Square,    needsText: true,  needsButton: true,  needsImage: false, needsVideo: false },
+  { value: 'text_image_button', label: 'Text & Image & Button', icon: ImageIcon, needsText: true, needsButton: true, needsImage: true, needsVideo: false },
+  { value: 'video_text',        label: 'Video & Text',       icon: Video,     needsText: true,  needsButton: false, needsImage: false, needsVideo: true  },
+  { value: 'media_only',        label: 'Media only',         icon: Layers,    needsText: false, needsButton: false, needsImage: true,  needsVideo: false },
+];
+
 function NovaKampanjaTab({ onDone }: { onDone: () => void }) {
   const [naziv, setNaziv] = useState('');
   const [channelMode, setChannelMode] = useState<ChannelMode>('viber_then_sms');
   const [smsText, setSmsText] = useState('');
   const [smsSender, setSmsSender] = useState('');
+  const [viberType, setViberType] = useState<ViberType>('text_image_button');
   const [viberText, setViberText] = useState('');
   const [viberCaption, setViberCaption] = useState('');
   const [viberActionUrl, setViberActionUrl] = useState('');
   const [viberImageUrl, setViberImageUrl] = useState('');
+  const [viberVideoUrl, setViberVideoUrl] = useState('');
 
   const [targetType, setTargetType] = useState<'svi_pacijenti' | 'grupa' | 'rucni' | 'filter'>('svi_pacijenti');
   const [groups, setGroups] = useState<Group[]>([]);
@@ -754,7 +794,16 @@ function NovaKampanjaTab({ onDone }: { onDone: () => void }) {
 
   async function handleSubmit() {
     if (!naziv) return alert('Naziv kampanje je obavezan');
-    if (channelMode !== 'sms' && !viberText) return alert('Viber tekst je obavezan');
+
+    if (channelMode !== 'sms') {
+      const cfg = VIBER_TYPES.find((t) => t.value === viberType)!;
+      if (cfg.needsText && !viberText) return alert('Viber tekst je obavezan za ovaj tip poruke');
+      if (cfg.needsButton && (!viberCaption || !viberActionUrl)) return alert('Caption i Action URL su obavezni za tip sa dugmetom');
+      if (cfg.needsImage && !viberImageUrl) return alert('Image URL je obavezan za ovaj tip poruke');
+      if (cfg.needsVideo && !viberVideoUrl) return alert('Video URL je obavezan za ovaj tip poruke');
+      if (viberType === 'media_only' && !viberImageUrl && !viberVideoUrl) return alert('Za Media only treba Image URL ili Video URL');
+    }
+
     if (channelMode !== 'viber' && !smsText) return alert('SMS tekst je obavezan (fallback ili primarni)');
     if (sendMode === 'later' && !scheduledAt) return alert('Izaberite datum i vrijeme zakazivanja');
 
@@ -781,10 +830,12 @@ function NovaKampanjaTab({ onDone }: { onDone: () => void }) {
         channel_mode: channelMode,
         sms_text: smsText || null,
         sms_sender: smsSender || null,
+        viber_type: viberType,
         viber_text: viberText || null,
         viber_caption: viberCaption || null,
         viber_action_url: viberActionUrl || null,
         viber_image_url: viberImageUrl || null,
+        viber_video_url: viberVideoUrl || null,
         target_type: targetType,
         target_group_id: targetType === 'grupa' ? targetGroupId || null : null,
         target_rucni_ids: targetRucniIds,
@@ -891,32 +942,78 @@ function NovaKampanjaTab({ onDone }: { onDone: () => void }) {
         </p>
 
         {channelMode !== 'sms' && (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
-            <div className="space-y-3">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Viber tekst *</label>
-                <textarea
-                  value={viberText}
-                  onChange={(e) => setViberText(e.target.value)}
-                  rows={4}
-                  maxLength={1000}
-                  className="w-full px-3 py-2 border border-border rounded-lg text-sm"
-                  placeholder="Postovani/a {ime}, pozivamo vas..."
-                />
-                <p className="text-xs text-gray-400 mt-1">{viberText.length} / 1000</p>
+          <div className="space-y-4 mb-4">
+            {/* Viber type selector — 5 kartica kao u Omni composer-u */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Tip Viber poruke</label>
+              <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+                {VIBER_TYPES.map((t) => (
+                  <button
+                    key={t.value}
+                    onClick={() => setViberType(t.value)}
+                    className={`relative px-2 py-3 rounded-lg text-center border transition-colors ${
+                      viberType === t.value
+                        ? 'bg-purple-50 border-purple-500 ring-1 ring-purple-500'
+                        : 'border-border hover:border-gray-400'
+                    }`}
+                  >
+                    <t.icon size={24} className={`mx-auto mb-1 ${viberType === t.value ? 'text-purple-600' : 'text-gray-500'}`} />
+                    <p className={`text-xs ${viberType === t.value ? 'font-semibold text-purple-700' : 'text-gray-600'}`}>{t.label}</p>
+                  </button>
+                ))}
               </div>
-              <Input label="Caption (tekst dugmeta)" value={viberCaption} onChange={(e) => setViberCaption(e.target.value)} placeholder="Rezervisi termin" />
-              <Input label="Action URL (link dugmeta)" value={viberActionUrl} onChange={(e) => setViberActionUrl(e.target.value)} placeholder="https://..." />
-              <Input label="Image URL (poster, opciono)" value={viberImageUrl} onChange={(e) => setViberImageUrl(e.target.value)} placeholder="https://.../slika.jpg" />
             </div>
 
-            {/* Viber preview — kao Viber bubble */}
-            <ViberPreview
-              text={renderPersonalizedPreview(viberText)}
-              caption={viberCaption}
-              actionUrl={viberActionUrl}
-              imageUrl={viberImageUrl}
-            />
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <div className="space-y-3">
+                {(() => {
+                  const cfg = VIBER_TYPES.find((t) => t.value === viberType)!;
+                  return (
+                    <>
+                      {cfg.needsText && (
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Viber tekst *</label>
+                          <textarea
+                            value={viberText}
+                            onChange={(e) => setViberText(e.target.value)}
+                            rows={4}
+                            maxLength={1000}
+                            className="w-full px-3 py-2 border border-border rounded-lg text-sm"
+                            placeholder="Postovani/a {ime}, pozivamo vas..."
+                          />
+                          <p className="text-xs text-gray-400 mt-1">{viberText.length} / 1000</p>
+                        </div>
+                      )}
+                      {cfg.needsButton && (
+                        <>
+                          <Input label="Caption (tekst dugmeta) *" value={viberCaption} onChange={(e) => setViberCaption(e.target.value)} placeholder="Rezervisi termin" />
+                          <Input label="Action URL (link dugmeta) *" value={viberActionUrl} onChange={(e) => setViberActionUrl(e.target.value)} placeholder="https://..." />
+                        </>
+                      )}
+                      {cfg.needsImage && (
+                        <Input label="Image URL (poster) *" value={viberImageUrl} onChange={(e) => setViberImageUrl(e.target.value)} placeholder="https://.../slika.jpg" />
+                      )}
+                      {cfg.needsVideo && (
+                        <Input label="Video URL *" value={viberVideoUrl} onChange={(e) => setViberVideoUrl(e.target.value)} placeholder="https://.../video.mp4" />
+                      )}
+                      {viberType === 'media_only' && !cfg.needsImage && !cfg.needsVideo && (
+                        <Input label="Image URL *" value={viberImageUrl} onChange={(e) => setViberImageUrl(e.target.value)} placeholder="https://.../slika.jpg" />
+                      )}
+                    </>
+                  );
+                })()}
+              </div>
+
+              {/* Viber preview */}
+              <ViberPreview
+                viberType={viberType}
+                text={renderPersonalizedPreview(viberText)}
+                caption={viberCaption}
+                actionUrl={viberActionUrl}
+                imageUrl={viberImageUrl}
+                videoUrl={viberVideoUrl}
+              />
+            </div>
           </div>
         )}
 

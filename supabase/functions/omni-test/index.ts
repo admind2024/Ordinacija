@@ -157,6 +157,19 @@ Deno.serve(async (req) => {
       const data = await res.json().catch(() => ({}));
 
       if (!res.ok || data?.status !== 'success') {
+        // Upisi i neuspjesan pokusaj u log
+        await supabase.from('notifications').insert({
+          tip: 'test',
+          kanal: channel,
+          status: 'failed',
+          sadrzaj: text,
+          patient_ime: 'Test',
+          patient_telefon: phone,
+          error: data?.errors?.[0]?.message || `HTTP ${res.status}`,
+          datum_slanja: new Date().toISOString(),
+          channel_used: channel,
+        });
+
         return jsonResponse({
           success: false,
           error: data?.errors?.[0]?.message || `HTTP ${res.status}`,
@@ -164,9 +177,28 @@ Deno.serve(async (req) => {
         });
       }
 
+      const sendingId = data.data?.sending_id;
+      const recipientId = data.data?.recipients?.[0]?.id || `${sendingId}-000001`;
+
+      // Log uspjesan test u notifications da bude vidljivo u Marketing > Izvjestaj
+      await supabase.from('notifications').insert({
+        tip: 'test',
+        kanal: channel,
+        status: 'sent',
+        sadrzaj: text,
+        patient_ime: 'Test',
+        patient_telefon: phone,
+        datum_slanja: new Date().toISOString(),
+        channel_used: channel,
+        omni_sending_id: sendingId,
+        omni_recipient_id: recipientId,
+        viber_dlr: channel === 'viber' ? 'pending' : null,
+        sms_dlr: channel === 'sms' ? 'submitted' : null,
+      });
+
       return jsonResponse({
         success: true,
-        sending_id: data.data?.sending_id,
+        sending_id: sendingId,
         cost_estimation: data.data?.cost_estimation,
         status: data.data?.status,
       });

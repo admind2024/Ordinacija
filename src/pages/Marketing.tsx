@@ -153,59 +153,155 @@ export default function Marketing() {
 }
 
 // ============================================================
-// TAB: IZVJESTAJ — Viber DLR statistika i breakdown
+// TAB: IZVJESTAJ — objedinjeni izvjestaj svih poruka (kampanje + notifikacije)
 // ============================================================
+
+interface UnifiedMessage {
+  id: string;
+  source: 'kampanja' | 'podsjetnik' | 'potvrda' | 'otkazivanje' | 'potvrdjivanje' | 'test' | 'kontrola' | 'post_procedura';
+  source_label: string;
+  datum: string;
+  primalac: string;
+  telefon: string;
+  kanal: string;
+  status: string;
+  viber_dlr: string | null;
+  viber_message_status: string | null;
+  sms_dlr: string | null;
+  fallbacked: boolean;
+  clicked: boolean;
+  error: string | null;
+  tekst: string | null;
+  campaign_id?: string | null;
+}
+
 function IzvjestajTab() {
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [recipients, setRecipients] = useState<any[]>([]);
+  const [notifs, setNotifs] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [sourceFilter, setSourceFilter] = useState<'sve' | 'kampanja' | 'podsjetnik' | 'potvrda' | 'test'>('sve');
+  const [channelFilter, setChannelFilter] = useState<'sve' | 'viber' | 'sms'>('sve');
 
   async function load() {
     setLoading(true);
+
+    // 1. Kampanje
     let cq = supabase.from('campaigns').select('*').order('created_at', { ascending: false });
     if (dateFrom) cq = cq.gte('created_at', `${dateFrom}T00:00:00`);
     if (dateTo) cq = cq.lte('created_at', `${dateTo}T23:59:59`);
     const { data: camps } = await cq;
     setCampaigns((camps || []) as Campaign[]);
 
-    // Svi primaoci za izracun breakdown-a
+    // 2. Campaign recipients za hronoloski feed
     const ids = (camps || []).map((c: any) => c.id);
     if (ids.length > 0) {
       const { data: recs } = await supabase
         .from('campaign_recipients')
-        .select('campaign_id, channel_used, viber_dlr, viber_message_status, sms_dlr, fallbacked, clicked')
-        .in('campaign_id', ids);
+        .select('id, campaign_id, ime, telefon, channel_used, viber_dlr, viber_message_status, sms_dlr, fallbacked, clicked, error, created_at')
+        .in('campaign_id', ids)
+        .order('created_at', { ascending: false });
       setRecipients(recs || []);
     } else {
       setRecipients([]);
     }
+
+    // 3. Notifikacije (podsjetnici, potvrde, test poruke, itd. — sve osim campaign recipient-a)
+    let nq = supabase
+      .from('notifications')
+      .select('id, tip, kanal, status, sadrzaj, patient_ime, patient_telefon, error, datum_slanja, channel_used, viber_dlr, viber_message_status, sms_dlr, fallbacked, omni_sending_id')
+      .order('datum_slanja', { ascending: false });
+    if (dateFrom) nq = nq.gte('datum_slanja', `${dateFrom}T00:00:00`);
+    if (dateTo) nq = nq.lte('datum_slanja', `${dateTo}T23:59:59`);
+    const { data: ns } = await nq;
+    setNotifs(ns || []);
+
     setLoading(false);
   }
 
   useEffect(() => { load(); }, [dateFrom, dateTo]);
 
-  // Ukupna statistika preko svih kampanja
+  // Objedinjen hronoloski feed
+  const unifiedMessages = useMemo<UnifiedMessage[]>(() => {
+    const campaignMap = new Map(campaigns.map((c) => [c.id, c]));
+
+    const fromRecipients: UnifiedMessage[] = recipients.map((r: any) => {
+      const camp = campaignMap.get(r.campaign_id);
+      return {
+        id: `cr-${r.id}`,
+        source: 'kampanja',
+        source_label: camp ? `Kampanja: ${camp.naziv}` : 'Kampanja',
+        datum: r.created_at,
+        primalac: r.ime,
+        telefon: r.telefon,
+        kanal: r.channel_used || '—',
+        status: r.viber_dlr === 'delivered' || r.sms_dlr === 'delivered' || r.sms_dlr === 'submitted' ? 'sent' : (r.viber_dlr || r.sms_dlr || 'pending'),
+        viber_dlr: r.viber_dlr,
+        viber_message_status: r.viber_message_status,
+        sms_dlr: r.sms_dlr,
+        fallbacked: !!r.fallbacked,
+        clicked: !!r.clicked,
+        error: r.error,
+        tekst: camp?.viber_text || camp?.sms_text || null,
+        campaign_id: r.campaign_id,
+      };
+    });
+
+    const fromNotifs: UnifiedMessage[] = notifs.map((n: any) => ({
+      id: `n-${n.id}`,
+      source: n.tip as any,
+      source_label: n.tip === 'podsjetnik' ? 'Podsjetnik'
+        : n.tip === 'potvrda' ? 'Potvrda termina'
+        : n.tip === 'otkazivanje' ? 'Otkazivanje'
+        : n.tip === 'potvrdjivanje' ? 'Potvrda statusa'
+        : n.tip === 'test' ? 'Test poruka'
+        : n.tip,
+      datum: n.datum_slanja,
+      primalac: n.patient_ime || '—',
+      telefon: n.patient_telefon || '—',
+      kanal: n.channel_used || n.kanal || '—',
+      status: n.status,
+      viber_dlr: n.viber_dlr,
+      viber_message_status: n.viber_message_status,
+      sms_dlr: n.sms_dlr,
+      fallbacked: !!n.fallbacked,
+      clicked: false,
+      error: n.error,
+      tekst: n.sadrzaj,
+    }));
+
+    return [...fromRecipients, ...fromNotifs]
+      .filter((m) => {
+        if (sourceFilter !== 'sve' && m.source !== sourceFilter) return false;
+        if (channelFilter !== 'sve' && m.kanal !== channelFilter) return false;
+        return true;
+      })
+      .sort((a, b) => new Date(b.datum).getTime() - new Date(a.datum).getTime());
+  }, [campaigns, recipients, notifs, sourceFilter, channelFilter]);
+
+  // Ukupna statistika PREKO OBA izvora (kampanje + notifikacije)
   const stats = useMemo(() => {
-    const total = campaigns.reduce((s, c) => s + (c.total_recipients || 0), 0);
-    const viberDelivered = recipients.filter((r) => r.viber_dlr === 'delivered').length;
-    const smsDelivered = recipients.filter((r) => r.sms_dlr === 'delivered' || r.sms_dlr === 'submitted').length;
-    const seen = recipients.filter((r) => r.viber_message_status === 'seen').length;
-    const clicked = recipients.filter((r) => r.clicked === true).length;
-    const fallback = recipients.filter((r) => r.fallbacked === true).length;
-    const notViberUser = recipients.filter((r) => r.viber_dlr === 'not_viber_user').length;
-    const noSuitableDevice = recipients.filter((r) => r.viber_dlr === 'no_suitable_device').length;
-    const blocked = recipients.filter((r) => r.viber_dlr === 'blocked').length;
-    const expired = recipients.filter((r) => r.viber_dlr === 'expired').length;
-    const failed = recipients.filter((r) => r.viber_dlr === 'failed').length;
+    const all = unifiedMessages;
+    const total = all.length;
+    const viberDelivered = all.filter((m) => m.viber_dlr === 'delivered').length;
+    const smsDelivered = all.filter((m) => m.sms_dlr === 'delivered' || m.sms_dlr === 'submitted').length;
+    const seen = all.filter((m) => m.viber_message_status === 'seen').length;
+    const clicked = all.filter((m) => m.clicked).length;
+    const fallback = all.filter((m) => m.fallbacked).length;
+    const notViberUser = all.filter((m) => m.viber_dlr === 'not_viber_user').length;
+    const noSuitableDevice = all.filter((m) => m.viber_dlr === 'no_suitable_device').length;
+    const blocked = all.filter((m) => m.viber_dlr === 'blocked').length;
+    const expired = all.filter((m) => m.viber_dlr === 'expired').length;
+    const failed = all.filter((m) => m.viber_dlr === 'failed').length;
 
     return {
       total, viberDelivered, smsDelivered, seen, clicked, fallback,
       viberFailReasons: { notViberUser, noSuitableDevice, blocked, expired, failed },
     };
-  }, [campaigns, recipients]);
+  }, [unifiedMessages]);
 
   const pct = (num: number, denom: number) => denom > 0 ? Math.round((num / denom) * 100) : 0;
 
@@ -300,6 +396,106 @@ function IzvjestajTab() {
               Za sve nabrojane razloge koji su u kampanji <strong>Viber + SMS fallback</strong>, SMS je automatski poslat preko rakunat-a.
               Kolona "Fallback" gore pokazuje koliko ih je realno prebaceno.
             </p>
+          </Card>
+
+          {/* Hronoloski feed svih poruka (kampanje + podsjetnici + potvrde + testovi) */}
+          <Card padding={false}>
+            <div className="px-4 py-3 border-b border-border flex items-center justify-between flex-wrap gap-2">
+              <h3 className="text-sm font-semibold text-gray-600">Sve poruke — hronoloski</h3>
+              <div className="flex items-center gap-2">
+                <select
+                  value={sourceFilter}
+                  onChange={(e) => setSourceFilter(e.target.value as any)}
+                  className="px-2 py-1 border border-border rounded text-xs"
+                >
+                  <option value="sve">Svi tipovi</option>
+                  <option value="kampanja">Kampanje</option>
+                  <option value="podsjetnik">Podsjetnici</option>
+                  <option value="potvrda">Potvrde termina</option>
+                  <option value="test">Test poruke</option>
+                </select>
+                <select
+                  value={channelFilter}
+                  onChange={(e) => setChannelFilter(e.target.value as any)}
+                  className="px-2 py-1 border border-border rounded text-xs"
+                >
+                  <option value="sve">Svi kanali</option>
+                  <option value="viber">Viber</option>
+                  <option value="sms">SMS</option>
+                </select>
+                <span className="text-xs text-gray-500">{unifiedMessages.length} poruka</span>
+              </div>
+            </div>
+            {unifiedMessages.length === 0 ? (
+              <div className="py-10 text-center text-gray-400 text-sm">
+                Nema poruka u izabranom periodu / filteru
+              </div>
+            ) : (
+              <div className="divide-y divide-border max-h-[500px] overflow-y-auto">
+                <div className="px-4 py-2 bg-gray-50 text-[10px] text-gray-500 font-medium flex items-center gap-2 sticky top-0">
+                  <span className="w-28">Vrijeme</span>
+                  <span className="w-36">Primalac</span>
+                  <span className="w-28">Telefon</span>
+                  <span className="w-16">Kanal</span>
+                  <span className="w-20">DLR</span>
+                  <span className="w-14 text-center">Seen</span>
+                  <span className="w-16 text-center">Fallback</span>
+                  <span className="flex-1">Izvor / Tekst</span>
+                </div>
+                {unifiedMessages.slice(0, 300).map((m) => {
+                  const dlr = m.viber_dlr || m.sms_dlr || '—';
+                  const dlrColor = dlr === 'delivered'
+                    ? 'text-green-700 bg-green-50'
+                    : dlr === 'pending' || dlr === 'submitted'
+                    ? 'text-amber-700 bg-amber-50'
+                    : dlr === '—' ? 'text-gray-400 bg-gray-50'
+                    : 'text-red-700 bg-red-50';
+                  return (
+                    <div
+                      key={m.id}
+                      className="px-4 py-2 flex items-center gap-2 text-xs hover:bg-gray-50"
+                      onClick={() => m.campaign_id && setSelectedId(m.campaign_id)}
+                      style={{ cursor: m.campaign_id ? 'pointer' : 'default' }}
+                    >
+                      <span className="w-28 text-gray-500">
+                        {new Date(m.datum).toLocaleString('sr-Latn-ME', { dateStyle: 'short', timeStyle: 'short' })}
+                      </span>
+                      <span className="w-36 font-medium text-gray-900 truncate">{m.primalac}</span>
+                      <span className="w-28 text-gray-600 font-mono">{m.telefon}</span>
+                      <span className={`w-16 px-1.5 py-0.5 rounded text-[10px] font-medium text-center ${
+                        m.kanal === 'viber' ? 'bg-purple-100 text-purple-700'
+                        : m.kanal === 'sms' ? 'bg-sky-100 text-sky-700'
+                        : 'bg-gray-100 text-gray-500'
+                      }`}>{m.kanal}</span>
+                      <span className={`w-20 px-1.5 py-0.5 rounded text-[10px] font-medium text-center truncate ${dlrColor}`}>
+                        {dlr}
+                      </span>
+                      <span className="w-14 text-center">
+                        {m.viber_message_status === 'seen' ? <Eye size={12} className="text-green-600 inline" /> : <span className="text-gray-300">—</span>}
+                      </span>
+                      <span className="w-16 text-center">
+                        {m.fallbacked ? <span className="text-[10px] text-amber-700 bg-amber-100 px-1 py-0.5 rounded">SMS</span> : <span className="text-gray-300">—</span>}
+                      </span>
+                      <span className="flex-1 min-w-0">
+                        <span className={`text-[10px] px-1.5 py-0.5 rounded mr-1 ${
+                          m.source === 'kampanja' ? 'bg-purple-100 text-purple-700'
+                          : m.source === 'podsjetnik' ? 'bg-blue-100 text-blue-700'
+                          : m.source === 'potvrda' ? 'bg-green-100 text-green-700'
+                          : m.source === 'test' ? 'bg-gray-100 text-gray-700'
+                          : 'bg-gray-100 text-gray-600'
+                        }`}>{m.source_label}</span>
+                        {m.error && <span className="text-red-500 ml-1">· {m.error}</span>}
+                      </span>
+                    </div>
+                  );
+                })}
+                {unifiedMessages.length > 300 && (
+                  <div className="px-4 py-2 text-center text-xs text-gray-400 bg-gray-50">
+                    Prikazano prvih 300 od {unifiedMessages.length} — suzi filter po datumu
+                  </div>
+                )}
+              </div>
+            )}
           </Card>
 
           {/* Tabela kampanja sa stats */}

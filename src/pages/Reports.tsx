@@ -1,15 +1,32 @@
 import { useState, useMemo, useEffect } from 'react';
-import { BarChart3, TrendingUp, Users, Calendar, CreditCard, FileText, Printer, Download } from 'lucide-react';
+import {
+  Calendar, TrendingUp, CreditCard, Users, FileText, Package,
+  Printer, Download,
+} from 'lucide-react';
 import Card from '../components/ui/Card';
 import { useCalendar } from '../contexts/CalendarContext';
 
 import { supabase } from '../lib/supabase';
-import { APPOINTMENT_STATUS_COLORS, APPOINTMENT_STATUS_LABELS } from '../types';
+import { APPOINTMENT_STATUS_LABELS } from '../types';
 import { exportToExcel, printToPdf, type ReportExport } from '../lib/exportReport';
+
+// ============================================================
+// Reports — smireni monohromatski stil + materijali sekcija
+// Jedna akcentna boja (primary) za highlights. Sve ostalo neutralno.
+// ============================================================
+
+interface MaterialStat {
+  material_id: string;
+  naziv: string;
+  jedinica: string;
+  kolicina: number;
+  cijena: number;   // nabavna
+  vrijednost: number; // kolicina * cijena
+}
 
 export default function Reports() {
   const { appointments, doctors } = useCalendar();
-  
+
   const [selectedDoctor, setSelectedDoctor] = useState<string>('all');
   const [dateFrom, setDateFrom] = useState(() => {
     const d = new Date(); d.setDate(1);
@@ -55,14 +72,55 @@ export default function Reports() {
       .gte('datum', dateFrom)
       .lte('datum', dateTo)
       .then(({ count }) => setExamCount(count || 0));
-
-    supabase.from('notifications')
-      .select('id', { count: 'exact' })
-      .eq('tip', 'potvrda')
-      .eq('status', 'sent')
-      .gte('datum_slanja', `${dateFrom}T00:00:00`)
-      .lte('datum_slanja', `${dateTo}T23:59:59`)
   }, [dateFrom, dateTo]);
+
+  // Materijali iz material_usage u izabranom periodu
+  const [materialStats, setMaterialStats] = useState<MaterialStat[]>([]);
+  const [materialLoading, setMaterialLoading] = useState(false);
+
+  useEffect(() => {
+    (async () => {
+      setMaterialLoading(true);
+      let q = supabase
+        .from('material_usage')
+        .select('material_id, kolicina, ljekar_id, datum, material:materials(naziv, jedinica_mjere, nabavna_cijena)')
+        .gte('datum', dateFrom)
+        .lte('datum', dateTo);
+      if (selectedDoctor !== 'all') q = q.eq('ljekar_id', selectedDoctor);
+
+      const { data } = await q;
+      const map = new Map<string, MaterialStat>();
+      for (const u of (data || []) as any[]) {
+        const mid = u.material_id;
+        const mat = u.material;
+        if (!mid || !mat) continue;
+        const kolicina = Number(u.kolicina) || 0;
+        const cijena = Number(mat.nabavna_cijena) || 0;
+        const existing = map.get(mid);
+        if (existing) {
+          existing.kolicina += kolicina;
+          existing.vrijednost += kolicina * cijena;
+        } else {
+          map.set(mid, {
+            material_id: mid,
+            naziv: mat.naziv || '—',
+            jedinica: mat.jedinica_mjere || 'kom',
+            kolicina,
+            cijena,
+            vrijednost: kolicina * cijena,
+          });
+        }
+      }
+      setMaterialStats(Array.from(map.values()).sort((a, b) => b.vrijednost - a.vrijednost));
+      setMaterialLoading(false);
+    })();
+  }, [dateFrom, dateTo, selectedDoctor]);
+
+  const materialTotals = useMemo(() => ({
+    ukupnoStavki: materialStats.length,
+    ukupnoVrijednost: materialStats.reduce((s, m) => s + m.vrijednost, 0),
+    ukupnoKolicina: materialStats.reduce((s, m) => s + m.kolicina, 0),
+  }), [materialStats]);
 
   // Po ljekaru
   const doctorStats = useMemo(() => {
@@ -91,11 +149,27 @@ export default function Reports() {
     }).sort((a, b) => b.revenue - a.revenue);
   }, [doctors, filtered]);
 
+  // Top usluge
+  const topServices = useMemo(() => {
+    const map: Record<string, { naziv: string; count: number; revenue: number }> = {};
+    for (const apt of filtered) {
+      for (const svc of (apt.services || [])) {
+        if (!map[svc.naziv]) map[svc.naziv] = { naziv: svc.naziv, count: 0, revenue: 0 };
+        map[svc.naziv].count += svc.kolicina;
+        map[svc.naziv].revenue += svc.ukupno;
+      }
+    }
+    return Object.values(map).sort((a, b) => b.revenue - a.revenue).slice(0, 10);
+  }, [filtered]);
+
   // Build export payload sa svim dostupnim sheet-ovima za PDF/Excel
   function buildReportExport(): ReportExport {
     const doctorLabel = selectedDoctor === 'all'
       ? 'Svi ljekari'
-      : doctors.find((d) => d.id === selectedDoctor)?.ime + ' ' + doctors.find((d) => d.id === selectedDoctor)?.prezime;
+      : (() => {
+          const d = doctors.find((x) => x.id === selectedDoctor);
+          return d ? `${d.titula || ''} ${d.ime} ${d.prezime}`.trim() : '—';
+        })();
     const subtitle = `Period: ${dateFrom} — ${dateTo}  |  Ljekar: ${doctorLabel}`;
 
     return {
@@ -120,6 +194,8 @@ export default function Reports() {
             { metric: 'Pregleda (examinations)',     value: examCount },
             { metric: 'Stopa realizacije %',         value: Number(stats.realizationRate) },
             { metric: 'Prosjecna vrijednost termina EUR', value: Number(stats.avgValue) },
+            { metric: 'Materijali (broj stavki)',    value: materialTotals.ukupnoStavki },
+            { metric: 'Materijali (vrijednost EUR)', value: Number(materialTotals.ukupnoVrijednost.toFixed(2)) },
           ],
         },
         // 2. Top usluge
@@ -166,7 +242,25 @@ export default function Reports() {
             patients: r.uniquePatients,
           })),
         },
-        // 4. Detaljan spisak termina
+        // 4. Materijali (NOVO)
+        {
+          name: 'Materijali',
+          columns: [
+            { key: 'naziv',      label: 'Materijal' },
+            { key: 'kolicina',   label: 'Kolicina', format: 'number' },
+            { key: 'jedinica',   label: 'Jedinica' },
+            { key: 'cijena',     label: 'Nabavna cijena', format: 'currency' },
+            { key: 'vrijednost', label: 'Vrijednost (EUR)', format: 'currency' },
+          ],
+          rows: materialStats.map((m) => ({
+            naziv: m.naziv,
+            kolicina: Number(m.kolicina.toFixed(2)),
+            jedinica: m.jedinica,
+            cijena: Number(m.cijena.toFixed(2)),
+            vrijednost: Number(m.vrijednost.toFixed(2)),
+          })),
+        },
+        // 5. Detaljan spisak termina
         {
           name: 'Detalji termina',
           columns: [
@@ -205,21 +299,9 @@ export default function Reports() {
     printToPdf(buildReportExport());
   }
 
-  // Top usluge
-  const topServices = useMemo(() => {
-    const map: Record<string, { naziv: string; count: number; revenue: number }> = {};
-    for (const apt of filtered) {
-      for (const svc of (apt.services || [])) {
-        if (!map[svc.naziv]) map[svc.naziv] = { naziv: svc.naziv, count: 0, revenue: 0 };
-        map[svc.naziv].count += svc.kolicina;
-        map[svc.naziv].revenue += svc.ukupno;
-      }
-    }
-    return Object.values(map).sort((a, b) => b.revenue - a.revenue).slice(0, 10);
-  }, [filtered]);
-
   return (
     <div>
+      {/* Header */}
       <div className="flex items-center justify-between mb-6 flex-wrap gap-4">
         <div>
           <h2 className="text-2xl font-bold text-gray-900">Izvjestaji</h2>
@@ -240,14 +322,14 @@ export default function Reports() {
           <div className="h-6 w-px bg-gray-200 mx-1" />
           <button
             onClick={handlePrintPdf}
-            className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 transition-colors"
+            className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors"
             title="Stampaj izvjestaj kao PDF"
           >
             <Printer size={13} /> PDF
           </button>
           <button
             onClick={handleExportExcel}
-            className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 transition-colors"
+            className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg bg-gray-900 text-white hover:bg-gray-800 transition-colors"
             title="Preuzmi izvjestaj kao Excel"
           >
             <Download size={13} /> Excel
@@ -255,94 +337,41 @@ export default function Reports() {
         </div>
       </div>
 
-      {/* Sumarne metrike */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
-        <Card>
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-primary-100 rounded-lg flex items-center justify-center">
-              <Calendar size={20} className="text-primary-600" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
-              <p className="text-xs text-gray-500">Termini</p>
-            </div>
-          </div>
-        </Card>
-        <Card>
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
-              <TrendingUp size={20} className="text-green-600" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-green-600">{stats.completed}</p>
-              <p className="text-xs text-gray-500">Realizovano</p>
-            </div>
-          </div>
-        </Card>
-        <Card>
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
-              <CreditCard size={20} className="text-purple-600" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-purple-600">{stats.revenue.toFixed(0)} EUR</p>
-              <p className="text-xs text-gray-500">Prihod (realizovano)</p>
-            </div>
-          </div>
-        </Card>
-        <Card>
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-              <BarChart3 size={20} className="text-blue-600" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-blue-600">{stats.allRevenue.toFixed(0)} EUR</p>
-              <p className="text-xs text-gray-500">Ukupno zakazano</p>
-            </div>
-          </div>
-        </Card>
-        <Card>
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-amber-100 rounded-lg flex items-center justify-center">
-              <Users size={20} className="text-amber-600" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-gray-900">{stats.uniquePatients}</p>
-              <p className="text-xs text-gray-500">Pacijenata</p>
-            </div>
-          </div>
-        </Card>
-        <Card>
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-teal-100 rounded-lg flex items-center justify-center">
-              <FileText size={20} className="text-teal-600" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-gray-900">{examCount}</p>
-              <p className="text-xs text-gray-500">Pregleda</p>
-            </div>
-          </div>
-        </Card>
+      {/* Sumarne metrike — neutralno, samo linija + tekst */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
+        <KpiTile icon={<Calendar size={16} />}   label="Termini"            value={stats.total} />
+        <KpiTile icon={<TrendingUp size={16} />} label="Realizovano"        value={stats.completed} />
+        <KpiTile icon={<CreditCard size={16} />} label="Prihod"             value={`${stats.revenue.toFixed(0)} €`} accent />
+        <KpiTile icon={<Calendar size={16} />}   label="Ukupno zakazano"    value={`${stats.allRevenue.toFixed(0)} €`} />
+        <KpiTile icon={<Users size={16} />}      label="Pacijenata"         value={stats.uniquePatients} />
+        <KpiTile icon={<FileText size={16} />}   label="Pregleda"           value={examCount} />
       </div>
 
-      {/* Realizacija + prosjecna vrijednost */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+      {/* Realizacija + prosjek + materijali ukupno */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
         <Card>
-          <p className="text-sm text-gray-500 mb-1">Stopa realizacije</p>
+          <p className="text-[11px] uppercase tracking-wider text-gray-400 font-semibold mb-1">Stopa realizacije</p>
           <div className="flex items-end gap-2">
-            <p className="text-3xl font-bold text-gray-900">{stats.realizationRate}%</p>
-            <div className="flex-1 bg-gray-200 rounded-full h-3 mb-2">
-              <div className="bg-green-500 h-3 rounded-full" style={{ width: `${stats.realizationRate}%` }} />
-            </div>
+            <p className="text-2xl font-bold text-gray-900">{stats.realizationRate}%</p>
+          </div>
+          <div className="w-full bg-gray-100 rounded-full h-1.5 mt-2">
+            <div className="bg-gray-700 h-1.5 rounded-full" style={{ width: `${stats.realizationRate}%` }} />
           </div>
         </Card>
         <Card>
-          <p className="text-sm text-gray-500 mb-1">Prosjecna vrijednost termina</p>
-          <p className="text-3xl font-bold text-gray-900">{stats.avgValue} EUR</p>
+          <p className="text-[11px] uppercase tracking-wider text-gray-400 font-semibold mb-1">Prosj. vrijednost termina</p>
+          <p className="text-2xl font-bold text-gray-900">{stats.avgValue} €</p>
         </Card>
         <Card>
-          <p className="text-sm text-gray-500 mb-1">Otkazano / No-show</p>
-          <p className="text-3xl font-bold text-red-600">{stats.cancelled} <span className="text-gray-400 text-lg">/</span> {stats.noShow}</p>
+          <p className="text-[11px] uppercase tracking-wider text-gray-400 font-semibold mb-1">Otkazano / No-show</p>
+          <p className="text-2xl font-bold text-gray-900">
+            {stats.cancelled} <span className="text-gray-300 font-normal">/</span> {stats.noShow}
+          </p>
+        </Card>
+        <Card>
+          <p className="text-[11px] uppercase tracking-wider text-gray-400 font-semibold mb-1">Materijali (vrijednost)</p>
+          <p className="text-2xl font-bold text-gray-900">{materialTotals.ukupnoVrijednost.toFixed(0)} €</p>
+          <p className="text-[11px] text-gray-400 mt-1">{materialTotals.ukupnoStavki} stavki</p>
         </Card>
       </div>
 
@@ -350,40 +379,91 @@ export default function Reports() {
       {topServices.length > 0 && (
         <Card padding={false} className="mb-6">
           <div className="px-6 py-4 border-b border-border">
-            <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider">Top usluge po prihodu</h3>
+            <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wider">Top usluge po prihodu</h3>
           </div>
           <div className="divide-y divide-border">
             {topServices.map((svc, i) => (
               <div key={svc.naziv} className="px-6 py-3 flex items-center gap-4">
-                <span className="text-sm font-bold text-gray-400 w-6">{i + 1}.</span>
-                <span className="text-sm font-medium text-gray-900 flex-1">{svc.naziv}</span>
-                <span className="text-xs text-gray-500">{svc.count}x</span>
-                <span className="text-sm font-bold text-purple-700">{svc.revenue.toFixed(0)} EUR</span>
+                <span className="text-xs font-semibold text-gray-400 w-6">{i + 1}.</span>
+                <span className="text-sm font-medium text-gray-900 flex-1 truncate">{svc.naziv}</span>
+                <span className="text-xs text-gray-500 whitespace-nowrap">{svc.count}x</span>
+                <span className="text-sm font-semibold text-gray-900 whitespace-nowrap">{svc.revenue.toFixed(0)} €</span>
               </div>
             ))}
           </div>
         </Card>
       )}
 
+      {/* Materijali (NOVO) */}
+      <Card padding={false} className="mb-6">
+        <div className="px-6 py-4 border-b border-border flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Package size={16} className="text-gray-500" />
+            <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wider">Utroseni materijali</h3>
+          </div>
+          <span className="text-xs text-gray-500">
+            Ukupno: <strong className="text-gray-900">{materialTotals.ukupnoVrijednost.toFixed(2)} €</strong> · {materialTotals.ukupnoStavki} stavki
+          </span>
+        </div>
+        {materialLoading ? (
+          <div className="px-6 py-8 text-center text-xs text-gray-400">Ucitavanje materijala...</div>
+        ) : materialStats.length === 0 ? (
+          <div className="px-6 py-8 text-center text-xs text-gray-400">
+            Nema utrosenih materijala u izabranom periodu.
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-gray-50 border-b border-border">
+                  <th className="px-4 py-3 text-left text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Materijal</th>
+                  <th className="px-4 py-3 text-right text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Kolicina</th>
+                  <th className="px-4 py-3 text-left text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Jedinica</th>
+                  <th className="px-4 py-3 text-right text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Cijena (EUR)</th>
+                  <th className="px-4 py-3 text-right text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Vrijednost (EUR)</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {materialStats.map((m) => (
+                  <tr key={m.material_id} className="hover:bg-gray-50">
+                    <td className="px-4 py-3 text-gray-900 font-medium">{m.naziv}</td>
+                    <td className="px-4 py-3 text-right text-gray-700 tabular-nums">{m.kolicina.toFixed(2)}</td>
+                    <td className="px-4 py-3 text-gray-500 text-xs">{m.jedinica}</td>
+                    <td className="px-4 py-3 text-right text-gray-600 tabular-nums">{m.cijena.toFixed(2)}</td>
+                    <td className="px-4 py-3 text-right text-gray-900 font-semibold tabular-nums">{m.vrijednost.toFixed(2)}</td>
+                  </tr>
+                ))}
+              </tbody>
+              <tfoot>
+                <tr className="bg-gray-50 border-t border-border">
+                  <td className="px-4 py-3 text-[10px] uppercase tracking-wider text-gray-500 font-semibold" colSpan={4}>Ukupno</td>
+                  <td className="px-4 py-3 text-right text-gray-900 font-bold tabular-nums">{materialTotals.ukupnoVrijednost.toFixed(2)}</td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        )}
+      </Card>
+
       {/* Komparativna tabela ljekara */}
       <Card padding={false} className="mb-6">
         <div className="px-6 py-4 border-b border-border">
-          <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider">Komparativni izvjestaj — ljekari</h3>
+          <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wider">Komparativni izvjestaj — ljekari</h3>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-gray-50 border-b border-border">
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Ljekar</th>
-                <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase">Termini</th>
-                <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase">Realizovano</th>
-                <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase">Prihod (EUR)</th>
-                <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase">Zakazano (EUR)</th>
-                <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase">Prosj. (EUR)</th>
-                <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase">Realizacija</th>
-                <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase">Otkazano</th>
-                <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase">No-show</th>
-                <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase">Pacijenata</th>
+                <th className="px-4 py-3 text-left text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Ljekar</th>
+                <th className="px-4 py-3 text-right text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Termini</th>
+                <th className="px-4 py-3 text-right text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Realizovano</th>
+                <th className="px-4 py-3 text-right text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Prihod (EUR)</th>
+                <th className="px-4 py-3 text-right text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Zakazano (EUR)</th>
+                <th className="px-4 py-3 text-right text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Prosjek (EUR)</th>
+                <th className="px-4 py-3 text-right text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Realizacija</th>
+                <th className="px-4 py-3 text-right text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Otkazano</th>
+                <th className="px-4 py-3 text-right text-[10px] font-semibold text-gray-500 uppercase tracking-wider">No-show</th>
+                <th className="px-4 py-3 text-right text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Pacijenata</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
@@ -391,53 +471,53 @@ export default function Reports() {
                 <tr key={row.doctor.id} className="hover:bg-gray-50">
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
-                      <span className="w-3 h-3 rounded-full" style={{ backgroundColor: row.doctor.boja }} />
+                      <span className="w-1.5 h-1.5 rounded-full bg-gray-400" />
                       <span className="font-medium text-gray-900">
                         {row.doctor.titula} {row.doctor.ime} {row.doctor.prezime}
                       </span>
                     </div>
                   </td>
-                  <td className="px-4 py-3 text-right text-gray-600">{row.total}</td>
-                  <td className="px-4 py-3 text-right font-medium text-green-600">{row.completed}</td>
-                  <td className="px-4 py-3 text-right font-bold text-purple-700">{row.revenue.toFixed(0)}</td>
-                  <td className="px-4 py-3 text-right text-blue-600">{row.allRevenue.toFixed(0)}</td>
-                  <td className="px-4 py-3 text-right text-gray-600">{row.avgValue.toFixed(0)}</td>
-                  <td className="px-4 py-3 text-right">
-                    <span className={`font-medium ${row.realizationRate >= 80 ? 'text-green-600' : row.realizationRate >= 60 ? 'text-amber-600' : 'text-red-600'}`}>
+                  <td className="px-4 py-3 text-right text-gray-700 tabular-nums">{row.total}</td>
+                  <td className="px-4 py-3 text-right text-gray-900 font-medium tabular-nums">{row.completed}</td>
+                  <td className="px-4 py-3 text-right text-gray-900 font-semibold tabular-nums">{row.revenue.toFixed(0)}</td>
+                  <td className="px-4 py-3 text-right text-gray-600 tabular-nums">{row.allRevenue.toFixed(0)}</td>
+                  <td className="px-4 py-3 text-right text-gray-600 tabular-nums">{row.avgValue.toFixed(0)}</td>
+                  <td className="px-4 py-3 text-right tabular-nums">
+                    <span className={`font-medium ${row.realizationRate >= 80 ? 'text-gray-900' : row.realizationRate >= 60 ? 'text-gray-500' : 'text-gray-400'}`}>
                       {row.realizationRate.toFixed(0)}%
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-right text-red-500">{row.cancelled}</td>
-                  <td className="px-4 py-3 text-right text-gray-400">{row.noShow}</td>
-                  <td className="px-4 py-3 text-right text-gray-600">{row.uniquePatients}</td>
+                  <td className="px-4 py-3 text-right text-gray-500 tabular-nums">{row.cancelled}</td>
+                  <td className="px-4 py-3 text-right text-gray-400 tabular-nums">{row.noShow}</td>
+                  <td className="px-4 py-3 text-right text-gray-600 tabular-nums">{row.uniquePatients}</td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
       </Card>
+    </div>
+  );
+}
 
-      {/* Status breakdown */}
-      <Card>
-        <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">Raspodjela statusa termina</h3>
-        <div className="flex gap-4 flex-wrap">
-          {[
-            { status: 'zavrsen', label: 'Zavrseni', count: stats.completed },
-            { status: 'otkazan', label: 'Otkazani', count: stats.cancelled },
-            { status: 'nije_dosao', label: 'No-show', count: stats.noShow },
-            { status: 'zakazan', label: 'Zakazani', count: stats.total - stats.completed - stats.cancelled - stats.noShow },
-          ].map((item) => (
-            <div key={item.status} className="flex items-center gap-2">
-              <span
-                className="w-3 h-3 rounded-full"
-                style={{ backgroundColor: APPOINTMENT_STATUS_COLORS[item.status as keyof typeof APPOINTMENT_STATUS_COLORS] }}
-              />
-              <span className="text-sm text-gray-600">{item.label}:</span>
-              <span className="text-sm font-medium text-gray-900">{item.count}</span>
-            </div>
-          ))}
-        </div>
-      </Card>
+// ============================================================
+// KPI tile — neutralna jednoredna kartica
+// Akcent je samo jedna tanka linija ispod vrijednosti kad je accent=true
+// ============================================================
+function KpiTile({ icon, label, value, accent }: {
+  icon: React.ReactNode;
+  label: string;
+  value: string | number;
+  accent?: boolean;
+}) {
+  return (
+    <div className="bg-white border border-gray-200 rounded-xl px-4 py-3">
+      <div className="flex items-center gap-2 text-gray-500 mb-1">
+        {icon}
+        <p className="text-[11px] uppercase tracking-wider font-semibold truncate">{label}</p>
+      </div>
+      <p className={`text-xl font-bold truncate ${accent ? 'text-gray-900' : 'text-gray-800'}`}>{value}</p>
+      {accent && <div className="h-0.5 w-8 bg-gray-900 rounded-full mt-1.5" />}
     </div>
   );
 }

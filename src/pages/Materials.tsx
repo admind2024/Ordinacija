@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Plus, Edit, Trash2, Package, BarChart3, Search, Loader2, Save } from 'lucide-react';
+import { Plus, Edit, Trash2, Package, BarChart3, Search, Loader2, Save, Printer, Download } from 'lucide-react';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
@@ -7,6 +7,7 @@ import Modal from '../components/ui/Modal';
 import { useCalendar } from '../contexts/CalendarContext';
 import { usePatients } from '../contexts/PatientsContext';
 import { supabase } from '../lib/supabase';
+import { exportToExcel, printToPdf, type ReportExport } from '../lib/exportReport';
 import type { Material } from '../types';
 
 type MatTab = 'katalog' | 'izvjestaj';
@@ -102,13 +103,88 @@ export default function Materials() {
   useEffect(() => { if (tab === 'izvjestaj') loadUsageReport(); }, [tab, dateFrom, dateTo, filterMaterial, filterDoctor]);
 
   const usageSummary = useMemo(() => {
-    const map: Record<string, { naziv: string; jedinica: string; total: number }> = {};
+    const map: Record<string, { naziv: string; jedinica: string; total: number; vrijednost: number }> = {};
     for (const u of usageData) {
-      if (!map[u.material_naziv]) map[u.material_naziv] = { naziv: u.material_naziv, jedinica: u.material_jedinica, total: 0 };
+      if (!map[u.material_naziv]) {
+        const mat = materials.find((m) => m.naziv === u.material_naziv);
+        map[u.material_naziv] = {
+          naziv: u.material_naziv,
+          jedinica: u.material_jedinica,
+          total: 0,
+          vrijednost: 0,
+        };
+        // prodji kroz sve rows for this material, compute
+        void mat;
+      }
       map[u.material_naziv].total += u.kolicina;
+      const mat = materials.find((m) => m.naziv === u.material_naziv);
+      if (mat) map[u.material_naziv].vrijednost += u.kolicina * (Number(mat.nabavna_cijena) || 0);
     }
     return Object.values(map).sort((a, b) => b.total - a.total);
-  }, [usageData]);
+  }, [usageData, materials]);
+
+  // ====== EXPORT (PDF + Excel) ======
+  function buildExport(): ReportExport {
+    const subtitle = `Period: ${dateFrom} — ${dateTo}${filterMaterial ? ` | Materijal: ${filterMaterial}` : ''}${filterDoctor ? ` | Ljekar: ${filterDoctor}` : ''}`;
+    const totalVrijednost = usageSummary.reduce((s, r) => s + r.vrijednost, 0);
+
+    return {
+      title: 'Izvjestaj utroska materijala',
+      subtitle,
+      sheets: [
+        {
+          name: 'Ukupno po materijalu',
+          columns: [
+            { key: 'naziv',      label: 'Materijal' },
+            { key: 'total',      label: 'Kolicina', format: 'number' },
+            { key: 'jedinica',   label: 'Jedinica' },
+            { key: 'vrijednost', label: 'Vrijednost (EUR)', format: 'currency' },
+          ],
+          rows: [
+            ...usageSummary.map((s) => ({
+              naziv: s.naziv,
+              total: Number(s.total.toFixed(2)),
+              jedinica: s.jedinica,
+              vrijednost: Number(s.vrijednost.toFixed(2)),
+            })),
+            {
+              naziv: 'UKUPNO',
+              total: '',
+              jedinica: '',
+              vrijednost: Number(totalVrijednost.toFixed(2)),
+            },
+          ],
+        },
+        {
+          name: 'Detaljan izvjestaj',
+          columns: [
+            { key: 'datum',    label: 'Datum' },
+            { key: 'material', label: 'Materijal' },
+            { key: 'kolicina', label: 'Kolicina', format: 'number' },
+            { key: 'jedinica', label: 'Jedinica' },
+            { key: 'pacijent', label: 'Pacijent' },
+            { key: 'ljekar',   label: 'Ljekar' },
+          ],
+          rows: usageData.map((u) => ({
+            datum: u.datum,
+            material: u.material_naziv,
+            kolicina: Number(u.kolicina.toFixed(2)),
+            jedinica: u.material_jedinica,
+            pacijent: u.patient_ime,
+            ljekar: u.ljekar_ime,
+          })),
+        },
+      ],
+    };
+  }
+
+  function handleExportExcel() {
+    exportToExcel(buildExport());
+  }
+
+  function handlePrintPdf() {
+    printToPdf(buildExport());
+  }
 
   return (
     <div>
@@ -162,26 +238,46 @@ export default function Materials() {
       {tab === 'izvjestaj' && (
         <div className="space-y-6">
           <Card>
-            <div className="flex flex-wrap gap-4 items-end">
-              <div>
-                <label className="block text-xs font-medium text-gray-500 mb-1">Od</label>
-                <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)}
-                  className="px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" />
+            <div className="flex flex-wrap gap-4 items-end justify-between">
+              <div className="flex flex-wrap gap-4 items-end">
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 mb-1">Od</label>
+                  <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)}
+                    className="px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 mb-1">Do</label>
+                  <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)}
+                    className="px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 mb-1">Materijal</label>
+                  <input type="text" placeholder="Svi" value={filterMaterial} onChange={(e) => setFilterMaterial(e.target.value)}
+                    className="px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 mb-1">Ljekar</label>
+                  <input type="text" placeholder="Svi" value={filterDoctor} onChange={(e) => setFilterDoctor(e.target.value)}
+                    className="px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" />
+                </div>
               </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-500 mb-1">Do</label>
-                <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)}
-                  className="px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-500 mb-1">Materijal</label>
-                <input type="text" placeholder="Svi" value={filterMaterial} onChange={(e) => setFilterMaterial(e.target.value)}
-                  className="px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-500 mb-1">Ljekar</label>
-                <input type="text" placeholder="Svi" value={filterDoctor} onChange={(e) => setFilterDoctor(e.target.value)}
-                  className="px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" />
+              <div className="flex gap-2">
+                <button
+                  onClick={handlePrintPdf}
+                  disabled={usageData.length === 0}
+                  className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                  title="Stampaj izvjestaj kao PDF"
+                >
+                  <Printer size={13} /> PDF
+                </button>
+                <button
+                  onClick={handleExportExcel}
+                  disabled={usageData.length === 0}
+                  className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg bg-gray-900 text-white hover:bg-gray-800 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                  title="Preuzmi izvjestaj kao Excel"
+                >
+                  <Download size={13} /> Excel
+                </button>
               </div>
             </div>
           </Card>

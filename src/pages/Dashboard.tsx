@@ -1,6 +1,6 @@
 import { useMemo, useState, useEffect } from 'react';
 import { format, parseISO } from 'date-fns';
-import { CalendarDays, Users, CreditCard, TrendingUp, Printer, Eye, FileText, Banknote, CheckCircle, XCircle, Receipt, AlertTriangle } from 'lucide-react';
+import { CalendarDays, Users, CreditCard, TrendingUp, Printer, Eye, FileText, Banknote, CheckCircle, XCircle, Receipt, AlertTriangle, Tag } from 'lucide-react';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import Modal from '../components/ui/Modal';
@@ -129,6 +129,14 @@ export default function Dashboard() {
   const [payFiskalizuj, setPayFiskalizuj] = useState(false);
   const [payNapomena, setPayNapomena] = useState('');
   const [paySaving, setPaySaving] = useState(false);
+  const [payPopust, setPayPopust] = useState(0);
+
+  // Bruto (bez popusta) i za naplatu (sa popustom) za trenutni payExam
+  const payBruto = payExam?.appointmentServices
+    ? payExam.appointmentServices.reduce((s: number, svc: any) => s + (Number(svc.cijena) * (Number(svc.kolicina) || 1)), 0)
+    : 0;
+  const payPopustIznos = payBruto * (payPopust / 100);
+  const payZaNaplatu = Math.max(0, payBruto - payPopustIznos);
 
   function openPayment(exam: ExamWithDetails) {
     if (fiscalData[exam.id]?.success) {
@@ -137,7 +145,11 @@ export default function Dashboard() {
       return;
     }
     setPayExam(exam);
-    setPayAmount(exam.appointmentTotal || 0);
+    // Auto-primijeni stalni popust pacijenta ako ga ima
+    const pPopust = exam.patient?.popust || 0;
+    setPayPopust(pPopust);
+    const bruto = (exam.appointmentServices || []).reduce((s: number, svc: any) => s + (Number(svc.cijena) * (Number(svc.kolicina) || 1)), 0);
+    setPayAmount(Math.max(0, bruto * (1 - pPopust / 100)));
     setPayMethod('gotovina');
     setPayFiskalizuj(false);
     setPayNapomena('');
@@ -147,7 +159,21 @@ export default function Dashboard() {
     if (!payExam || payAmount <= 0) return;
     setPaySaving(true);
 
-    const examTotal = payExam.appointmentTotal || 0;
+    // Sinhronizuj popust u appointment_services ako se promijenio
+    if (payExam.appointmentServices && payExam.appointmentServices.length > 0) {
+      for (const svc of payExam.appointmentServices as any[]) {
+        const cijena = Number(svc.cijena) || 0;
+        const kolicina = Number(svc.kolicina) || 1;
+        const novoUkupno = cijena * kolicina * (1 - payPopust / 100);
+        await supabase
+          .from('appointment_services')
+          .update({ popust: payPopust, ukupno: novoUkupno })
+          .eq('id', svc.id);
+      }
+    }
+
+    // Od sada total = payZaNaplatu (bruto - popust)
+    const examTotal = payZaNaplatu;
     const remaining = examTotal - payAmount;
     const willCreateDebt = remaining > 0.01;
 
@@ -453,58 +479,121 @@ export default function Dashboard() {
       {payExam && (
         <Modal isOpen onClose={() => setPayExam(null)} title="Naplata" size="md">
           <div className="space-y-4">
-            {/* Info */}
-            <div className="bg-gray-50 rounded-lg p-3 text-sm space-y-1">
-              <p className="font-medium text-gray-900">
+            {/* Pacijent */}
+            <div className="flex items-center justify-between">
+              <p className="font-semibold text-gray-900 text-base">
                 {payExam.patient ? `${payExam.patient.ime} ${payExam.patient.prezime}` : 'Pacijent'}
               </p>
-              {payExam.appointmentServices?.map((svc: any) => (
-                <div key={svc.id} className="flex justify-between text-gray-600">
-                  <span>{svc.naziv} {svc.kolicina > 1 ? `x${svc.kolicina}` : ''}</span>
-                  <span>{Number(svc.ukupno).toFixed(2)} EUR</span>
+              {payExam.patient?.popust && payExam.patient.popust > 0 && (
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-semibold border border-emerald-100">
+                  Stalni popust {payExam.patient.popust}%
+                </span>
+              )}
+            </div>
+
+            {/* Sumarni pregled sa inline popust kontrolom */}
+            <div className="bg-gray-50 border border-gray-200 rounded-xl divide-y divide-gray-200">
+              {/* Stavke */}
+              <div className="px-4 py-3 space-y-1 text-sm">
+                {payExam.appointmentServices?.map((svc: any) => (
+                  <div key={svc.id} className="flex justify-between text-gray-600">
+                    <span className="truncate pr-2">{svc.naziv} {svc.kolicina > 1 ? `x${svc.kolicina}` : ''}</span>
+                    <span className="tabular-nums shrink-0">{(Number(svc.cijena) * (Number(svc.kolicina) || 1)).toFixed(2)} EUR</span>
+                  </div>
+                ))}
+              </div>
+
+              {/* Osnovica */}
+              <div className="px-4 py-2 flex justify-between text-sm text-gray-600">
+                <span>Osnovica</span>
+                <span className="tabular-nums">{payBruto.toFixed(2)} EUR</span>
+              </div>
+
+              {/* Popust row — subtilan inline input */}
+              <div className="px-4 py-2 flex items-center justify-between text-sm group">
+                <div className="flex items-center gap-2 text-gray-600">
+                  <Tag size={12} className="text-gray-400" />
+                  <span>Popust</span>
+                  <div className="relative w-14">
+                    <input
+                      type="number"
+                      min={0}
+                      max={100}
+                      step={1}
+                      value={payPopust}
+                      onChange={(e) => {
+                        const val = Math.max(0, Math.min(100, Number(e.target.value) || 0));
+                        setPayPopust(val);
+                        setPayAmount(Math.max(0, payBruto * (1 - val / 100)));
+                      }}
+                      className="w-full px-1.5 py-0.5 pr-4 text-right text-sm font-semibold text-gray-900 bg-white border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500 tabular-nums"
+                    />
+                    <span className="absolute right-1 top-1/2 -translate-y-1/2 text-[11px] text-gray-400 pointer-events-none">%</span>
+                  </div>
+                  {payExam.patient?.popust && payExam.patient.popust > 0 && payPopust !== payExam.patient.popust && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const val = payExam.patient!.popust;
+                        setPayPopust(val);
+                        setPayAmount(Math.max(0, payBruto * (1 - val / 100)));
+                      }}
+                      className="text-[10px] text-primary-600 hover:text-primary-700 underline"
+                    >
+                      stalni {payExam.patient.popust}%
+                    </button>
+                  )}
                 </div>
-              ))}
-              <div className="border-t border-border pt-1 mt-2 flex justify-between font-semibold text-gray-900">
-                <span>Ukupno:</span>
-                <span>{(payExam.appointmentTotal || 0).toFixed(2)} EUR</span>
+                <span className={`tabular-nums ${payPopust > 0 ? 'text-emerald-700 font-medium' : 'text-gray-400'}`}>
+                  {payPopust > 0 ? `−${payPopustIznos.toFixed(2)} EUR` : '—'}
+                </span>
+              </div>
+
+              {/* Za naplatu */}
+              <div className="px-4 py-3 flex justify-between items-center bg-white rounded-b-xl">
+                <span className="text-sm font-semibold text-gray-700">Za naplatu</span>
+                <span className="text-lg font-bold text-gray-900 tabular-nums">{payZaNaplatu.toFixed(2)} EUR</span>
               </div>
             </div>
 
-            {/* Iznos */}
+            {/* Iznos uplate */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Koliko pacijent placa? (EUR) *</label>
-              <input
-                type="number"
-                step="0.01"
-                min="0.01"
-                value={payAmount}
-                onChange={(e) => setPayAmount(Number(e.target.value))}
-                className="w-full px-3 py-2.5 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
-              />
+              <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Koliko pacijent placa</label>
+              <div className="relative">
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0.01"
+                  value={payAmount}
+                  onChange={(e) => setPayAmount(Number(e.target.value))}
+                  className="w-full px-3 py-2.5 pr-12 border border-gray-300 rounded-lg text-base font-semibold text-gray-900 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 tabular-nums"
+                />
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-400 pointer-events-none">EUR</span>
+              </div>
             </div>
 
-            {/* Nacin placanja */}
+            {/* Nacin placanja — smirenije */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Nacin placanja *</label>
+              <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Nacin placanja</label>
               <div className="flex gap-2">
                 <button
                   type="button"
                   onClick={() => setPayMethod('gotovina')}
-                  className={`flex-1 px-4 py-3 rounded-xl text-sm font-medium border-2 transition-all
+                  className={`flex-1 px-4 py-2.5 rounded-lg text-sm font-medium border transition-all
                     ${payMethod === 'gotovina'
-                      ? 'border-green-500 bg-green-50 text-green-700'
-                      : 'border-gray-200 bg-white text-gray-500 hover:border-gray-300'
+                      ? 'border-gray-900 bg-gray-900 text-white'
+                      : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
                     }`}
                 >
-                  Gotovina (Kes)
+                  Gotovina
                 </button>
                 <button
                   type="button"
                   onClick={() => setPayMethod('kartica')}
-                  className={`flex-1 px-4 py-3 rounded-xl text-sm font-medium border-2 transition-all
+                  className={`flex-1 px-4 py-2.5 rounded-lg text-sm font-medium border transition-all
                     ${payMethod === 'kartica'
-                      ? 'border-blue-500 bg-blue-50 text-blue-700'
-                      : 'border-gray-200 bg-white text-gray-500 hover:border-gray-300'
+                      ? 'border-gray-900 bg-gray-900 text-white'
+                      : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
                     }`}
                 >
                   Kartica
@@ -512,39 +601,39 @@ export default function Dashboard() {
               </div>
             </div>
 
-            {/* Fiskalizacija toggle */}
+            {/* Fiskalizacija — kompaktniji toggle */}
             <div
               onClick={() => setPayFiskalizuj(!payFiskalizuj)}
-              className={`flex items-center justify-between px-4 py-3 rounded-xl border-2 cursor-pointer transition-all
+              className={`flex items-center justify-between px-4 py-2.5 rounded-lg border cursor-pointer transition-all
                 ${payFiskalizuj
-                  ? 'border-amber-400 bg-amber-50'
+                  ? 'border-amber-300 bg-amber-50/60'
                   : 'border-gray-200 bg-white hover:border-gray-300'
                 }`}
             >
-              <div className="flex items-center gap-3">
-                <Receipt size={20} className={payFiskalizuj ? 'text-amber-600' : 'text-gray-400'} />
+              <div className="flex items-center gap-2.5">
+                <Receipt size={16} className={payFiskalizuj ? 'text-amber-600' : 'text-gray-400'} />
                 <div>
-                  <p className={`text-sm font-medium ${payFiskalizuj ? 'text-amber-800' : 'text-gray-700'}`}>
+                  <p className={`text-sm font-medium ${payFiskalizuj ? 'text-amber-900' : 'text-gray-700'}`}>
                     Fiskalizacija
                   </p>
-                  <p className="text-xs text-gray-400">Izdaj fiskalni racun</p>
+                  <p className="text-[11px] text-gray-400">Izdaj fiskalni racun</p>
                 </div>
               </div>
-              <div className={`w-11 h-6 rounded-full transition-colors relative ${payFiskalizuj ? 'bg-amber-500' : 'bg-gray-300'}`}>
-                <div className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${payFiskalizuj ? 'translate-x-5' : 'translate-x-0.5'}`} />
+              <div className={`w-9 h-5 rounded-full transition-colors relative ${payFiskalizuj ? 'bg-amber-500' : 'bg-gray-300'}`}>
+                <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${payFiskalizuj ? 'translate-x-4' : 'translate-x-0.5'}`} />
               </div>
             </div>
 
             {/* Upozorenje za dug */}
-            {payAmount < (payExam.appointmentTotal || 0) - 0.01 && payAmount > 0 && (
+            {payAmount < payZaNaplatu - 0.01 && payAmount > 0 && (
               <div className="bg-red-50 border border-red-200 rounded-lg p-3 flex items-start gap-2">
-                <AlertTriangle size={18} className="text-red-500 shrink-0 mt-0.5" />
+                <AlertTriangle size={16} className="text-red-500 shrink-0 mt-0.5" />
                 <div>
                   <p className="text-sm font-semibold text-red-700">
-                    Preostaje dug: {((payExam.appointmentTotal || 0) - payAmount).toFixed(2)} EUR
+                    Preostaje dug: {(payZaNaplatu - payAmount).toFixed(2)} EUR
                   </p>
-                  <p className="text-xs text-red-600 mt-0.5">
-                    Automatski ce se kreirati dugovanje za {payExam.patient?.ime} {payExam.patient?.prezime}.
+                  <p className="text-[11px] text-red-600 mt-0.5">
+                    Kreirace se dugovanje za {payExam.patient?.ime} {payExam.patient?.prezime}.
                   </p>
                 </div>
               </div>
@@ -552,18 +641,18 @@ export default function Dashboard() {
 
             {/* Napomena */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Napomena</label>
+              <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Napomena (opciono)</label>
               <textarea
                 value={payNapomena}
                 onChange={(e) => setPayNapomena(e.target.value)}
                 rows={2}
-                className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none"
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 resize-none"
                 placeholder="Opciona biljeska..."
               />
             </div>
 
             {/* Dugmad */}
-            <div className="flex justify-end gap-2 pt-2">
+            <div className="flex justify-end gap-2 pt-2 border-t border-gray-100">
               <Button variant="secondary" onClick={() => setPayExam(null)}>Otkazi</Button>
               <Button onClick={handlePaySubmit} disabled={paySaving || payAmount <= 0}>
                 {paySaving ? 'Obrada...' : `Naplati ${payAmount.toFixed(2)} EUR`}

@@ -2,7 +2,6 @@ import { useState, useMemo } from 'react';
 import { AlertTriangle, Receipt, Tag } from 'lucide-react';
 import Modal from '../ui/Modal';
 import Button from '../ui/Button';
-import Input from '../ui/Input';
 import { useBilling } from '../../contexts/BillingContext';
 import { supabase } from '../../lib/supabase';
 import type { Appointment, PaymentMethod } from '../../types';
@@ -105,128 +104,113 @@ export default function PaymentForm({ isOpen, onClose, appointment }: PaymentFor
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Naplata" size="md">
       <form onSubmit={handleSubmit} className="space-y-4">
-        {/* Pacijent + usluge */}
-        <div className="bg-gray-50 rounded-lg p-3 text-sm space-y-1">
-          <p className="font-medium text-gray-900">
+        {/* Pacijent */}
+        <div className="flex items-center justify-between">
+          <p className="font-semibold text-gray-900 text-base">
             {patient ? `${patient.ime} ${patient.prezime}` : 'Pacijent'}
-            {patient && patient.popust > 0 && (
-              <span className="ml-2 text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-semibold">
-                Stalni popust {patient.popust}%
-              </span>
-            )}
           </p>
-          {appointment.services && (
-            <div className="space-y-0.5">
+          {patient && patient.popust > 0 && (
+            <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-semibold border border-emerald-100">
+              Stalni popust {patient.popust}%
+            </span>
+          )}
+        </div>
+
+        {/* Sumarni pregled sa inline popust kontrolom */}
+        <div className="bg-gray-50 border border-gray-200 rounded-xl divide-y divide-gray-200">
+          {/* Stavke */}
+          {appointment.services && appointment.services.length > 0 && (
+            <div className="px-4 py-3 space-y-1 text-sm">
               {appointment.services.map((svc) => (
                 <div key={svc.id} className="flex justify-between text-gray-600">
-                  <span>{svc.naziv} {svc.kolicina > 1 ? `x${svc.kolicina}` : ''}</span>
-                  <span>{(svc.cijena * (svc.kolicina || 1)).toFixed(2)} EUR</span>
+                  <span className="truncate pr-2">{svc.naziv} {svc.kolicina > 1 ? `x${svc.kolicina}` : ''}</span>
+                  <span className="tabular-nums shrink-0">{(svc.cijena * (svc.kolicina || 1)).toFixed(2)} EUR</span>
                 </div>
               ))}
             </div>
           )}
-        </div>
 
-        {/* POPUST — prominentan boxed section */}
-        <div className="bg-emerald-50 border-2 border-emerald-300 rounded-xl p-4">
-          <label className="flex items-center gap-2 mb-2">
-            <Tag size={16} className="text-emerald-700" />
-            <span className="text-sm font-bold text-emerald-900 uppercase tracking-wider">Popust na racun</span>
-          </label>
-          <div className="flex items-center gap-3">
-            <div className="relative flex-1 max-w-[140px]">
-              <input
-                type="number"
-                min={0}
-                max={100}
-                step={1}
-                value={popust}
-                onChange={(e) => {
-                  const val = Math.max(0, Math.min(100, Number(e.target.value) || 0));
-                  setPopust(val);
-                  const newZaNaplatu = bruto * (1 - val / 100);
-                  const newPreostalo = Math.max(0, newZaNaplatu - balance.paid);
-                  setIznos(newPreostalo);
-                }}
-                className="w-full px-4 py-3 pr-10 border-2 border-emerald-400 rounded-lg text-2xl font-bold text-center text-emerald-900 bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
-              />
-              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-lg font-bold text-emerald-700 pointer-events-none">%</span>
-            </div>
-            {patient && patient.popust > 0 && popust !== patient.popust && (
-              <button
-                type="button"
-                onClick={() => {
-                  const val = patient.popust;
-                  setPopust(val);
-                  const newZaNaplatu = bruto * (1 - val / 100);
-                  const newPreostalo = Math.max(0, newZaNaplatu - balance.paid);
-                  setIznos(newPreostalo);
-                }}
-                className="px-3 py-2 text-xs font-semibold rounded-lg bg-white border border-emerald-300 text-emerald-700 hover:bg-emerald-100 transition-colors"
-              >
-                Vrati stalni ({patient.popust}%)
-              </button>
-            )}
-            {popust > 0 && (
-              <button
-                type="button"
-                onClick={() => {
-                  setPopust(0);
-                  setIznos(Math.max(0, bruto - balance.paid));
-                }}
-                className="px-3 py-2 text-xs font-semibold rounded-lg bg-white border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors"
-              >
-                Ukloni
-              </button>
-            )}
-          </div>
-          <p className="text-[11px] text-emerald-700 mt-2">
-            {patient && patient.popust > 0 && popust === patient.popust
-              ? `Primijenjen stalni popust pacijenta (${patient.popust}%)`
-              : popust > 0
-                ? `Popust ce umanjiti racun za ${popustIznos.toFixed(2)} EUR`
-                : 'Bez popusta — racun se naplacuje po punoj cijeni'}
-          </p>
-        </div>
-
-        {/* Sumarni pregled */}
-        <div className="bg-white border border-gray-200 rounded-lg p-3 text-sm space-y-1">
-          <div className="flex justify-between text-gray-600">
-            <span>Osnovica:</span>
+          {/* Osnovica */}
+          <div className="px-4 py-2 flex justify-between text-sm text-gray-600">
+            <span>Osnovica</span>
             <span className="tabular-nums">{bruto.toFixed(2)} EUR</span>
           </div>
-          {popust > 0 && (
-            <div className="flex justify-between text-emerald-700 font-medium">
-              <span>Popust −{popust}%:</span>
-              <span className="tabular-nums">−{popustIznos.toFixed(2)} EUR</span>
+
+          {/* Popust — inline suptilan input */}
+          <div className="px-4 py-2 flex items-center justify-between text-sm">
+            <div className="flex items-center gap-2 text-gray-600">
+              <Tag size={12} className="text-gray-400" />
+              <span>Popust</span>
+              <div className="relative w-14">
+                <input
+                  type="number"
+                  min={0}
+                  max={100}
+                  step={1}
+                  value={popust}
+                  onChange={(e) => {
+                    const val = Math.max(0, Math.min(100, Number(e.target.value) || 0));
+                    setPopust(val);
+                    const newZaNaplatu = bruto * (1 - val / 100);
+                    const newPreostalo = Math.max(0, newZaNaplatu - balance.paid);
+                    setIznos(newPreostalo);
+                  }}
+                  className="w-full px-1.5 py-0.5 pr-4 text-right text-sm font-semibold text-gray-900 bg-white border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500 tabular-nums"
+                />
+                <span className="absolute right-1 top-1/2 -translate-y-1/2 text-[11px] text-gray-400 pointer-events-none">%</span>
+              </div>
+              {patient && patient.popust > 0 && popust !== patient.popust && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const val = patient.popust;
+                    setPopust(val);
+                    const newZaNaplatu = bruto * (1 - val / 100);
+                    const newPreostalo = Math.max(0, newZaNaplatu - balance.paid);
+                    setIznos(newPreostalo);
+                  }}
+                  className="text-[10px] text-primary-600 hover:text-primary-700 underline"
+                >
+                  stalni {patient.popust}%
+                </button>
+              )}
             </div>
-          )}
-          <div className="flex justify-between font-semibold text-gray-900 border-t border-border pt-1 mt-1">
-            <span>Ukupno:</span>
-            <span className="tabular-nums">{zaNaplatu.toFixed(2)} EUR</span>
+            <span className={`tabular-nums ${popust > 0 ? 'text-emerald-700 font-medium' : 'text-gray-400'}`}>
+              {popust > 0 ? `−${popustIznos.toFixed(2)} EUR` : '—'}
+            </span>
           </div>
+
+          {/* Vec placeno */}
           {balance.paid > 0 && (
-            <div className="flex justify-between text-green-600">
-              <span>Vec placeno:</span>
-              <span className="tabular-nums">{balance.paid.toFixed(2)} EUR</span>
+            <div className="px-4 py-2 flex justify-between text-sm text-green-600">
+              <span>Vec placeno</span>
+              <span className="tabular-nums">−{balance.paid.toFixed(2)} EUR</span>
             </div>
           )}
-          <div className="flex justify-between font-bold text-gray-900 text-base pt-1">
-            <span>Za naplatu:</span>
-            <span className="tabular-nums">{preostaloZaNaplatu.toFixed(2)} EUR</span>
+
+          {/* Za naplatu */}
+          <div className="px-4 py-3 flex justify-between items-center bg-white rounded-b-xl">
+            <span className="text-sm font-semibold text-gray-700">Za naplatu</span>
+            <span className="text-lg font-bold text-gray-900 tabular-nums">{preostaloZaNaplatu.toFixed(2)} EUR</span>
           </div>
         </div>
 
-        {/* Iznos */}
-        <Input
-          label="Koliko pacijent placa? (EUR) *"
-          type="number"
-          step="0.01"
-          min="0.01"
-          value={iznos}
-          onChange={(e) => setIznos(Number(e.target.value))}
-          required
-        />
+        {/* Iznos uplate */}
+        <div>
+          <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Koliko pacijent placa</label>
+          <div className="relative">
+            <input
+              type="number"
+              step="0.01"
+              min="0.01"
+              value={iznos}
+              onChange={(e) => setIznos(Number(e.target.value))}
+              required
+              className="w-full px-3 py-2.5 pr-12 border border-gray-300 rounded-lg text-base font-semibold text-gray-900 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 tabular-nums"
+            />
+            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-400 pointer-events-none">EUR</span>
+          </div>
+        </div>
 
         {/* Nacin placanja */}
         <div>

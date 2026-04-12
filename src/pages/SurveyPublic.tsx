@@ -211,8 +211,12 @@ function Body({ children }: { children: React.ReactNode }) {
 function Header() {
   return (
     <div style={S.header}>
-      <div style={S.logoFallback}>M</div>
-      <p style={S.headerSub}>Ministarstvo estetike</p>
+      <img
+        src="https://pedgschrivtpbzcoqniu.supabase.co/storage/v1/object/public/Razno/MOA%20LOGO%201.png"
+        alt="MOA"
+        style={{ height: 64, objectFit: 'contain', display: 'block', margin: '0 auto 10px' }}
+      />
+      <p style={S.headerSub}>Ministry of Aesthetics</p>
     </div>
   );
 }

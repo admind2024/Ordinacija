@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { format } from 'date-fns';
 
-import { Phone, Search, Users, Clock, CheckCircle2, CircleDot, XCircle } from 'lucide-react';
+import { Phone, Search, Users, Clock } from 'lucide-react';
 import DoctorLogin from '../components/ui/DoctorLogin';
 import PatientKarton from '../components/examinations/PatientKarton';
 import { openPrintReport } from '../components/examinations/PrintReport';
@@ -338,21 +338,31 @@ function ExaminationsContent({ loggedDoctor }: { loggedDoctor: Doctor }) {
 
   return (
     <div className="print:hidden">
-      {/* KPI cards */}
-      <div className="mb-6 flex items-center justify-end flex-wrap gap-4">
-        <div className="flex items-center gap-3">
+      {/* ====== PRETRAGA + KPI — na vrhu ====== */}
+      <div className="mb-6 flex items-center gap-4 flex-wrap">
+        <div className="relative flex-1 max-w-md">
+          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Pretrazi pacijente po imenu ili telefonu..."
+            className="w-full pl-9 pr-3 py-2.5 border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 bg-white"
+          />
+        </div>
+        <div className="flex items-center gap-3 ml-auto">
           <div className="text-center px-4 py-2 bg-primary-50 rounded-xl border border-primary-100">
             <p className="text-2xl font-bold text-primary-700">{todayCount}</p>
             <p className="text-[10px] uppercase tracking-wider text-primary-500 font-medium">Danas</p>
           </div>
           <div className="text-center px-4 py-2 bg-gray-50 rounded-xl border border-gray-200">
             <p className="text-2xl font-bold text-gray-700">{doctorPatients.length}</p>
-            <p className="text-[10px] uppercase tracking-wider text-gray-400 font-medium">Ukupno pacijenata</p>
+            <p className="text-[10px] uppercase tracking-wider text-gray-400 font-medium">Ukupno</p>
           </div>
         </div>
       </div>
 
-      {/* ====== RASPORED ZA DANAS ====== */}
+      {/* ====== RASPORED ZA DANAS — kompaktna tabela ====== */}
       {todayAppointments.length > 0 && (
         <div className="mb-8">
           <div className="flex items-center gap-2 mb-3">
@@ -361,54 +371,45 @@ function ExaminationsContent({ loggedDoctor }: { loggedDoctor: Doctor }) {
               Raspored za danas ({todayAppointments.length})
             </h3>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+          <div className="bg-white border border-border rounded-xl divide-y divide-border overflow-hidden">
             {todayAppointments.map((t) => {
-              const statusCfg: Record<string, { icon: typeof CheckCircle2; label: string; cls: string; border: string }> = {
-                zavrsen:   { icon: CheckCircle2, label: 'Završen',   cls: 'bg-emerald-50 text-emerald-700', border: 'border-emerald-200' },
-                potvrdjen: { icon: CircleDot,    label: 'Potvrđen',  cls: 'bg-blue-50    text-blue-700',    border: 'border-blue-200' },
-                zakazan:   { icon: Clock,        label: 'Zakazan',   cls: 'bg-sky-50     text-sky-700',     border: 'border-sky-200' },
-                otkazan:   { icon: XCircle,      label: 'Otkazan',   cls: 'bg-gray-50    text-gray-500',    border: 'border-gray-200' },
-                nije_dosao:{ icon: XCircle,      label: 'Nije došao',cls: 'bg-red-50     text-red-700',     border: 'border-red-200' },
-              };
-              const sc = statusCfg[t.status] || statusCfg.zakazan;
-              const Icon = sc.icon;
+              const sc = {
+                zavrsen:   { label: 'Završen',    cls: 'bg-emerald-100 text-emerald-800' },
+                potvrdjen: { label: 'Potvrđen',   cls: 'bg-blue-50 text-blue-700' },
+                zakazan:   { label: 'Zakazan',    cls: 'bg-sky-50 text-sky-700' },
+                otkazan:   { label: 'Otkazan',    cls: 'bg-gray-100 text-gray-500' },
+                nije_dosao:{ label: 'Nije došao', cls: 'bg-red-50 text-red-700' },
+              }[t.status] || { label: t.status, cls: 'bg-gray-100 text-gray-600' };
 
               return (
                 <button
                   key={t.appointment.id}
                   onClick={() => loadPatientData(t.patient_id, t.appointment)}
-                  className={`text-left p-4 rounded-xl bg-white border-2 transition-all hover:shadow-md group ${
-                    t.done ? 'opacity-60 ' + sc.border : sc.border + ' hover:border-primary-400'
+                  className={`w-full text-left px-4 py-3 flex items-center gap-4 hover:bg-gray-50 transition-colors ${
+                    t.done ? 'bg-emerald-50/40' : ''
                   }`}
                 >
-                  <div className="flex items-start justify-between mb-2">
-                    <div className="flex items-center gap-2">
-                      <div className="text-2xl font-bold text-gray-900 leading-none">{t.time}</div>
-                    </div>
-                    <div className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold ${sc.cls}`}>
-                      <Icon size={11} />
-                      {sc.label}
-                    </div>
+                  {/* Vrijeme */}
+                  <div className="w-14 shrink-0 text-center">
+                    <p className="text-base font-bold text-gray-900">{t.time}</p>
                   </div>
-                  <div className="text-sm font-semibold text-gray-900 truncate mb-0.5">
-                    {t.ime} {t.prezime}
-                  </div>
-                  {t.telefon && (
-                    <div className="flex items-center gap-1 text-[11px] text-gray-400 mb-1.5">
-                      <Phone size={10} /> {t.telefon}
-                    </div>
-                  )}
-                  {t.services && (
-                    <div className="text-[11px] text-gray-500 line-clamp-2 mb-2">{t.services}</div>
-                  )}
-                  <div className="flex items-center justify-between pt-2 border-t border-gray-100">
-                    <span className="text-[10px] uppercase tracking-wider text-gray-400 font-semibold">
-                      {t.done ? 'Zavrseno' : 'Otvori karton →'}
-                    </span>
-                    {t.total > 0 && (
-                      <span className="text-xs font-bold text-gray-700">{t.total.toFixed(0)} €</span>
+                  {/* Ime + usluga */}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-gray-900 truncate">
+                      {t.ime} {t.prezime}
+                    </p>
+                    {t.services && (
+                      <p className="text-[11px] text-gray-500 truncate">{t.services}</p>
                     )}
                   </div>
+                  {/* Iznos */}
+                  {t.total > 0 && (
+                    <span className="text-xs font-bold text-gray-700 shrink-0">{t.total.toFixed(0)} €</span>
+                  )}
+                  {/* Status badge — prominentniji za završene */}
+                  <span className={`text-[10px] px-2.5 py-1 rounded-full font-bold shrink-0 ${sc.cls}`}>
+                    {sc.label}
+                  </span>
                 </button>
               );
             })}
@@ -417,23 +418,11 @@ function ExaminationsContent({ loggedDoctor }: { loggedDoctor: Doctor }) {
       )}
 
       {/* ====== SVI PACIJENTI ====== */}
-      <div className="mb-4 flex items-center justify-between gap-4 flex-wrap">
-        <div className="flex items-center gap-2">
-          <Users size={16} className="text-gray-500" />
-          <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wider">
-            Svi moji pacijenti ({filteredPatients.length})
-          </h3>
-        </div>
-        <div className="relative flex-1 max-w-md">
-          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Pretrazi pacijente..."
-            className="w-full pl-9 pr-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 bg-white"
-          />
-        </div>
+      <div className="mb-4 flex items-center gap-2">
+        <Users size={16} className="text-gray-500" />
+        <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wider">
+          Svi moji pacijenti ({filteredPatients.length})
+        </h3>
       </div>
 
       {filteredPatients.length === 0 ? (

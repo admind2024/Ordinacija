@@ -1,8 +1,7 @@
 import { useMemo, useState, useEffect } from 'react';
-import { format, parseISO, startOfWeek, addDays, isSameDay, startOfMonth, endOfMonth, eachDayOfInterval } from 'date-fns';
+import { format, parseISO, startOfWeek, addDays, isSameDay } from 'date-fns';
 import { srLatn as sr } from 'date-fns/locale';
 import { CalendarDays, Users, CreditCard, TrendingUp, Printer, Eye, FileText, Banknote, CheckCircle, XCircle, Receipt, AlertTriangle, Tag, Sun, CloudSun, Moon } from 'lucide-react';
-import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import Modal from '../components/ui/Modal';
@@ -261,17 +260,7 @@ export default function Dashboard() {
   const greeting = hour < 12 ? 'Dobro jutro' : hour < 18 ? 'Dobar dan' : 'Dobro veče';
   const GreetIcon = hour < 12 ? Sun : hour < 18 ? CloudSun : Moon;
 
-  // Area chart: termini po danu za tekući mjesec
-  const monthChartData = useMemo(() => {
-    const now = new Date();
-    const days = eachDayOfInterval({ start: startOfMonth(now), end: endOfMonth(now) });
-    return days.map((day) => {
-      const count = appointments.filter((a) => isSameDay(new Date(a.pocetak), day)).length;
-      return { dan: format(day, 'd'), termini: count, isToday: isSameDay(day, now) };
-    });
-  }, [appointments]);
-
-  // Mini kalendar — 7 dana sa danas u sredini
+  // Mini kalendar — 7 dana tekuće sedmice
   const [selectedCalDay, setSelectedCalDay] = useState<Date>(new Date());
   const weekDays = useMemo(() => {
     const ws = startOfWeek(new Date(), { weekStartsOn: 1 });
@@ -324,29 +313,6 @@ export default function Dashboard() {
         <KpiCard icon={<CreditCard size={22} />} label="Prihod danas" value={`${(todayRevenue || todayExamsTotal).toFixed(0)} €`} bg="bg-accent-50" iconColor="text-accent-600" />
         <KpiCard icon={<TrendingUp size={22} />} label="Realizacija" value={`${realizationRate}%`} bg="bg-primary-50" iconColor="text-primary-600" />
       </div>
-
-      {/* ====== AREA CHART: Termini ovog mjeseca ====== */}
-      <Card>
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-sm font-semibold text-gray-700">Termini ovog mjeseca</h3>
-          <span className="text-xs text-gray-400">{format(new Date(), 'MMMM yyyy', { locale: sr })}</span>
-        </div>
-        <ResponsiveContainer width="100%" height={200}>
-          <AreaChart data={monthChartData} margin={{ left: 0, right: 5, top: 5, bottom: 0 }}>
-            <defs>
-              <linearGradient id="dashGrad" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#2BA5A5" stopOpacity={0.25} />
-                <stop offset="95%" stopColor="#2BA5A5" stopOpacity={0.02} />
-              </linearGradient>
-            </defs>
-            <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-            <XAxis dataKey="dan" tick={{ fontSize: 10, fill: '#999' }} axisLine={false} tickLine={false} />
-            <YAxis tick={{ fontSize: 10, fill: '#999' }} axisLine={false} tickLine={false} width={30} allowDecimals={false} />
-            <Tooltip formatter={(v) => [`${v} termina`, '']} labelFormatter={(l) => `${l}. ${format(new Date(), 'MMM', { locale: sr })}`} />
-            <Area type="monotone" dataKey="termini" stroke="#2BA5A5" fill="url(#dashGrad)" strokeWidth={2.5} dot={false} activeDot={{ r: 5, fill: '#2BA5A5' }} />
-          </AreaChart>
-        </ResponsiveContainer>
-      </Card>
 
       {/* ====== TWO-COL: Termini + Mini kalendar ====== */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

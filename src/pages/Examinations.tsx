@@ -264,6 +264,47 @@ function ExaminationsContent({ loggedDoctor }: { loggedDoctor: Doctor }) {
     // Kad se pregled zavrsi, postavi appointment status na 'zavrsen'
     if (finish && selectedAppointment) {
       updateAppointmentStatus(selectedAppointment.id, 'zavrsen');
+
+      // Automatski posalji anketu pacijentu preko SMS-a (ako postoji aktivna anketa i pacijent ima telefon)
+      if (patient?.telefon && patient.telefon !== '000') {
+        (async () => {
+          try {
+            const { data: activeSurvey } = await supabase
+              .from('surveys')
+              .select('id')
+              .eq('aktivan', true)
+              .limit(1)
+              .maybeSingle();
+
+            if (activeSurvey) {
+              const surveyLink = `${window.location.origin}/anketa/${activeSurvey.id}`;
+              const { getSmsConfig } = await import('../lib/smsService');
+              const cfg = getSmsConfig();
+              if (cfg.apiKey && cfg.senderName) {
+                const text = `Hvala na posjeti MOA klinici! Molimo ocijenite nas iskustvo (30 sek): ${surveyLink}`;
+                const { sendSms } = await import('../lib/smsService');
+                await sendSms(patient.telefon, text);
+
+                // Log u notifications
+                await supabase.from('notifications').insert({
+                  patient_id: patient.id,
+                  appointment_id: selectedAppointment.id,
+                  kanal: 'sms',
+                  status: 'sent',
+                  sadrzaj: text,
+                  tip: 'potvrda',
+                  patient_ime: `${patient.ime} ${patient.prezime}`,
+                  patient_telefon: patient.telefon,
+                  datum_slanja: new Date().toISOString(),
+                  channel_used: 'sms',
+                });
+              }
+            }
+          } catch (e) {
+            console.error('Anketa SMS greska:', e);
+          }
+        })();
+      }
     }
 
     setSaving(false);

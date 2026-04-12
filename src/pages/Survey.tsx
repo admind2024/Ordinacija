@@ -58,8 +58,8 @@ export default function SurveyPage() {
   // Preview
   const [previewSurvey, setPreviewSurvey] = useState<Survey | null>(null);
 
-  // Selected survey for responses
-  const [selectedSurveyId, setSelectedSurveyId] = useState<string>('all');
+  // Default: prva anketa umjesto 'all' — da statistika odmah radi
+  const [selectedSurveyId, setSelectedSurveyId] = useState<string>('');
 
   useEffect(() => {
     loadData();
@@ -71,8 +71,13 @@ export default function SurveyPage() {
       supabase.from('surveys').select('*').order('created_at', { ascending: false }),
       supabase.from('survey_responses').select('*').order('created_at', { ascending: false }),
     ]);
-    setSurveys((s || []) as Survey[]);
+    const surveyList = (s || []) as Survey[];
+    setSurveys(surveyList);
     setResponses((r || []) as SurveyResponse[]);
+    // Auto-selektuj prvu anketu ako nista nije odabrano
+    if (!selectedSurveyId && surveyList.length > 0) {
+      setSelectedSurveyId(surveyList[0].id);
+    }
     setLoading(false);
   }
 
@@ -160,15 +165,21 @@ export default function SurveyPage() {
   }
 
   const filteredResponses = useMemo(() => {
-    if (selectedSurveyId === 'all') return responses;
+    if (!selectedSurveyId || selectedSurveyId === 'all') return responses;
     return responses.filter((r) => r.survey_id === selectedSurveyId);
   }, [responses, selectedSurveyId]);
 
-  // Statistika za odabrani survey
+  // Statistika — koristi selektovanu anketu, ili prvu ako je "all"
+  const statsSurvey = useMemo(() => {
+    if (selectedSurveyId && selectedSurveyId !== 'all') {
+      return surveys.find((s) => s.id === selectedSurveyId) || null;
+    }
+    return surveys.length > 0 ? surveys[0] : null;
+  }, [surveys, selectedSurveyId]);
+
   const responseStats = useMemo(() => {
-    if (filteredResponses.length === 0) return null;
-    const survey = surveys.find((s) => s.id === selectedSurveyId);
-    if (!survey) return null;
+    if (filteredResponses.length === 0 || !statsSurvey) return null;
+    const survey = statsSurvey;
 
     const questionStats = survey.pitanja.map((q) => {
       const answers = filteredResponses

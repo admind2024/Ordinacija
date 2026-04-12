@@ -79,7 +79,7 @@ export default function SurveyPage() {
     setFormNaziv('');
     setFormOpis('');
     setFormPitanja([
-      { id: crypto.randomUUID(), text: 'Kako ocjenjujete nas tretman? (1-5)', type: 'rating' },
+      { id: crypto.randomUUID(), text: 'Kako ocjenjujete nas tretman? (1-10)', type: 'rating' },
       { id: crypto.randomUUID(), text: 'Da li biste preporucili nasu kliniku?', type: 'yesno' },
       { id: crypto.randomUUID(), text: 'Vas komentar / sugestija:', type: 'text' },
     ]);
@@ -186,7 +186,7 @@ export default function SurveyPage() {
   }, [filteredResponses, surveys, selectedSurveyId]);
 
   const typeLabels: Record<string, string> = {
-    rating: 'Ocjena (1-5)',
+    rating: 'Ocjena (1-10)',
     text: 'Slobodan tekst',
     yesno: 'Da / Ne',
   };
@@ -303,7 +303,7 @@ export default function SurveyPage() {
                       <div className="flex items-center gap-2">
                         <Star size={16} className="text-amber-500" />
                         <span className="text-lg font-bold text-gray-900">{qs.avg}</span>
-                        <span className="text-xs text-gray-500">/ 5 ({qs.count} ocjena)</span>
+                        <span className="text-xs text-gray-500">/ 10 ({qs.count} ocjena)</span>
                       </div>
                     )}
                     {qs.type === 'yesno' && (
@@ -355,7 +355,7 @@ export default function SurveyPage() {
                             <div key={q.id} className="flex gap-2">
                               <span className="text-gray-400 shrink-0 w-40 truncate">{q.text}</span>
                               <span className="text-gray-900 font-medium">
-                                {q.type === 'rating' ? `${'★'.repeat(Number(answer))}${'☆'.repeat(5 - Number(answer))}` : String(answer)}
+                                {q.type === 'rating' ? `${Number(answer)}/10` : String(answer)}
                               </span>
                             </div>
                           );
@@ -425,9 +425,9 @@ export default function SurveyPage() {
               <div key={q.id} className="bg-gray-50 rounded-lg p-4">
                 <p className="text-sm font-medium text-gray-900 mb-2">{i + 1}. {q.text}</p>
                 {q.type === 'rating' && (
-                  <div className="flex gap-1">
-                    {[1, 2, 3, 4, 5].map((n) => (
-                      <button key={n} className="w-10 h-10 rounded-lg border border-gray-200 bg-white text-sm font-bold text-gray-500 hover:bg-primary-50 hover:text-primary-700 hover:border-primary-300 transition-colors">
+                  <div className="flex gap-1 flex-wrap">
+                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => (
+                      <button key={n} className="w-8 h-8 rounded-lg border border-gray-200 bg-white text-xs font-bold text-gray-500 hover:bg-primary-50 hover:text-primary-700 hover:border-primary-300 transition-colors">
                         {n}
                       </button>
                     ))}

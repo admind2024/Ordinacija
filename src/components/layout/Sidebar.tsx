@@ -28,7 +28,7 @@ const navigation = [
   { name: 'Naplata', path: '/naplata', icon: CreditCard, roles: ['admin', 'menadzer', 'recepcija'] },
   { name: 'Cjenovnik', path: '/cjenovnik', icon: ListOrdered, roles: ['admin', 'menadzer'] },
   { name: 'Izvjestaji', path: '/izvjestaji', icon: BarChart3, roles: ['admin', 'menadzer'] },
-  { name: 'Ljekari', path: '/ljekari', icon: Stethoscope, roles: ['admin', 'menadzer'] },
+  { name: 'Osoblje', path: '/ljekari', icon: Stethoscope, roles: ['admin', 'menadzer'] },
   { name: 'Materijali', path: '/materijali', icon: Package, roles: ['admin', 'menadzer', 'ljekar'] },
   { name: 'Dugovanja', path: '/dugovanja', icon: Wallet, roles: ['admin', 'menadzer', 'recepcija'] },
   { name: 'Ankete', path: '/ankete', icon: ClipboardCheck, roles: ['admin', 'menadzer', 'recepcija'] },

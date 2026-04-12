@@ -19,7 +19,9 @@ type SurveyTab = 'liste' | 'odgovori';
 interface SurveyQuestion {
   id: string;
   text: string;
-  type: 'rating' | 'text' | 'yesno';
+  type: 'rating' | 'text' | 'yesno' | 'stars' | 'choice' | 'nps';
+  options?: string[];
+  required?: boolean;
 }
 
 interface Survey {
@@ -173,17 +175,30 @@ export default function SurveyPage() {
         .map((r) => r.odgovori[q.id])
         .filter((a) => a != null);
 
-      if (q.type === 'rating') {
+      // Stars (1-5) ili Rating (1-10) ili NPS (1-10) — numeric average
+      if (q.type === 'stars' || q.type === 'rating' || q.type === 'nps') {
         const nums = answers.map(Number).filter((n) => !isNaN(n));
         const avg = nums.length > 0 ? nums.reduce((s, n) => s + n, 0) / nums.length : 0;
-        return { question: q.text, type: q.type, avg: avg.toFixed(1), count: nums.length };
+        const max = q.type === 'stars' ? 5 : 10;
+        return { question: q.text, type: q.type, avg: avg.toFixed(1), max, count: nums.length };
       }
+      // Choice — breakdown po opcijama
+      if (q.type === 'choice') {
+        const breakdown: Record<string, number> = {};
+        for (const a of answers) {
+          const key = String(a);
+          breakdown[key] = (breakdown[key] || 0) + 1;
+        }
+        return { question: q.text, type: q.type, breakdown, count: answers.length };
+      }
+      // YesNo
       if (q.type === 'yesno') {
         const da = answers.filter((a) => a === 'da' || a === true).length;
         const ne = answers.filter((a) => a === 'ne' || a === false).length;
         return { question: q.text, type: q.type, da, ne, count: answers.length };
       }
-      return { question: q.text, type: q.type, count: answers.length };
+      // Text
+      return { question: q.text, type: q.type, count: answers.length, answers };
     });
 
     return { total: filteredResponses.length, questionStats };
@@ -302,13 +317,43 @@ export default function SurveyPage() {
                 {responseStats.questionStats.map((qs: any, i: number) => (
                   <div key={i} className="bg-gray-50 rounded-lg p-3">
                     <p className="text-sm font-medium text-gray-900 mb-1.5">{qs.question}</p>
-                    {qs.type === 'rating' && (
+
+                    {/* Stars (1-5) / Rating (1-10) / NPS (1-10) — prosjek */}
+                    {(qs.type === 'stars' || qs.type === 'rating' || qs.type === 'nps') && (
                       <div className="flex items-center gap-2">
-                        <Star size={16} className="text-amber-500" />
+                        <Star size={16} className="text-accent-500" />
                         <span className="text-lg font-bold text-gray-900">{qs.avg}</span>
-                        <span className="text-xs text-gray-500">/ 10 ({qs.count} ocjena)</span>
+                        <span className="text-xs text-gray-500">/ {qs.max} ({qs.count} ocjena)</span>
+                        {/* Progress bar */}
+                        <div className="flex-1 bg-gray-200 rounded-full h-2 max-w-[120px]">
+                          <div
+                            className="bg-accent-500 h-2 rounded-full"
+                            style={{ width: `${(Number(qs.avg) / qs.max) * 100}%` }}
+                          />
+                        </div>
                       </div>
                     )}
+
+                    {/* Choice — breakdown */}
+                    {qs.type === 'choice' && qs.breakdown && (
+                      <div className="space-y-1">
+                        {Object.entries(qs.breakdown as Record<string, number>).map(([opt, cnt]) => (
+                          <div key={opt} className="flex items-center gap-2 text-sm">
+                            <span className="text-gray-700 min-w-[100px]">{opt}</span>
+                            <div className="flex-1 bg-gray-200 rounded-full h-2 max-w-[150px]">
+                              <div
+                                className="bg-primary-500 h-2 rounded-full"
+                                style={{ width: `${qs.count > 0 ? ((cnt as number) / qs.count) * 100 : 0}%` }}
+                              />
+                            </div>
+                            <span className="text-xs text-gray-500 font-semibold">{cnt as number}</span>
+                          </div>
+                        ))}
+                        <span className="text-xs text-gray-400">({qs.count} odg.)</span>
+                      </div>
+                    )}
+
+                    {/* YesNo */}
                     {qs.type === 'yesno' && (
                       <div className="flex items-center gap-4 text-sm">
                         <span className="text-primary-700 font-semibold">Da: {qs.da}</span>
@@ -316,8 +361,21 @@ export default function SurveyPage() {
                         <span className="text-xs text-gray-400">({qs.count} odg.)</span>
                       </div>
                     )}
+
+                    {/* Text — prikaži odgovore */}
                     {qs.type === 'text' && (
-                      <span className="text-xs text-gray-500">{qs.count} odgovora</span>
+                      <div>
+                        <span className="text-xs text-gray-500">{qs.count} odgovora</span>
+                        {qs.answers && qs.answers.length > 0 && (
+                          <div className="mt-2 space-y-1 max-h-32 overflow-y-auto">
+                            {(qs.answers as string[]).filter(Boolean).map((a: string, j: number) => (
+                              <p key={j} className="text-xs text-gray-600 bg-white rounded px-2 py-1 border border-gray-100">
+                                "{a}"
+                              </p>
+                            ))}
+                          </div>
+                        )}
+                      </div>
                     )}
                   </div>
                 ))}
@@ -358,7 +416,9 @@ export default function SurveyPage() {
                             <div key={q.id} className="flex gap-2">
                               <span className="text-gray-400 shrink-0 w-40 truncate">{q.text}</span>
                               <span className="text-gray-900 font-medium">
-                                {q.type === 'rating' ? `${Number(answer)}/10` : String(answer)}
+                                {q.type === 'stars' ? `${'★'.repeat(Number(answer))}${'☆'.repeat(5 - Number(answer))}` :
+                                 q.type === 'nps' || q.type === 'rating' ? `${answer}/10` :
+                                 String(answer)}
                               </span>
                             </div>
                           );

@@ -41,6 +41,9 @@ export default function SurveyPublic() {
       });
   }, [id]);
 
+  // Provjeri da li je vec popunjena u ovom browseru
+  const alreadyDone = typeof window !== 'undefined' && localStorage.getItem(`survey_done_${id}`) === 'true';
+
   async function handleSubmit() {
     if (starsQ1 === 0) { alert('Molimo ocijenite doktora.'); return; }
     if (npsVal === null) { alert('Molimo odaberite NPS ocjenu.'); return; }
@@ -49,14 +52,17 @@ export default function SurveyPublic() {
     await supabase.from('survey_responses').insert({
       survey_id: surveyId,
       odgovori: {
-        q1_doktor: starsQ1,
-        q2_cekanje: choiceQ2 || null,
-        q3_osoblje: starsQ3 || null,
-        q4_cistoca: starsQ4 || null,
-        q5_nps: npsVal,
-        q6_komentar: comment || null,
+        q1: starsQ1,
+        q2: choiceQ2 || null,
+        q3: starsQ3 || null,
+        q4: starsQ4 || null,
+        q5: npsVal,
+        q6: comment || null,
       },
     });
+
+    // Oznaci kao popunjeno u localStorage
+    localStorage.setItem(`survey_done_${id}`, 'true');
 
     setSubmitted(true);
     setSubmitting(false);
@@ -66,6 +72,26 @@ export default function SurveyPublic() {
   // ── Loading ──
   if (exists === null) {
     return <Body><p style={S.loading}>Ucitavanje...</p></Body>;
+  }
+
+  // ── Already submitted ──
+  if (alreadyDone) {
+    return (
+      <Body>
+        <Header />
+        <div style={S.successCard}>
+          <div style={S.successIcon}>
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#2BA5A5" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M20 6L9 17l-5-5" />
+            </svg>
+          </div>
+          <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 10 }}>Vec ste popunili anketu</h2>
+          <p style={{ fontSize: 14, color: '#6B7280', lineHeight: 1.6 }}>
+            Hvala vam na odgovorima!<br />Anketa se moze popuniti samo jednom.
+          </p>
+        </div>
+      </Body>
+    );
   }
 
   // ── Not found ──

@@ -240,6 +240,25 @@ export default function Dashboard() {
       setTimeout(() => setFiscalResult(null), 8000);
     }
 
+    // Snimi uplatu u payments tabelu
+    const paymentMethod = payFiskalizuj
+      ? (payMethod === 'kartica' ? 'kartica_fiskalni' : 'gotovina_fiskalni')
+      : (payMethod === 'kartica' ? 'kartica_fiskalni' : 'gotovina');
+
+    if (payExam.appointment_id) {
+      await supabase.from('payments').insert({
+        appointment_id: payExam.appointment_id,
+        iznos: payAmount,
+        metoda: paymentMethod,
+        napomena: payNapomena || null,
+        datum: new Date().toISOString(),
+        fiskalni_status: payFiskalizuj ? 'done' : null,
+      });
+
+      // Azuriraj lokalni set za instant prikaz
+      setPaidAppointmentIds((prev) => new Set([...prev, payExam.appointment_id!]));
+    }
+
     // Kreiranje dugovanja ako je placeno manje
     if (willCreateDebt && payExam.patient) {
       const serviceNames = payExam.appointmentServices?.map((s: any) => s.naziv).join(', ') || 'Usluge';

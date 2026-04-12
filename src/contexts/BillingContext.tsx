@@ -1,6 +1,7 @@
-import { createContext, useContext, useState, useCallback, type ReactNode } from 'react';
+import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from 'react';
 import type { Payment, Appointment, PaymentMethod } from '../types';
 import { useCalendar } from './CalendarContext';
+import { supabase } from '../lib/supabase';
 
 interface BillingContextType {
   payments: Payment[];
@@ -19,8 +20,45 @@ export function BillingProvider({ children }: { children: ReactNode }) {
   const { appointments } = useCalendar();
   const [payments, setPayments] = useState<Payment[]>([]);
 
-  const addPayment = useCallback((payment: Payment) => {
-    setPayments((prev) => [...prev, payment]);
+  // Ucitaj uplate iz baze na mount
+  useEffect(() => {
+    supabase
+      .from('payments')
+      .select('*')
+      .order('datum', { ascending: false })
+      .then(({ data }) => {
+        if (data && data.length > 0) {
+          setPayments(data.map((p: any) => ({
+            id: p.id,
+            appointment_id: p.appointment_id,
+            iznos: Number(p.iznos),
+            metoda: p.metoda,
+            napomena: p.napomena,
+            datum: p.datum,
+            fiskalni_status: p.fiskalni_status,
+          })));
+        }
+      });
+  }, []);
+
+  const addPayment = useCallback(async (payment: Payment) => {
+    // Snimi u bazu
+    const { data, error } = await supabase.from('payments').insert({
+      appointment_id: payment.appointment_id,
+      iznos: payment.iznos,
+      metoda: payment.metoda,
+      napomena: payment.napomena || null,
+      datum: payment.datum,
+      fiskalni_status: payment.fiskalni_status || null,
+    }).select().single();
+
+    if (error) {
+      console.error('Greska pri snimanju uplate:', error);
+    }
+
+    // Dodaj u lokalni state (sa ID-jem iz baze ako je uspjelo)
+    const saved = data ? { ...payment, id: data.id } : payment;
+    setPayments((prev) => [...prev, saved]);
   }, []);
 
   const getPaymentsForAppointment = useCallback(

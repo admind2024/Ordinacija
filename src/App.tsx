@@ -20,12 +20,16 @@ import Settings from './pages/Settings';
 import Examinations from './pages/Examinations';
 import Debts from './pages/Debts';
 import ServicesPage from './pages/Services';
+import SurveyPublic from './pages/SurveyPublic';
 
 function AppRoutes() {
   const { user } = useAuth();
 
   return (
     <Routes>
+      {/* Public route — anketa za pacijente (bez login-a) */}
+      <Route path="/anketa/:id" element={<SurveyPublic />} />
+
       <Route path="/login" element={user ? <Navigate to="/" replace /> : <Login />} />
 
       <Route

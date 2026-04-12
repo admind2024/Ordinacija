@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import { format, addMinutes } from 'date-fns';
 import Modal from '../ui/Modal';
 import Button from '../ui/Button';
@@ -62,6 +62,10 @@ export default function AppointmentModal({
   );
   const [napomena, setNapomena] = useState(editAppointment?.napomena ?? '');
   const [showPatientList, setShowPatientList] = useState(false);
+  // Pretraga usluga
+  const [serviceSearch, setServiceSearch] = useState('');
+  const [showServiceList, setShowServiceList] = useState(false);
+  const serviceSearchRef = useRef<HTMLInputElement>(null);
   // Materijali
   const [selectedMaterials, setSelectedMaterials] = useState<{ material_id: string; naziv: string; kolicina: number; jedinica: string }[]>([]);
 
@@ -98,6 +102,15 @@ export default function AppointmentModal({
       services: services.filter((s) => s.kategorija_id === cat.id),
     }));
   }, [serviceCategories, services]);
+
+  const filteredServiceResults = useMemo(() => {
+    const q = serviceSearch.toLowerCase().trim();
+    if (!q) return [];
+    const already = new Set(selectedServices.map((s) => s.service_id));
+    return services
+      .filter((s) => !already.has(s.id) && (s.naziv.toLowerCase().includes(q)))
+      .slice(0, 8);
+  }, [serviceSearch, services, selectedServices]);
 
   const ukupnaCijena = selectedServices.reduce((sum, s) => sum + s.ukupno, 0);
 
@@ -322,25 +335,42 @@ export default function AppointmentModal({
         {/* Usluge */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">Usluge</label>
-          <select
-            onChange={(e) => {
-              if (e.target.value) addService(e.target.value);
-              e.target.value = '';
-            }}
-            className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
-            defaultValue=""
-          >
-            <option value="">+ Dodaj uslugu...</option>
-            {groupedServices.map((cat) => (
-              <optgroup key={cat.id} label={cat.naziv}>
-                {cat.services.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.naziv} — {s.cijena} EUR ({s.trajanje} min)
-                  </option>
+          <div className="relative">
+            <input
+              ref={serviceSearchRef}
+              type="text"
+              value={serviceSearch}
+              onChange={(e) => { setServiceSearch(e.target.value); setShowServiceList(true); }}
+              onFocus={() => setShowServiceList(true)}
+              onBlur={() => setTimeout(() => setShowServiceList(false), 150)}
+              placeholder="Pretraži uslugu..."
+              className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+            />
+            {showServiceList && filteredServiceResults.length > 0 && (
+              <div className="absolute z-50 left-0 right-0 mt-1 bg-white border border-border rounded-lg shadow-lg max-h-52 overflow-y-auto">
+                {filteredServiceResults.map((s) => (
+                  <button
+                    key={s.id}
+                    type="button"
+                    onMouseDown={() => {
+                      addService(s.id);
+                      setServiceSearch('');
+                      setShowServiceList(false);
+                    }}
+                    className="w-full text-left px-3 py-2 text-sm hover:bg-primary-50 flex items-center justify-between gap-2"
+                  >
+                    <span className="font-medium text-gray-800">{s.naziv}</span>
+                    <span className="text-xs text-gray-400 shrink-0">{s.cijena} EUR · {s.trajanje} min</span>
+                  </button>
                 ))}
-              </optgroup>
-            ))}
-          </select>
+              </div>
+            )}
+            {showServiceList && serviceSearch.length > 0 && filteredServiceResults.length === 0 && (
+              <div className="absolute z-50 left-0 right-0 mt-1 bg-white border border-border rounded-lg shadow-sm px-3 py-2 text-sm text-gray-400">
+                Nema rezultata
+              </div>
+            )}
+          </div>
 
           {selectedServices.length > 0 && (
             <div className="mt-2 space-y-1">

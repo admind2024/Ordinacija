@@ -150,15 +150,6 @@ export default function DoctorLogin({ children }: DoctorLoginProps) {
         <p className="text-xs text-gray-300 mt-6">
           PIN se automatski šalje nakon unosa 4 cifre
         </p>
-
-        {/* Doctor names as subtle hint */}
-        <div className="mt-4 flex flex-wrap justify-center gap-x-3 gap-y-1">
-          {doctors.map((d) => (
-            <span key={d.id} className="text-[11px] text-gray-400">
-              {d.titula} {d.ime} {d.prezime.charAt(0)}.
-            </span>
-          ))}
-        </div>
       </div>
     </div>
   );

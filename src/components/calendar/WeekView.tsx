@@ -43,32 +43,30 @@ export default function WeekView({ onAppointmentClick, onSlotClick }: WeekViewPr
 
   return (
     <div className="bg-surface border border-border rounded-xl overflow-hidden">
-      {/* Header — dani */}
-      <div className="grid grid-cols-[60px_repeat(7,1fr)] border-b border-border">
-        <div className="p-2 border-r border-border" />
-        {days.map((day) => (
-          <div
-            key={day.toISOString()}
-            className={`p-2 text-center border-l border-border
-              ${isToday(day) ? 'bg-primary-50' : ''}`}
-          >
-            <p className="text-xs text-gray-500 uppercase">
-              {format(day, 'EEE', { locale: sr })}
-            </p>
-            <p
-              className={`text-lg font-semibold mt-0.5
-                ${isToday(day) ? 'text-primary-600 bg-primary-600 text-white w-8 h-8 rounded-full flex items-center justify-center mx-auto' : 'text-gray-900'}`}
-            >
-              {format(day, 'd')}
-            </p>
-          </div>
-        ))}
-      </div>
-
-      {/* Grid — sati x dani */}
-      <div className="overflow-y-auto" style={{ maxHeight: 'calc(100vh - 240px)' }}>
+      <div className="overflow-y-auto" style={{ maxHeight: 'calc(100vh - 200px)' }}>
+        {/* Jedan grid za header + body — borderi su uvijek poravnati */}
         <div className="grid grid-cols-[60px_repeat(7,1fr)]">
-          {/* Sati kolona */}
+          {/* ====== HEADER ROW (sticky) ====== */}
+          <div className="sticky top-0 z-10 bg-surface border-b border-border border-r border-border" />
+          {days.map((day) => (
+            <div
+              key={`h-${day.toISOString()}`}
+              className={`sticky top-0 z-10 p-2 text-center border-b border-border border-l border-border
+                ${isToday(day) ? 'bg-primary-50' : 'bg-surface'}`}
+            >
+              <p className="text-xs text-gray-500 uppercase">
+                {format(day, 'EEE', { locale: sr })}
+              </p>
+              <p
+                className={`text-lg font-semibold mt-0.5
+                  ${isToday(day) ? 'bg-primary-600 text-white w-8 h-8 rounded-full flex items-center justify-center mx-auto' : 'text-gray-900'}`}
+              >
+                {format(day, 'd')}
+              </p>
+            </div>
+          ))}
+
+          {/* ====== TIME COLUMN ====== */}
           <div className="border-r border-border">
             {hours.map((hour) => (
               <div
@@ -81,7 +79,7 @@ export default function WeekView({ onAppointmentClick, onSlotClick }: WeekViewPr
             ))}
           </div>
 
-          {/* Dani kolone */}
+          {/* ====== DAY COLUMNS ====== */}
           {days.map((day) => {
             const dayApts = getAppointmentsForDay(day);
             return (
@@ -89,7 +87,6 @@ export default function WeekView({ onAppointmentClick, onSlotClick }: WeekViewPr
                 key={day.toISOString()}
                 className={`border-l border-border relative ${isToday(day) ? 'bg-primary-50/30' : ''}`}
               >
-                {/* Slot grid */}
                 {hours.map((hour) => (
                   <div key={hour} style={{ height: `${HOUR_HEIGHT}px` }}>
                     <div
@@ -103,7 +100,6 @@ export default function WeekView({ onAppointmentClick, onSlotClick }: WeekViewPr
                   </div>
                 ))}
 
-                {/* Termini */}
                 {dayApts.map((apt) => (
                   <div key={apt.id} style={getAppointmentStyle(apt)} className="absolute left-0 right-0 px-0.5">
                     <AppointmentCard
@@ -113,7 +109,6 @@ export default function WeekView({ onAppointmentClick, onSlotClick }: WeekViewPr
                   </div>
                 ))}
 
-                {/* Current time indicator */}
                 {isToday(day) && <CurrentTimeIndicator />}
               </div>
             );

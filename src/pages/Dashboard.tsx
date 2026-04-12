@@ -335,36 +335,41 @@ export default function Dashboard() {
           </div>
         </Card>
 
-        {/* Pregled ljekara */}
+        {/* Osoblje sa terminima danas — samo koji imaju termine */}
         <Card padding={false}>
           <div className="px-6 py-4 border-b border-border">
-            <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider">Ljekari — danas</h3>
+            <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider">Osoblje — danas</h3>
           </div>
           <div className="divide-y divide-border">
-            {doctors.map((doctor) => {
-              const docApts = todayAppointments.filter((a) => a.doctor_id === doctor.id);
-              const docRevenue = docApts.reduce((sum, a) => sum + (a.services?.reduce((s, svc) => s + svc.ukupno, 0) || 0), 0);
-              return (
-                <div key={doctor.id} className="px-6 py-3 flex items-center gap-3">
-                  <div
-                    className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0"
-                    style={{ backgroundColor: doctor.boja }}
-                  >
-                    {doctor.ime.charAt(0)}{doctor.prezime.charAt(0)}
+            {doctors
+              .filter((doctor) => todayAppointments.some((a) => a.doctor_id === doctor.id))
+              .map((doctor) => {
+                const docApts = todayAppointments.filter((a) => a.doctor_id === doctor.id);
+                const docRevenue = docApts.reduce((sum, a) => sum + (a.services?.reduce((s, svc) => s + svc.ukupno, 0) || 0), 0);
+                return (
+                  <div key={doctor.id} className="px-6 py-3 flex items-center gap-3">
+                    <div
+                      className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0"
+                      style={{ backgroundColor: doctor.boja }}
+                    >
+                      {doctor.ime.charAt(0)}{doctor.prezime.charAt(0)}
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-gray-900">
+                        {doctor.titula ? `${doctor.titula} ` : ''}{doctor.ime} {doctor.prezime}
+                      </p>
+                      <p className="text-xs text-gray-400">{doctor.specijalizacija}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm font-semibold text-gray-900">{docApts.length} termina</p>
+                      {docRevenue > 0 && <p className="text-xs text-green-600">{docRevenue.toFixed(0)} EUR</p>}
+                    </div>
                   </div>
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-gray-900">
-                      {doctor.titula} {doctor.ime} {doctor.prezime}
-                    </p>
-                    <p className="text-xs text-gray-400">{doctor.specijalizacija}</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-sm font-semibold text-gray-900">{docApts.length} termina</p>
-                    {docRevenue > 0 && <p className="text-xs text-green-600">{docRevenue.toFixed(0)} EUR</p>}
-                  </div>
-                </div>
-              );
-            })}
+                );
+              })}
+            {!doctors.some((d) => todayAppointments.some((a) => a.doctor_id === d.id)) && (
+              <div className="px-6 py-8 text-center text-sm text-gray-400">Nema zakazanih termina danas</div>
+            )}
           </div>
         </Card>
       </div>

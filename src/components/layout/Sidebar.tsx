@@ -18,9 +18,8 @@ import {
   ClipboardList,
   ListOrdered,
 } from 'lucide-react';
-import { useState } from 'react';
 
-const navigation = [
+export const navigation = [
   { name: 'Dashboard', path: '/', icon: LayoutDashboard, roles: ['admin', 'menadzer', 'recepcija', 'ljekar'] },
   { name: 'Kalendar', path: '/kalendar', icon: CalendarDays, roles: ['admin', 'menadzer', 'recepcija', 'ljekar'] },
   { name: 'Pacijenti', path: '/pacijenti', icon: Users, roles: ['admin', 'menadzer', 'recepcija', 'ljekar'] },
@@ -37,9 +36,13 @@ const navigation = [
   { name: 'Podesavanja', path: '/podesavanja', icon: Settings, roles: ['admin'] },
 ];
 
-export default function Sidebar() {
+interface SidebarProps {
+  collapsed: boolean;
+  setCollapsed: (v: boolean) => void;
+}
+
+export default function Sidebar({ collapsed, setCollapsed }: SidebarProps) {
   const { user } = useAuth();
-  const [collapsed, setCollapsed] = useState(false);
 
   const visibleNav = navigation.filter(
     (item) => user && item.roles.includes(user.uloga)

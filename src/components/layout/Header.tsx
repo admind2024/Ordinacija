@@ -1,7 +1,11 @@
 import { useAuth } from '../../contexts/AuthContext';
 import { LogOut, User } from 'lucide-react';
 
-export default function Header() {
+interface HeaderProps {
+  sectionName?: string;
+}
+
+export default function Header({ sectionName = 'MOA' }: HeaderProps) {
   const { user, signOut } = useAuth();
 
   if (!user) return null;
@@ -17,7 +21,7 @@ export default function Header() {
   return (
     <header className="h-16 bg-surface border-b border-border flex items-center justify-between px-6">
       <div>
-        <h1 className="text-lg font-semibold text-gray-900">Ministry of Aesthetics</h1>
+        <h1 className="text-lg font-semibold text-gray-900">{sectionName}</h1>
       </div>
 
       <div className="flex items-center gap-4">

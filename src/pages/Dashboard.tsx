@@ -1,6 +1,8 @@
 import { useMemo, useState, useEffect } from 'react';
-import { format, parseISO } from 'date-fns';
-import { CalendarDays, Users, CreditCard, TrendingUp, Printer, Eye, FileText, Banknote, CheckCircle, XCircle, Receipt, AlertTriangle, Tag } from 'lucide-react';
+import { format, parseISO, startOfWeek, addDays, isSameDay, startOfMonth, endOfMonth, eachDayOfInterval } from 'date-fns';
+import { srLatn as sr } from 'date-fns/locale';
+import { CalendarDays, Users, CreditCard, TrendingUp, Printer, Eye, FileText, Banknote, CheckCircle, XCircle, Receipt, AlertTriangle, Tag, Sun, CloudSun, Moon } from 'lucide-react';
+import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import Modal from '../components/ui/Modal';
@@ -254,127 +256,252 @@ export default function Dashboard() {
 
   const todayUniquePatients = new Set(todayAppointments.map((a) => a.patient_id)).size;
 
-  const stats = [
-    { label: 'Termini danas', value: String(todayAppointments.length), icon: CalendarDays, color: 'text-primary-600 bg-primary-100' },
-    { label: 'Pacijenata danas', value: String(todayUniquePatients), icon: Users, color: 'text-green-600 bg-green-100' },
-    { label: 'Prihod danas (EUR)', value: todayRevenue > 0 ? todayRevenue.toFixed(0) : todayExamsTotal.toFixed(0), icon: CreditCard, color: 'text-purple-600 bg-purple-100' },
-    { label: 'Realizacija danas', value: `${realizationRate}%`, icon: TrendingUp, color: 'text-orange-600 bg-orange-100' },
-  ];
+  // Greeting po dobu dana
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? 'Dobro jutro' : hour < 18 ? 'Dobar dan' : 'Dobro veče';
+  const GreetIcon = hour < 12 ? Sun : hour < 18 ? CloudSun : Moon;
+
+  // Area chart: termini po danu za tekući mjesec
+  const monthChartData = useMemo(() => {
+    const now = new Date();
+    const days = eachDayOfInterval({ start: startOfMonth(now), end: endOfMonth(now) });
+    return days.map((day) => {
+      const count = appointments.filter((a) => isSameDay(new Date(a.pocetak), day)).length;
+      return { dan: format(day, 'd'), termini: count, isToday: isSameDay(day, now) };
+    });
+  }, [appointments]);
+
+  // Mini kalendar — 7 dana sa danas u sredini
+  const [selectedCalDay, setSelectedCalDay] = useState<Date>(new Date());
+  const weekDays = useMemo(() => {
+    const ws = startOfWeek(new Date(), { weekStartsOn: 1 });
+    return Array.from({ length: 7 }, (_, i) => addDays(ws, i));
+  }, []);
+
+  const selectedDayApts = useMemo(() =>
+    appointments
+      .filter((a) => isSameDay(new Date(a.pocetak), selectedCalDay))
+      .sort((a, b) => new Date(a.pocetak).getTime() - new Date(b.pocetak).getTime()),
+    [appointments, selectedCalDay],
+  );
+
+  // Osoblje danas sa terminima
+  const todayStaff = useMemo(() =>
+    doctors
+      .filter((d) => todayAppointments.some((a) => a.doctor_id === d.id))
+      .map((d) => ({
+        ...d,
+        aptCount: todayAppointments.filter((a) => a.doctor_id === d.id).length,
+        revenue: todayAppointments
+          .filter((a) => a.doctor_id === d.id)
+          .reduce((s, a) => s + (a.services?.reduce((ss, svc) => ss + svc.ukupno, 0) || 0), 0),
+      })),
+    [doctors, todayAppointments],
+  );
 
   return (
-    <div>
-      {/* Statistike */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        {stats.map((stat) => (
-          <Card key={stat.label}>
-            <div className="flex items-center gap-4">
-              <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${stat.color}`}>
-                <stat.icon size={24} />
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-gray-900">{stat.value}</p>
-                <p className="text-sm text-gray-500">{stat.label}</p>
-              </div>
-            </div>
-          </Card>
-        ))}
+    <div className="space-y-6">
+      {/* ====== GREETING ====== */}
+      <div className="flex items-center justify-between flex-wrap gap-4">
+        <div>
+          <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+            {greeting} <GreetIcon size={24} className="text-accent-500" />
+          </h2>
+          <p className="text-sm text-gray-500 mt-1">
+            Pregled za {format(new Date(), 'EEEE, dd. MMMM yyyy.', { locale: sr })}
+          </p>
+        </div>
+        <div className="px-4 py-2 bg-primary-50 border border-primary-100 rounded-xl">
+          <p className="text-sm font-semibold text-primary-700">{format(new Date(), 'dd. MMMM', { locale: sr })}</p>
+          <p className="text-[10px] text-primary-500 uppercase tracking-wider">{format(new Date(), 'EEEE', { locale: sr })}</p>
+        </div>
       </div>
 
+      {/* ====== KPI KARTICE ====== */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <KpiCard icon={<CalendarDays size={22} />} label="Termini danas" value={todayAppointments.length} bg="bg-primary-50" iconColor="text-primary-600" />
+        <KpiCard icon={<Users size={22} />} label="Pacijenata" value={todayUniquePatients} bg="bg-primary-50" iconColor="text-primary-600" />
+        <KpiCard icon={<CreditCard size={22} />} label="Prihod danas" value={`${(todayRevenue || todayExamsTotal).toFixed(0)} €`} bg="bg-accent-50" iconColor="text-accent-600" />
+        <KpiCard icon={<TrendingUp size={22} />} label="Realizacija" value={`${realizationRate}%`} bg="bg-primary-50" iconColor="text-primary-600" />
+      </div>
+
+      {/* ====== AREA CHART: Termini ovog mjeseca ====== */}
+      <Card>
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-sm font-semibold text-gray-700">Termini ovog mjeseca</h3>
+          <span className="text-xs text-gray-400">{format(new Date(), 'MMMM yyyy', { locale: sr })}</span>
+        </div>
+        <ResponsiveContainer width="100%" height={200}>
+          <AreaChart data={monthChartData} margin={{ left: 0, right: 5, top: 5, bottom: 0 }}>
+            <defs>
+              <linearGradient id="dashGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="#2BA5A5" stopOpacity={0.25} />
+                <stop offset="95%" stopColor="#2BA5A5" stopOpacity={0.02} />
+              </linearGradient>
+            </defs>
+            <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+            <XAxis dataKey="dan" tick={{ fontSize: 10, fill: '#999' }} axisLine={false} tickLine={false} />
+            <YAxis tick={{ fontSize: 10, fill: '#999' }} axisLine={false} tickLine={false} width={30} allowDecimals={false} />
+            <Tooltip formatter={(v) => [`${v} termina`, '']} labelFormatter={(l) => `${l}. ${format(new Date(), 'MMM', { locale: sr })}`} />
+            <Area type="monotone" dataKey="termini" stroke="#2BA5A5" fill="url(#dashGrad)" strokeWidth={2.5} dot={false} activeDot={{ r: 5, fill: '#2BA5A5' }} />
+          </AreaChart>
+        </ResponsiveContainer>
+      </Card>
+
+      {/* ====== TWO-COL: Termini + Mini kalendar ====== */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Danasnji termini */}
+        {/* Današnji termini sa timeline */}
         <Card padding={false}>
-          <div className="px-6 py-4 border-b border-border flex items-center justify-between">
-            <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider">Danasnji termini</h3>
+          <div className="px-5 py-4 border-b border-border flex items-center justify-between">
+            <h3 className="text-sm font-semibold text-gray-700">Današnji termini</h3>
             <span className="text-xs text-gray-400">{todayAppointments.length} termina</span>
           </div>
-          <div className="divide-y divide-border max-h-[400px] overflow-y-auto">
+          <div className="max-h-[400px] overflow-y-auto">
             {todayAppointments.length === 0 ? (
-              <p className="px-6 py-8 text-sm text-gray-400 text-center">Nema termina za danas</p>
+              <p className="px-5 py-10 text-sm text-gray-400 text-center">Nema termina za danas</p>
             ) : (
-              todayAppointments.map((apt) => {
-                const patient = patients.find((p) => p.id === apt.patient_id);
-                const doctor = doctors.find((d) => d.id === apt.doctor_id);
-                const aptTime = new Date(apt.pocetak);
-                const svcTotal = apt.services?.reduce((s, svc) => s + svc.ukupno, 0) || 0;
-                return (
-                  <div key={apt.id} className="px-6 py-3 flex items-center gap-3">
-                    <div className="w-14 text-center shrink-0">
-                      <p className="text-sm font-semibold text-gray-900">
-                        {String(aptTime.getHours()).padStart(2, '0')}:{String(aptTime.getMinutes()).padStart(2, '0')}
-                      </p>
+              <div className="divide-y divide-border">
+                {todayAppointments.map((apt) => {
+                  const patient = patients.find((p) => p.id === apt.patient_id);
+                  const doctor = doctors.find((d) => d.id === apt.doctor_id);
+                  const svcTotal = apt.services?.reduce((s, svc) => s + svc.ukupno, 0) || 0;
+                  const t = new Date(apt.pocetak);
+                  return (
+                    <div key={apt.id} className="flex items-center gap-3 px-5 py-3 hover:bg-gray-50 transition-colors">
+                      {/* Timeline dot + line */}
+                      <div className="flex flex-col items-center shrink-0 w-1">
+                        <div className="w-2 h-2 rounded-full bg-primary-500" />
+                        <div className="w-0.5 flex-1 bg-primary-100" />
+                      </div>
+                      {/* Time */}
+                      <div className="w-12 shrink-0 text-center">
+                        <p className="text-sm font-bold text-gray-900">{format(t, 'HH:mm')}</p>
+                      </div>
+                      {/* Info */}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-gray-900 truncate">
+                          {patient ? `${patient.ime} ${patient.prezime}` : '—'}
+                        </p>
+                        <p className="text-xs text-gray-500 truncate">
+                          {doctor ? `${doctor.titula ? doctor.titula + ' ' : ''}${doctor.ime} ${doctor.prezime.charAt(0)}.` : ''}
+                          {apt.services?.[0] && ` · ${apt.services[0].naziv}`}
+                        </p>
+                      </div>
+                      {/* Status + amount */}
+                      <div className="flex items-center gap-2 shrink-0">
+                        {svcTotal > 0 && <span className="text-xs font-semibold text-gray-600">{svcTotal.toFixed(0)} €</span>}
+                        <span
+                          className="text-[9px] px-1.5 py-0.5 rounded-full font-semibold"
+                          style={{
+                            backgroundColor: (APPOINTMENT_STATUS_COLORS[apt.status] || '#888') + '20',
+                            color: APPOINTMENT_STATUS_COLORS[apt.status] || '#888',
+                          }}
+                        >
+                          {APPOINTMENT_STATUS_LABELS[apt.status]}
+                        </span>
+                      </div>
                     </div>
-                    <div
-                      className="w-1 h-8 rounded-full shrink-0"
-                      style={{ backgroundColor: APPOINTMENT_STATUS_COLORS[apt.status] }}
-                    />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-gray-900 truncate">
-                        {patient ? `${patient.ime} ${patient.prezime}` : '—'}
-                      </p>
-                      <p className="text-xs text-gray-500">
-                        {doctor ? `${doctor.titula} ${doctor.ime} ${doctor.prezime.charAt(0)}.` : ''}
-                        {apt.services?.[0] && ` · ${apt.services[0].naziv}`}
-                      </p>
-                    </div>
-                    {svcTotal > 0 && (
-                      <span className="text-xs font-medium text-gray-600 shrink-0">{svcTotal.toFixed(0)} EUR</span>
-                    )}
-                    <span
-                      className="text-[10px] px-2 py-0.5 rounded-full font-medium shrink-0"
-                      style={{
-                        backgroundColor: APPOINTMENT_STATUS_COLORS[apt.status] + '20',
-                        color: APPOINTMENT_STATUS_COLORS[apt.status],
-                      }}
-                    >
-                      {APPOINTMENT_STATUS_LABELS[apt.status]}
-                    </span>
-                  </div>
-                );
-              })
+                  );
+                })}
+              </div>
             )}
           </div>
         </Card>
 
-        {/* Osoblje sa terminima danas — samo koji imaju termine */}
+        {/* Mini kalendar + termini odabranog dana */}
         <Card padding={false}>
-          <div className="px-6 py-4 border-b border-border">
-            <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider">Osoblje — danas</h3>
-          </div>
-          <div className="divide-y divide-border">
-            {doctors
-              .filter((doctor) => todayAppointments.some((a) => a.doctor_id === doctor.id))
-              .map((doctor) => {
-                const docApts = todayAppointments.filter((a) => a.doctor_id === doctor.id);
-                const docRevenue = docApts.reduce((sum, a) => sum + (a.services?.reduce((s, svc) => s + svc.ukupno, 0) || 0), 0);
+          <div className="px-5 py-4 border-b border-border">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-semibold text-gray-700">
+                {isSameDay(selectedCalDay, new Date())
+                  ? `Danas, ${format(selectedCalDay, 'dd. MMM', { locale: sr })}`
+                  : format(selectedCalDay, 'EEEE, dd. MMM', { locale: sr })}
+              </h3>
+            </div>
+            {/* 7 dana */}
+            <div className="flex gap-1.5 justify-between">
+              {weekDays.map((day) => {
+                const isToday = isSameDay(day, new Date());
+                const isSelected = isSameDay(day, selectedCalDay);
+                const hasApts = appointments.some((a) => isSameDay(new Date(a.pocetak), day));
                 return (
-                  <div key={doctor.id} className="px-6 py-3 flex items-center gap-3">
-                    <div
-                      className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0"
-                      style={{ backgroundColor: doctor.boja }}
-                    >
-                      {doctor.ime.charAt(0)}{doctor.prezime.charAt(0)}
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-sm font-medium text-gray-900">
-                        {doctor.titula ? `${doctor.titula} ` : ''}{doctor.ime} {doctor.prezime}
-                      </p>
-                      <p className="text-xs text-gray-400">{doctor.specijalizacija}</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-sm font-semibold text-gray-900">{docApts.length} termina</p>
-                      {docRevenue > 0 && <p className="text-xs text-green-600">{docRevenue.toFixed(0)} EUR</p>}
-                    </div>
-                  </div>
+                  <button
+                    key={day.toISOString()}
+                    onClick={() => setSelectedCalDay(day)}
+                    className={`flex-1 py-2 rounded-xl text-center transition-all ${
+                      isSelected
+                        ? 'bg-primary-600 text-white shadow-md'
+                        : isToday
+                          ? 'bg-primary-50 text-primary-700'
+                          : 'hover:bg-gray-50 text-gray-600'
+                    }`}
+                  >
+                    <p className="text-[10px] uppercase">{format(day, 'EEE', { locale: sr })}</p>
+                    <p className={`text-lg font-bold ${isSelected ? 'text-white' : ''}`}>{format(day, 'd')}</p>
+                    {hasApts && !isSelected && <div className="w-1 h-1 rounded-full bg-primary-500 mx-auto mt-0.5" />}
+                  </button>
                 );
               })}
-            {!doctors.some((d) => todayAppointments.some((a) => a.doctor_id === d.id)) && (
-              <div className="px-6 py-8 text-center text-sm text-gray-400">Nema zakazanih termina danas</div>
+            </div>
+          </div>
+          {/* Termini za odabrani dan */}
+          <div className="max-h-[300px] overflow-y-auto">
+            {selectedDayApts.length === 0 ? (
+              <p className="px-5 py-10 text-sm text-gray-400 text-center">Nema termina</p>
+            ) : (
+              <div className="divide-y divide-border">
+                {selectedDayApts.map((apt) => {
+                  const patient = patients.find((p) => p.id === apt.patient_id);
+                  const t = new Date(apt.pocetak);
+                  const k = new Date(apt.kraj);
+                  return (
+                    <div key={apt.id} className="px-5 py-3 hover:bg-gray-50">
+                      <div className="flex items-center gap-3">
+                        <div className="w-1 h-10 rounded-full bg-primary-400 shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold text-gray-900 truncate">
+                            {apt.services?.[0]?.naziv || 'Termin'}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            {format(t, 'HH:mm')} - {format(k, 'HH:mm')} · {patient ? `${patient.ime} ${patient.prezime}` : '—'}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             )}
           </div>
         </Card>
       </div>
 
-      {/* Zavrseni pregledi danas — za sestre */}
+      {/* ====== OSOBLJE DANAS — horizontalni scroll ====== */}
+      {todayStaff.length > 0 && (
+        <div>
+          <h3 className="text-sm font-semibold text-gray-700 mb-3">Osoblje danas</h3>
+          <div className="flex gap-4 overflow-x-auto pb-2">
+            {todayStaff.map((d) => (
+              <div key={d.id} className="bg-white border border-border rounded-xl p-4 min-w-[160px] flex flex-col items-center text-center shrink-0">
+                {d.slika ? (
+                  <img src={d.slika} alt={d.ime} className="w-14 h-14 rounded-full object-cover mb-2" />
+                ) : (
+                  <div className="w-14 h-14 rounded-full flex items-center justify-center text-white font-bold mb-2" style={{ backgroundColor: d.boja }}>
+                    {d.ime.charAt(0)}{d.prezime.charAt(0)}
+                  </div>
+                )}
+                <p className="text-sm font-semibold text-gray-900 truncate w-full">
+                  {d.titula ? `${d.titula} ` : ''}{d.ime} {d.prezime.charAt(0)}.
+                </p>
+                <p className="text-xs text-gray-500">{d.aptCount} termina</p>
+                {d.revenue > 0 && <p className="text-xs text-primary-700 font-semibold mt-0.5">{d.revenue.toFixed(0)} €</p>}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ====== ZAVRŠENI PREGLEDI DANAS ====== */}
       {todayExams.length > 0 && (
         <div className="mt-6">
           <Card padding={false}>
@@ -731,6 +858,22 @@ export default function Dashboard() {
           </div>
         </Modal>
       )}
+    </div>
+  );
+}
+
+function KpiCard({ icon, label, value, bg, iconColor }: {
+  icon: React.ReactNode; label: string; value: string | number; bg: string; iconColor: string;
+}) {
+  return (
+    <div className="bg-white border border-border rounded-xl px-5 py-4 flex items-center gap-4">
+      <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${bg} ${iconColor} shrink-0`}>
+        {icon}
+      </div>
+      <div className="min-w-0">
+        <p className="text-2xl font-bold text-gray-900">{value}</p>
+        <p className="text-xs text-gray-500">{label}</p>
+      </div>
     </div>
   );
 }

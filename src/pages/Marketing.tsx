@@ -1235,6 +1235,8 @@ function NovaKampanjaTab({ onDone }: { onDone: () => void }) {
   const [selectedPatients, setSelectedPatients] = useState<Set<string>>(new Set());
   const [selectedContacts, setSelectedContacts] = useState<Set<string>>(new Set());
   const [memberSearch, setMemberSearch] = useState('');
+  // Per-recipient kanal override: id -> 'sms' | 'viber' | default (kampanjin channelMode)
+  const [recipientChannels, setRecipientChannels] = useState<Map<string, 'sms' | 'viber'>>(new Map());
 
   // Filter
   const [filterGrad, setFilterGrad] = useState('');
@@ -1558,46 +1560,106 @@ function NovaKampanjaTab({ onDone }: { onDone: () => void }) {
           {targetType === 'rucni' && (
             <div className="space-y-2">
               <Input value={memberSearch} onChange={(e) => setMemberSearch(e.target.value)} placeholder="Pretraga..." />
-              <div className="text-xs text-gray-500">
-                Izabrano: {selectedPatients.size} pacijenata, {selectedContacts.size} kontakata
+              <div className="flex items-center justify-between text-xs text-gray-500">
+                <span>Izabrano: {selectedPatients.size} pacijenata, {selectedContacts.size} kontakata</span>
+                <span className="text-gray-400">Kanal: default = kampanjin ({channelMode})</span>
               </div>
-              <div className="border border-border rounded-lg max-h-60 overflow-y-auto">
-                <div className="px-3 py-2 bg-gray-50 text-xs font-medium">Pacijenti</div>
+              <div className="border border-border rounded-lg max-h-72 overflow-y-auto">
+                {/* Header */}
+                <div className="px-3 py-2 bg-gray-50 text-[10px] font-semibold uppercase tracking-wider text-gray-500 flex items-center gap-2 sticky top-0 z-10">
+                  <span className="w-5" />
+                  <span className="flex-1">Ime</span>
+                  <span className="w-24 text-center">Telefon</span>
+                  <span className="w-20 text-center">Kanal</span>
+                </div>
+
+                {/* Pacijenti */}
+                <div className="px-3 py-1.5 bg-primary-50/50 text-[10px] font-semibold text-primary-700 uppercase tracking-wider">Pacijenti</div>
                 {patients
                   .filter((p) => !memberSearch || `${p.ime} ${p.prezime}`.toLowerCase().includes(memberSearch.toLowerCase()))
                   .slice(0, 50)
-                  .map((p) => (
-                    <label key={p.id} className="flex items-center gap-2 px-3 py-1 text-sm">
-                      <input
-                        type="checkbox"
-                        checked={selectedPatients.has(p.id)}
-                        onChange={(e) => {
-                          const s = new Set(selectedPatients);
-                          if (e.target.checked) s.add(p.id); else s.delete(p.id);
-                          setSelectedPatients(s);
-                        }}
-                      />
-                      {p.ime} {p.prezime} <span className="text-xs text-gray-400">{p.telefon}</span>
-                    </label>
-                  ))}
-                <div className="px-3 py-2 bg-gray-50 text-xs font-medium">Kontakti</div>
+                  .map((p) => {
+                    const checked = selectedPatients.has(p.id);
+                    const ch = recipientChannels.get(p.id);
+                    return (
+                      <div key={p.id} className={`flex items-center gap-2 px-3 py-1.5 text-sm hover:bg-gray-50 ${checked ? 'bg-primary-50/30' : ''}`}>
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={(e) => {
+                            const s = new Set(selectedPatients);
+                            if (e.target.checked) s.add(p.id); else { s.delete(p.id); recipientChannels.delete(p.id); setRecipientChannels(new Map(recipientChannels)); }
+                            setSelectedPatients(s);
+                          }}
+                          className="rounded border-gray-300"
+                        />
+                        <span className="flex-1 truncate text-gray-900">{p.ime} {p.prezime}</span>
+                        <span className="w-24 text-center text-xs text-gray-400 font-mono">{p.telefon}</span>
+                        <div className="w-20 flex justify-center">
+                          {checked && (
+                            <select
+                              value={ch || ''}
+                              onChange={(e) => {
+                                const m = new Map(recipientChannels);
+                                if (e.target.value) m.set(p.id, e.target.value as 'sms' | 'viber');
+                                else m.delete(p.id);
+                                setRecipientChannels(m);
+                              }}
+                              className="px-1 py-0.5 text-[10px] border border-gray-200 rounded bg-white focus:outline-none focus:ring-1 focus:ring-primary-500"
+                            >
+                              <option value="">Auto</option>
+                              <option value="sms">SMS</option>
+                              <option value="viber">Viber</option>
+                            </select>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+
+                {/* Kontakti */}
+                <div className="px-3 py-1.5 bg-accent-50/50 text-[10px] font-semibold text-accent-700 uppercase tracking-wider">Kontakti</div>
                 {contacts
                   .filter((c) => !memberSearch || `${c.ime} ${c.prezime || ''}`.toLowerCase().includes(memberSearch.toLowerCase()))
                   .slice(0, 50)
-                  .map((c) => (
-                    <label key={c.id} className="flex items-center gap-2 px-3 py-1 text-sm">
-                      <input
-                        type="checkbox"
-                        checked={selectedContacts.has(c.id)}
-                        onChange={(e) => {
-                          const s = new Set(selectedContacts);
-                          if (e.target.checked) s.add(c.id); else s.delete(c.id);
-                          setSelectedContacts(s);
-                        }}
-                      />
-                      {c.ime} {c.prezime || ''} <span className="text-xs text-gray-400">{c.telefon}</span>
-                    </label>
-                  ))}
+                  .map((c) => {
+                    const checked = selectedContacts.has(c.id);
+                    const ch = recipientChannels.get(c.id);
+                    return (
+                      <div key={c.id} className={`flex items-center gap-2 px-3 py-1.5 text-sm hover:bg-gray-50 ${checked ? 'bg-accent-50/30' : ''}`}>
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={(e) => {
+                            const s = new Set(selectedContacts);
+                            if (e.target.checked) s.add(c.id); else { s.delete(c.id); recipientChannels.delete(c.id); setRecipientChannels(new Map(recipientChannels)); }
+                            setSelectedContacts(s);
+                          }}
+                          className="rounded border-gray-300"
+                        />
+                        <span className="flex-1 truncate text-gray-900">{c.ime} {c.prezime || ''}</span>
+                        <span className="w-24 text-center text-xs text-gray-400 font-mono">{c.telefon}</span>
+                        <div className="w-20 flex justify-center">
+                          {checked && (
+                            <select
+                              value={ch || ''}
+                              onChange={(e) => {
+                                const m = new Map(recipientChannels);
+                                if (e.target.value) m.set(c.id, e.target.value as 'sms' | 'viber');
+                                else m.delete(c.id);
+                                setRecipientChannels(m);
+                              }}
+                              className="px-1 py-0.5 text-[10px] border border-gray-200 rounded bg-white focus:outline-none focus:ring-1 focus:ring-primary-500"
+                            >
+                              <option value="">Auto</option>
+                              <option value="sms">SMS</option>
+                              <option value="viber">Viber</option>
+                            </select>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
               </div>
             </div>
           )}

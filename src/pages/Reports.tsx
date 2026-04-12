@@ -5,10 +5,27 @@ import {
 } from 'lucide-react';
 import Card from '../components/ui/Card';
 import { useCalendar } from '../contexts/CalendarContext';
+import {
+  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
+  PieChart, Pie, Cell, Legend,
+  AreaChart, Area, CartesianGrid,
+} from 'recharts';
 
 import { supabase } from '../lib/supabase';
 import { APPOINTMENT_STATUS_LABELS } from '../types';
 import { exportToExcel, printToPdf, type ReportExport } from '../lib/exportReport';
+
+// Brand boje za grafikone
+const CHART_COLORS = {
+  primary: '#2BA5A5',
+  primaryLight: '#66D1D1',
+  accent: '#C4956F',
+  accentLight: '#E4B890',
+  success: '#22C55E',
+  danger: '#EF4444',
+  warning: '#F97316',
+  gray: '#9CA3AF',
+};
 
 // ============================================================
 // Reports — smireni monohromatski stil + materijali sekcija
@@ -148,6 +165,41 @@ export default function Reports() {
       };
     }).sort((a, b) => b.revenue - a.revenue);
   }, [doctors, filtered]);
+
+  // Chart data: status breakdown (pie)
+  const statusChartData = useMemo(() => [
+    { name: 'Završeni',  value: stats.completed, color: CHART_COLORS.primary },
+    { name: 'Zakazani',  value: Math.max(0, stats.total - stats.completed - stats.cancelled - stats.noShow), color: CHART_COLORS.primaryLight },
+    { name: 'Otkazani',  value: stats.cancelled, color: CHART_COLORS.warning },
+    { name: 'No-show',   value: stats.noShow,    color: CHART_COLORS.danger },
+  ].filter((d) => d.value > 0), [stats]);
+
+  // Chart data: dnevni prihod (area)
+  const dailyRevenueData = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const a of filtered) {
+      if (a.status !== 'zavrsen') continue;
+      const d = new Date(a.pocetak);
+      const key = `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}`;
+      const rev = (a.services || []).reduce((s, svc) => s + svc.ukupno, 0);
+      map.set(key, (map.get(key) || 0) + rev);
+    }
+    return Array.from(map.entries())
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([datum, prihod]) => ({ datum, prihod: Math.round(prihod) }));
+  }, [filtered]);
+
+  // Chart data: prihod po ljekaru (bar)
+  const doctorBarData = useMemo(() =>
+    doctorStats
+      .filter((r) => r.revenue > 0)
+      .map((r) => ({
+        ime: `${r.doctor.titula || ''} ${r.doctor.ime} ${r.doctor.prezime.charAt(0)}.`.trim(),
+        prihod: Math.round(r.revenue),
+        zakazano: Math.round(r.allRevenue),
+      })),
+    [doctorStats],
+  );
 
   // Top usluge
   const topServices = useMemo(() => {
@@ -372,6 +424,90 @@ export default function Reports() {
           <p className="text-[11px] uppercase tracking-wider text-gray-400 font-semibold mb-1">Materijali (vrijednost)</p>
           <p className="text-2xl font-bold text-accent-600">{materialTotals.ukupnoVrijednost.toFixed(0)} €</p>
           <p className="text-[11px] text-gray-400 mt-1">{materialTotals.ukupnoStavki} stavki</p>
+        </Card>
+      </div>
+
+      {/* ====== GRAFIKONI ====== */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
+        {/* Pie: Status termina */}
+        <Card>
+          <h4 className="text-[11px] uppercase tracking-wider text-gray-400 font-semibold mb-3">Raspodjela statusa</h4>
+          {statusChartData.length > 0 ? (
+            <ResponsiveContainer width="100%" height={200}>
+              <PieChart>
+                <Pie
+                  data={statusChartData}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={50}
+                  outerRadius={80}
+                  dataKey="value"
+                  stroke="none"
+                >
+                  {statusChartData.map((entry, i) => (
+                    <Cell key={i} fill={entry.color} />
+                  ))}
+                </Pie>
+                <Tooltip formatter={(value) => [`${value} termina`, '']} />
+                <Legend
+                  iconType="circle"
+                  iconSize={8}
+                  formatter={(value: string) => <span className="text-xs text-gray-600">{value}</span>}
+                />
+              </PieChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="h-[200px] flex items-center justify-center text-xs text-gray-400">Nema podataka</div>
+          )}
+        </Card>
+
+        {/* Bar: Prihod po ljekaru */}
+        <Card>
+          <h4 className="text-[11px] uppercase tracking-wider text-gray-400 font-semibold mb-3">Prihod po ljekaru</h4>
+          {doctorBarData.length > 0 ? (
+            <ResponsiveContainer width="100%" height={200}>
+              <BarChart data={doctorBarData} layout="vertical" margin={{ left: 0, right: 10, top: 0, bottom: 0 }}>
+                <XAxis type="number" tick={{ fontSize: 10, fill: '#999' }} axisLine={false} tickLine={false} />
+                <YAxis type="category" dataKey="ime" tick={{ fontSize: 11, fill: '#555' }} width={90} axisLine={false} tickLine={false} />
+                <Tooltip formatter={(value) => [`${value} €`, '']} />
+                <Bar dataKey="prihod" fill={CHART_COLORS.primary} radius={[0, 4, 4, 0]} barSize={16} name="Realizovano" />
+                <Bar dataKey="zakazano" fill={CHART_COLORS.primaryLight} radius={[0, 4, 4, 0]} barSize={16} opacity={0.4} name="Zakazano" />
+              </BarChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="h-[200px] flex items-center justify-center text-xs text-gray-400">Nema podataka</div>
+          )}
+        </Card>
+
+        {/* Area: Dnevni prihod */}
+        <Card>
+          <h4 className="text-[11px] uppercase tracking-wider text-gray-400 font-semibold mb-3">Dnevni prihod (EUR)</h4>
+          {dailyRevenueData.length > 1 ? (
+            <ResponsiveContainer width="100%" height={200}>
+              <AreaChart data={dailyRevenueData} margin={{ left: 0, right: 10, top: 5, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor={CHART_COLORS.primary} stopOpacity={0.3} />
+                    <stop offset="95%" stopColor={CHART_COLORS.primary} stopOpacity={0.02} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                <XAxis dataKey="datum" tick={{ fontSize: 10, fill: '#999' }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fontSize: 10, fill: '#999' }} axisLine={false} tickLine={false} width={40} />
+                <Tooltip formatter={(value) => [`${value} €`, 'Prihod']} />
+                <Area type="monotone" dataKey="prihod" stroke={CHART_COLORS.primary} fill="url(#areaGrad)" strokeWidth={2} />
+              </AreaChart>
+            </ResponsiveContainer>
+          ) : dailyRevenueData.length === 1 ? (
+            <div className="h-[200px] flex items-center justify-center">
+              <div className="text-center">
+                <p className="text-3xl font-bold text-primary-700">{dailyRevenueData[0].prihod} €</p>
+                <p className="text-xs text-gray-500 mt-1">{dailyRevenueData[0].datum}</p>
+              </div>
+            </div>
+          ) : (
+            <div className="h-[200px] flex items-center justify-center text-xs text-gray-400">Nema podataka</div>
+          )}
         </Card>
       </div>
 

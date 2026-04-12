@@ -5,7 +5,7 @@ import AppointmentCard from './AppointmentCard';
 import type { Appointment } from '../../types';
 
 const HOUR_START = 7;
-const HOUR_END = 21;
+const HOUR_END = 23;
 const SLOT_HEIGHT = 48; // px per 30 min
 const HOUR_HEIGHT = SLOT_HEIGHT * 2;
 const TOTAL_HOURS = HOUR_END - HOUR_START;
@@ -45,7 +45,7 @@ export default function WeekView({ onAppointmentClick, onSlotClick }: WeekViewPr
     <div className="bg-surface border border-border rounded-xl overflow-hidden">
       {/* Header — dani */}
       <div className="grid grid-cols-[60px_repeat(7,1fr)] border-b border-border">
-        <div className="p-2" /> {/* prazan za sate */}
+        <div className="p-2 border-r border-border" />
         {days.map((day) => (
           <div
             key={day.toISOString()}
@@ -69,14 +69,14 @@ export default function WeekView({ onAppointmentClick, onSlotClick }: WeekViewPr
       <div className="overflow-y-auto" style={{ maxHeight: 'calc(100vh - 240px)' }}>
         <div className="grid grid-cols-[60px_repeat(7,1fr)]">
           {/* Sati kolona */}
-          <div>
+          <div className="border-r border-border">
             {hours.map((hour) => (
               <div
                 key={hour}
-                className="border-b border-border text-right pr-2 text-xs text-gray-400"
+                className="border-b border-border text-right pr-2 text-xs text-gray-400 flex items-start justify-end"
                 style={{ height: `${HOUR_HEIGHT}px` }}
               >
-                <span className="relative -top-2">{String(hour).padStart(2, '0')}:00</span>
+                <span className="relative -top-2 select-none">{String(hour).padStart(2, '0')}:00</span>
               </div>
             ))}
           </div>

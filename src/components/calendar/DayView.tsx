@@ -4,7 +4,7 @@ import AppointmentCard from './AppointmentCard';
 import type { Appointment } from '../../types';
 
 const HOUR_START = 7;
-const HOUR_END = 21;
+const HOUR_END = 23;
 const SLOT_HEIGHT = 48;
 const HOUR_HEIGHT = SLOT_HEIGHT * 2;
 const TOTAL_HOURS = HOUR_END - HOUR_START;
@@ -43,9 +43,9 @@ export default function DayView({ onAppointmentClick, onSlotClick }: DayViewProp
         className="grid border-b border-border"
         style={{ gridTemplateColumns: `60px repeat(${visibleDoctors.length}, 1fr)` }}
       >
-        <div className="p-2" />
-        {visibleDoctors.map((doctor) => (
-          <div key={doctor.id} className="p-2 text-center border-l border-border">
+        <div className="p-2 border-r border-border" />
+        {visibleDoctors.map((doctor, idx) => (
+          <div key={doctor.id} className={`p-2 text-center border-l border-border ${idx === visibleDoctors.length - 1 ? '' : ''}`}>
             <div className="flex items-center justify-center gap-2">
               <span className="w-3 h-3 rounded-full" style={{ backgroundColor: doctor.boja }} />
               <span className="text-sm font-medium text-gray-900">
@@ -64,14 +64,14 @@ export default function DayView({ onAppointmentClick, onSlotClick }: DayViewProp
           style={{ gridTemplateColumns: `60px repeat(${visibleDoctors.length}, 1fr)` }}
         >
           {/* Sati */}
-          <div>
+          <div className="border-r border-border">
             {hours.map((hour) => (
               <div
                 key={hour}
-                className="border-b border-border text-right pr-2 text-xs text-gray-400"
+                className="border-b border-border text-right pr-2 text-xs text-gray-400 flex items-start justify-end"
                 style={{ height: `${HOUR_HEIGHT}px` }}
               >
-                <span className="relative -top-2">{String(hour).padStart(2, '0')}:00</span>
+                <span className="relative -top-2 select-none">{String(hour).padStart(2, '0')}:00</span>
               </div>
             ))}
           </div>

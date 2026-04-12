@@ -55,7 +55,11 @@ export default function Sidebar({ collapsed, setCollapsed }: SidebarProps) {
     >
       {/* Logo */}
       <div className="flex items-center gap-3 px-4 h-16 border-b border-white/10">
-        <img src="/logo.png" alt="MOA" className="w-8 h-8 shrink-0" />
+        <img
+          src="https://pedgschrivtpbzcoqniu.supabase.co/storage/v1/object/public/Razno/MOA%20LOGO%201.png"
+          alt="MOA"
+          className="h-9 w-auto shrink-0 object-contain"
+        />
         {!collapsed && (
           <span className="font-semibold text-sm truncate">MOA</span>
         )}

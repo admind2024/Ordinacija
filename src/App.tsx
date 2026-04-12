@@ -13,7 +13,7 @@ import Billing from './pages/Billing';
 import Reports from './pages/Reports';
 import Doctors from './pages/Doctors';
 import Materials from './pages/Materials';
-import Notifications from './pages/Notifications';
+import SurveyPage from './pages/Survey';
 import Marketing from './pages/Marketing';
 import Establishment from './pages/Establishment';
 import Settings from './pages/Settings';
@@ -74,10 +74,10 @@ function AppRoutes() {
           }
         />
         <Route
-          path="/notifikacije"
+          path="/ankete"
           element={
-            <ProtectedRoute roles={['admin', 'menadzer', 'marketing']}>
-              <Notifications />
+            <ProtectedRoute roles={['admin', 'menadzer', 'recepcija']}>
+              <SurveyPage />
             </ProtectedRoute>
           }
         />

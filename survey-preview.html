@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="bs">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MOA Klinika — Anketa</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    background: #F7FAFA;
+    color: #111827;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 40px 16px 60px;
+  }
+
+  /* ── Header ── */
+  .header {
+    text-align: center;
+    margin-bottom: 32px;
+  }
+  .logo {
+    height: 64px;
+    object-fit: contain;
+    margin-bottom: 10px;
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+  }
+  .logo-fallback {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #2BA5A5 60%, #C4956F 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
+    font-weight: 800;
+    color: #fff;
+    margin: 0 auto 10px;
+    letter-spacing: -1px;
+  }
+  .header-sub {
+    font-size: 13px;
+    color: #7AABAB;
+    letter-spacing: 0.03em;
+  }
+
+  /* ── Form wrapper ── */
+  .form-wrap {
+    width: 100%;
+    max-width: 480px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  /* ── Intro card ── */
+  .intro-card {
+    background: #E6F5F5;
+    border: 1px solid #CCF0F0;
+    border-radius: 18px;
+    padding: 22px 24px;
+    text-align: center;
+  }
+  .intro-card h1 {
+    font-size: 17px;
+    font-weight: 700;
+    color: #145454;
+    margin-bottom: 6px;
+  }
+  .intro-card p {
+    font-size: 13px;
+    color: #238A8A;
+    line-height: 1.55;
+  }
+  .intro-card strong { font-weight: 700; }
+
+  /* ── Question card ── */
+  .q-card {
+    background: #fff;
+    border: 1px solid #E0EDED;
+    border-radius: 18px;
+    padding: 20px 24px;
+    box-shadow: 0 1px 3px rgba(43,165,165,.06);
+  }
+  .q-label {
+    font-size: 14px;
+    font-weight: 600;
+    color: #1f2937;
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .q-label .req { color: #EF4444; }
+
+  /* ── Star rating ── */
+  .stars {
+    display: flex;
+    gap: 6px;
+  }
+  .star-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 2px;
+    transition: transform .15s;
+    line-height: 1;
+  }
+  .star-btn:hover { transform: scale(1.15); }
+  .star-btn svg { display: block; }
+  .star-btn .star-outline { fill: none; stroke: #D1E0E0; stroke-width: 1.5; }
+  .star-btn .star-filled  { fill: #C4956F; stroke: #C4956F; stroke-width: 1.5; }
+
+  /* ── Choice buttons ── */
+  .choices {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .choice-btn {
+    padding: 9px 18px;
+    border-radius: 12px;
+    border: 2px solid #E8EFEF;
+    background: #fff;
+    color: #4B5563;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: border-color .15s, background .15s, color .15s;
+    font-family: inherit;
+  }
+  .choice-btn:hover {
+    border-color: #99E0E0;
+  }
+  .choice-btn.active {
+    background: #2BA5A5;
+    border-color: #2BA5A5;
+    color: #fff;
+  }
+
+  /* ── NPS ── */
+  .nps-wrap { display: flex; flex-direction: column; gap: 8px; }
+  .nps-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .nps-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    border: 2px solid #E8EFEF;
+    background: #fff;
+    font-size: 13px;
+    font-weight: 600;
+    color: #4B5563;
+    cursor: pointer;
+    transition: all .15s;
+    font-family: inherit;
+  }
+  .nps-btn:hover { border-color: #99E0E0; }
+  .nps-btn.active {
+    background: #2BA5A5;
+    border-color: #2BA5A5;
+    color: #fff;
+    transform: scale(1.08);
+  }
+  .nps-labels {
+    display: flex;
+    justify-content: space-between;
+    font-size: 11px;
+    color: #9CA3AF;
+    padding: 0 2px;
+  }
+
+  /* ── Textarea ── */
+  .comment-area {
+    width: 100%;
+    padding: 12px 14px;
+    border: 1px solid #E0EDED;
+    border-radius: 12px;
+    font-size: 13px;
+    font-family: inherit;
+    color: #374151;
+    resize: none;
+    outline: none;
+    transition: border-color .15s, box-shadow .15s;
+    background: #fff;
+  }
+  .comment-area::placeholder { color: #AECECE; }
+  .comment-area:focus {
+    border-color: #3FBDBD;
+    box-shadow: 0 0 0 3px rgba(43,165,165,.12);
+  }
+
+  /* ── Submit ── */
+  .submit-btn {
+    width: 100%;
+    padding: 14px;
+    background: #2BA5A5;
+    color: #fff;
+    font-size: 15px;
+    font-weight: 700;
+    border: none;
+    border-radius: 14px;
+    cursor: pointer;
+    transition: background .15s, transform .1s;
+    font-family: inherit;
+    letter-spacing: 0.01em;
+  }
+  .submit-btn:hover { background: #238A8A; }
+  .submit-btn:active { transform: scale(.985); }
+
+  /* ── Anon note ── */
+  .anon-note {
+    text-align: center;
+    font-size: 11px;
+    color: #9CA3AF;
+    padding-bottom: 8px;
+  }
+
+  /* ── Success state (hidden by default) ── */
+  .success-card {
+    display: none;
+    background: #fff;
+    border: 1px solid #E0EDED;
+    border-radius: 20px;
+    padding: 48px 32px;
+    text-align: center;
+    box-shadow: 0 2px 12px rgba(43,165,165,.07);
+  }
+  .success-card.visible { display: block; }
+  .success-icon {
+    width: 60px; height: 60px;
+    border-radius: 50%;
+    background: #E6F5F5;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 18px;
+  }
+  .success-card h2 {
+    font-size: 20px;
+    font-weight: 700;
+    color: #111827;
+    margin-bottom: 10px;
+  }
+  .success-card p {
+    font-size: 14px;
+    color: #6B7280;
+    line-height: 1.6;
+  }
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header">
+  <div class="logo-fallback">M</div>
+  <p class="header-sub">Ministarstvo estetike</p>
+</div>
+
+<!-- Form -->
+<div class="form-wrap" id="formWrap">
+
+  <!-- Intro -->
+  <div class="intro-card">
+    <h1>Kratka anketa o posjeti</h1>
+    <p>Vaši odgovori su <strong>anonimni</strong> — ne prikupljamo ime ni kontakt.<br>Traje oko 60 sekundi.</p>
+  </div>
+
+  <!-- Q1: Doctor rating -->
+  <div class="q-card">
+    <div class="q-label">Kako biste ocijenili doktora? <span class="req">*</span></div>
+    <div class="stars" id="starsQ1">
+      <!-- injected by JS -->
+    </div>
+  </div>
+
+  <!-- Q2: Waiting -->
+  <div class="q-card">
+    <div class="q-label">Kako ste čekali na termin?</div>
+    <div class="choices" id="choicesQ2">
+      <button class="choice-btn" onclick="selectChoice('Q2', this)">Bez čekanja</button>
+      <button class="choice-btn" onclick="selectChoice('Q2', this)">Kratko</button>
+      <button class="choice-btn" onclick="selectChoice('Q2', this)">Dugo čekanje</button>
+    </div>
+  </div>
+
+  <!-- Q3: Staff -->
+  <div class="q-card">
+    <div class="q-label">Pristup osoblja (recepcija, asistenti)</div>
+    <div class="stars" id="starsQ3"></div>
+  </div>
+
+  <!-- Q4: Cleanliness -->
+  <div class="q-card">
+    <div class="q-label">Čistoća i udobnost ordinacije</div>
+    <div class="stars" id="starsQ4"></div>
+  </div>
+
+  <!-- Q5: NPS -->
+  <div class="q-card">
+    <div class="q-label">Biste li nas preporučili prijatelju ili članu porodice? <span class="req">*</span></div>
+    <div class="nps-wrap">
+      <div class="nps-buttons" id="npsButtons"></div>
+      <div class="nps-labels">
+        <span>Sigurno ne</span>
+        <span>Definitivno da</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Q6: Comment -->
+  <div class="q-card">
+    <div class="q-label">Slobodan komentar (opcionalno)</div>
+    <textarea
+      class="comment-area"
+      rows="3"
+      placeholder="Možete napisati šta vam se posebno svidjelo ili šta bismo mogli poboljšati..."
+    ></textarea>
+  </div>
+
+  <!-- Submit -->
+  <button class="submit-btn" onclick="handleSubmit()">Pošalji odgovore</button>
+
+  <p class="anon-note">Vaši odgovori su anonimni i koriste se isključivo za unapređenje usluge.</p>
+</div>
+
+<!-- Success state -->
+<div class="success-card" id="successCard">
+  <div class="success-icon">
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#2BA5A5" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M20 6L9 17l-5-5"/>
+    </svg>
+  </div>
+  <h2>Hvala vam!</h2>
+  <p>Vaši odgovori su anonimni i pomažu nam<br>da svaki dan budemo bolji.<br><br>Vidimo se na sljedećoj posjeti! 🙏</p>
+</div>
+
+<script>
+  // ── Stars ────────────────────────────────────────────────────────────────
+  const starState = { Q1: 0, Q3: 0, Q4: 0 };
+
+  function starSVG(filled) {
+    const cls = filled ? 'star-filled' : 'star-outline';
+    return `<svg width="32" height="32" viewBox="0 0 24 24"><polygon class="${cls}" points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/></svg>`;
+  }
+
+  function renderStars(containerId, q) {
+    const el = document.getElementById(containerId);
+    el.innerHTML = '';
+    for (let i = 1; i <= 5; i++) {
+      const btn = document.createElement('button');
+      btn.className = 'star-btn';
+      btn.innerHTML = starSVG(i <= starState[q]);
+      btn.setAttribute('data-val', i);
+      btn.onmouseenter = () => previewStars(containerId, q, i);
+      btn.onmouseleave = () => renderStars(containerId, q);
+      btn.onclick = () => { starState[q] = i; renderStars(containerId, q); };
+      el.appendChild(btn);
+    }
+  }
+
+  function previewStars(containerId, q, upTo) {
+    const el = document.getElementById(containerId);
+    const btns = el.querySelectorAll('.star-btn');
+    btns.forEach((btn, idx) => { btn.innerHTML = starSVG(idx < upTo); });
+  }
+
+  renderStars('starsQ1', 'Q1');
+  renderStars('starsQ3', 'Q3');
+  renderStars('starsQ4', 'Q4');
+
+  // ── Choices ──────────────────────────────────────────────────────────────
+  function selectChoice(group, btn) {
+    const parent = document.getElementById('choices' + group);
+    parent.querySelectorAll('.choice-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  }
+
+  // ── NPS ──────────────────────────────────────────────────────────────────
+  let npsVal = null;
+  const npsWrap = document.getElementById('npsButtons');
+  for (let i = 0; i <= 10; i++) {
+    const btn = document.createElement('button');
+    btn.className = 'nps-btn';
+    btn.textContent = i;
+    btn.onclick = () => {
+      npsVal = i;
+      npsWrap.querySelectorAll('.nps-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+    };
+    npsWrap.appendChild(btn);
+  }
+
+  // ── Submit ───────────────────────────────────────────────────────────────
+  function handleSubmit() {
+    if (starState.Q1 === 0) { alert('Molimo ocijenite doktora.'); return; }
+    if (npsVal === null)     { alert('Molimo odaberite NPS ocjenu.'); return; }
+    document.getElementById('formWrap').style.display = 'none';
+    document.getElementById('successCard').classList.add('visible');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+</script>
+</body>
+</html>

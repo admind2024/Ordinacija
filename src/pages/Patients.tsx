@@ -61,11 +61,6 @@ function PatientsContent() {
 
   return (
     <div>
-      <div className="mb-4">
-        <h2 className="text-2xl font-bold text-gray-900">Pacijenti</h2>
-        <p className="text-sm text-gray-500 mt-1">Upravljanje kartonima pacijenata</p>
-      </div>
-
       <PatientList onSelect={setSelectedPatient} onNew={handleNew} />
 
       <PatientForm

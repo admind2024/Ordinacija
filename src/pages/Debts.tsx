@@ -165,12 +165,8 @@ export default function Debts() {
 
   return (
     <div>
-      {/* Header */}
-      <div className="mb-6 flex items-center justify-between flex-wrap gap-4">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900">Dugovanja</h2>
-          <p className="text-sm text-gray-500 mt-1">Pracenje dugova i rata pacijenata</p>
-        </div>
+      {/* KPI cards */}
+      <div className="mb-6 flex items-center justify-end flex-wrap gap-4">
         <div className="flex items-center gap-3">
           <div className="text-center px-4 py-2 bg-red-50 rounded-xl border border-red-100">
             <p className="text-2xl font-bold text-red-700">{totalDug.toFixed(0)}<span className="text-sm font-medium ml-0.5">EUR</span></p>

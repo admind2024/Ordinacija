@@ -353,12 +353,8 @@ export default function Reports() {
 
   return (
     <div>
-      {/* Header */}
-      <div className="flex items-center justify-between mb-6 flex-wrap gap-4">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900">Izvjestaji</h2>
-          <p className="text-sm text-gray-500 mt-1">Statistika, finansije i performanse</p>
-        </div>
+      {/* Filters + Export */}
+      <div className="flex items-center justify-end mb-6 flex-wrap gap-4">
         <div className="flex gap-2 flex-wrap items-center">
           <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)}
             className="px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" />

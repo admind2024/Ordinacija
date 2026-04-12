@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { format } from 'date-fns';
-import { srLatn as sr } from 'date-fns/locale';
-import { CalendarDays, Phone, Search, Users, Clock, CheckCircle2, CircleDot, XCircle } from 'lucide-react';
+
+import { Phone, Search, Users, Clock, CheckCircle2, CircleDot, XCircle } from 'lucide-react';
 import DoctorLogin from '../components/ui/DoctorLogin';
 import PatientKarton from '../components/examinations/PatientKarton';
 import { openPrintReport } from '../components/examinations/PrintReport';
@@ -338,15 +338,8 @@ function ExaminationsContent({ loggedDoctor }: { loggedDoctor: Doctor }) {
 
   return (
     <div className="print:hidden">
-      {/* Header */}
-      <div className="mb-6 flex items-center justify-between flex-wrap gap-4">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900">Moji pregledi</h2>
-          <div className="flex items-center gap-2 mt-1">
-            <CalendarDays size={14} className="text-gray-400" />
-            <span className="text-sm text-gray-500">{format(today, 'EEEE, dd.MM.yyyy.', { locale: sr })}</span>
-          </div>
-        </div>
+      {/* KPI cards */}
+      <div className="mb-6 flex items-center justify-end flex-wrap gap-4">
         <div className="flex items-center gap-3">
           <div className="text-center px-4 py-2 bg-primary-50 rounded-xl border border-primary-100">
             <p className="text-2xl font-bold text-primary-700">{todayCount}</p>

@@ -193,11 +193,7 @@ export default function SurveyPage() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6 flex-wrap gap-4">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900">Ankete</h2>
-          <p className="text-sm text-gray-500 mt-1">Ankete zadovoljstva pacijenata i povratne informacije</p>
-        </div>
+      <div className="flex items-center justify-end mb-6">
         <Button onClick={openCreate}><Plus size={16} /> Nova anketa</Button>
       </div>
 

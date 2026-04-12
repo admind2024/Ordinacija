@@ -188,13 +188,11 @@ export default function Materials() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900">Materijali</h2>
-          <p className="text-sm text-gray-500 mt-1">Katalog materijala i izvjestaj utroska</p>
+      {tab === 'katalog' && (
+        <div className="flex items-center justify-end mb-6">
+          <Button onClick={() => openForm()}><Plus size={16} /> Dodaj materijal</Button>
         </div>
-        {tab === 'katalog' && <Button onClick={() => openForm()}><Plus size={16} /> Dodaj materijal</Button>}
-      </div>
+      )}
 
       <div className="flex gap-1 bg-gray-100 rounded-lg p-0.5 w-fit mb-6">
         {([{ key: 'katalog' as const, label: 'Katalog', icon: Package }, { key: 'izvjestaj' as const, label: 'Izvjestaj utroska', icon: BarChart3 }]).map((t) => (

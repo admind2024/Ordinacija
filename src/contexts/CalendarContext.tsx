@@ -252,7 +252,27 @@ export function CalendarProvider({ children }: { children: ReactNode }) {
       if (svcError) console.error('Greska pri unosu usluga:', svcError);
     }
 
-    const newApt = { ...data, services: aptServices || [] } as Appointment;
+    // Ucitaj appointment sa relacijama (patient join) da bi Pregled i ostale stranice
+    // odmah vidjele novog pacijenta bez hard refresh-a
+    const { data: fullApt } = await supabase
+      .from('appointments')
+      .select('*, appointment_services(*), patient:patients(ime, prezime, telefon)')
+      .eq('id', data.id)
+      .single();
+
+    const newApt = fullApt
+      ? {
+          ...fullApt,
+          services: (fullApt.appointment_services || []).map((s: any) => ({
+            ...s,
+            cijena: Number(s.cijena) || 0,
+            popust: Number(s.popust) || 0,
+            ukupno: Number(s.ukupno) || 0,
+            kolicina: Number(s.kolicina) || 1,
+          })),
+        } as Appointment
+      : { ...data, services: aptServices || [] } as Appointment;
+
     setAppointments((prev) => [...prev, newApt]);
 
     // Posalji SMS potvrdu pacijentu (fire-and-forget)

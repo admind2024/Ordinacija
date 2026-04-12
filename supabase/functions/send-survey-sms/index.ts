@@ -30,10 +30,10 @@ Deno.serve(async (req) => {
     const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, serviceRoleKey);
 
-    // 1. SMS kredencijali iz reminder_settings
+    // 1. SMS kredencijali i sablon iz reminder_settings
     const { data: settings } = await supabase
       .from('reminder_settings')
-      .select('sms_api_key, sms_sender_name, sms_email')
+      .select('sms_api_key, sms_sender_name, sms_email, message_templates')
       .limit(1)
       .maybeSingle();
 
@@ -42,6 +42,9 @@ Deno.serve(async (req) => {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
+
+    const DEFAULT_SMS_TEMPLATE = 'Hvala na posjeti MOA klinici! Molimo ocijenite vase iskustvo (30 sek): {link}';
+    const smsTemplate: string = settings?.message_templates?.survey_sms || DEFAULT_SMS_TEMPLATE;
 
     // 2. Pokupi pending redove ciji je scheduled_at prosao
     const { data: queue } = await supabase
@@ -72,9 +75,7 @@ Deno.serve(async (req) => {
       // Ali zapravo treba produkcijski URL — dohvati iz env ili hardcode
       const appUrl = Deno.env.get('APP_URL') || 'https://ordinacija-rademilosevic87-3335s-projects.vercel.app';
       const surveyLink = `${appUrl}/anketa/${item.survey_id}`;
-      const text = stripDiacritics(
-        `Hvala na posjeti MOA klinici! Molimo ocijenite vase iskustvo (30 sek): ${surveyLink}`
-      );
+      const text = stripDiacritics(smsTemplate.replace('{link}', surveyLink));
 
       try {
         const res = await fetch(SMS_PROXY, {

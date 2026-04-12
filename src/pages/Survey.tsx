@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { ClipboardCheck, Plus, Eye, Trash2, Copy, BarChart3, Star } from 'lucide-react';
+import { ClipboardCheck, Plus, Eye, Trash2, Copy, BarChart3, Star, Settings } from 'lucide-react';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import Modal from '../components/ui/Modal';
@@ -14,7 +14,7 @@ import { supabase } from '../lib/supabase';
  *   survey_responses: id, survey_id, patient_id, patient_ime, odgovori (JSONB), created_at
  */
 
-type SurveyTab = 'liste' | 'odgovori';
+type SurveyTab = 'liste' | 'odgovori' | 'postavke';
 
 interface SurveyQuestion {
   id: string;
@@ -58,6 +58,12 @@ export default function SurveyPage() {
   // Preview
   const [previewSurvey, setPreviewSurvey] = useState<Survey | null>(null);
 
+  // SMS šablon
+  const DEFAULT_SMS = 'Hvala na posjeti MOA klinici! Molimo ocijenite vase iskustvo (30 sek): {link}';
+  const [smsTemplate, setSmsTemplate] = useState(DEFAULT_SMS);
+  const [smsSaving, setSmsSaving] = useState(false);
+  const [smsSaved, setSmsSaved] = useState(false);
+
   // Default: prva anketa umjesto 'all' — da statistika odmah radi
   const [selectedSurveyId, setSelectedSurveyId] = useState<string>('');
 
@@ -67,18 +73,38 @@ export default function SurveyPage() {
 
   async function loadData() {
     setLoading(true);
-    const [{ data: s }, { data: r }] = await Promise.all([
+    const [{ data: s }, { data: r }, { data: settings }] = await Promise.all([
       supabase.from('surveys').select('*').order('created_at', { ascending: false }),
       supabase.from('survey_responses').select('*').order('created_at', { ascending: false }),
+      supabase.from('reminder_settings').select('message_templates').limit(1).maybeSingle(),
     ]);
     const surveyList = (s || []) as Survey[];
     setSurveys(surveyList);
     setResponses((r || []) as SurveyResponse[]);
-    // Auto-selektuj prvu anketu ako nista nije odabrano
     if (!selectedSurveyId && surveyList.length > 0) {
       setSelectedSurveyId(surveyList[0].id);
     }
+    // Ucitaj SMS sablon ako postoji
+    const tmpl = settings?.message_templates?.survey_sms;
+    if (tmpl) setSmsTemplate(tmpl);
     setLoading(false);
+  }
+
+  async function saveSmsTemplate() {
+    setSmsSaving(true);
+    // Dohvati trenutni message_templates objekt
+    const { data: current } = await supabase
+      .from('reminder_settings')
+      .select('id, message_templates')
+      .limit(1)
+      .maybeSingle();
+    const templates = { ...(current?.message_templates || {}), survey_sms: smsTemplate };
+    if (current?.id) {
+      await supabase.from('reminder_settings').update({ message_templates: templates }).eq('id', current.id);
+    }
+    setSmsSaving(false);
+    setSmsSaved(true);
+    setTimeout(() => setSmsSaved(false), 2500);
   }
 
   function openCreate() {
@@ -232,6 +258,7 @@ export default function SurveyPage() {
         {([
           { key: 'liste' as const, label: 'Ankete', icon: ClipboardCheck },
           { key: 'odgovori' as const, label: 'Odgovori', icon: BarChart3 },
+          { key: 'postavke' as const, label: 'Postavke', icon: Settings },
         ]).map((t) => (
           <button key={t.key} onClick={() => setTab(t.key)}
             className={`px-4 py-2 text-sm font-medium rounded-md transition-colors flex items-center gap-2
@@ -246,6 +273,40 @@ export default function SurveyPage() {
 
       {loading ? (
         <div className="text-center py-20 text-gray-400 text-sm">Ucitavanje...</div>
+      ) : tab === 'postavke' ? (
+        /* ====== POSTAVKE SMS ŠABLONA ====== */
+        <div className="max-w-xl">
+          <Card>
+            <h3 className="text-sm font-semibold text-gray-800 mb-1">SMS poruka za anketu</h3>
+            <p className="text-xs text-gray-500 mb-4">
+              Ova poruka se šalje pacijentu 30 minuta nakon završenog pregleda.<br />
+              Koristite <code className="bg-gray-100 px-1 rounded text-primary-700 font-mono">{'{link}'}</code> gdje želite da se pojavi link na anketu.
+            </p>
+            <textarea
+              value={smsTemplate}
+              onChange={(e) => setSmsTemplate(e.target.value)}
+              rows={4}
+              className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none font-mono"
+            />
+            <div className="mt-2 text-xs text-gray-400">
+              Pregled: <span className="text-gray-600 italic">
+                {smsTemplate.replace('{link}', 'https://ordinacija.app/anketa/...')}
+              </span>
+            </div>
+            <div className="mt-4 flex items-center gap-3">
+              <Button onClick={saveSmsTemplate} disabled={smsSaving}>
+                {smsSaving ? 'Čuvanje...' : 'Sačuvaj šablon'}
+              </Button>
+              {smsSaved && <span className="text-sm text-primary-600 font-medium">✓ Sačuvano</span>}
+              <button
+                onClick={() => setSmsTemplate(DEFAULT_SMS)}
+                className="ml-auto text-xs text-gray-400 hover:text-gray-600 underline"
+              >
+                Vrati na podrazumijevani
+              </button>
+            </div>
+          </Card>
+        </div>
       ) : tab === 'liste' ? (
         /* ====== LISTE ANKETA ====== */
         surveys.length === 0 ? (

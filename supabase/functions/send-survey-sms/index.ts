@@ -70,7 +70,7 @@ Deno.serve(async (req) => {
 
       // Generiši link — koristimo SUPABASE_URL kao proxy za origin (edge function nema window.location)
       // Ali zapravo treba produkcijski URL — dohvati iz env ili hardcode
-      const appUrl = Deno.env.get('APP_URL') || 'https://ordinacija-seven.vercel.app';
+      const appUrl = Deno.env.get('APP_URL') || 'https://ordinacija-rademilosevic87-3335s-projects.vercel.app';
       const surveyLink = `${appUrl}/anketa/${item.survey_id}`;
       const text = stripDiacritics(
         `Hvala na posjeti MOA klinici! Molimo ocijenite vase iskustvo (30 sek): ${surveyLink}`

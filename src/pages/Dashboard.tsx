@@ -252,22 +252,17 @@ export default function Dashboard() {
   // Ukupno za naplatu danas iz zavrsenih pregleda
   const todayExamsTotal = todayExams.reduce((sum, e) => sum + (e.appointmentTotal || 0), 0);
 
+  const todayUniquePatients = new Set(todayAppointments.map((a) => a.patient_id)).size;
+
   const stats = [
     { label: 'Termini danas', value: String(todayAppointments.length), icon: CalendarDays, color: 'text-primary-600 bg-primary-100' },
-    { label: 'Ukupno pacijenata', value: String(patients.length), icon: Users, color: 'text-green-600 bg-green-100' },
+    { label: 'Pacijenata danas', value: String(todayUniquePatients), icon: Users, color: 'text-green-600 bg-green-100' },
     { label: 'Prihod danas (EUR)', value: todayRevenue > 0 ? todayRevenue.toFixed(0) : todayExamsTotal.toFixed(0), icon: CreditCard, color: 'text-purple-600 bg-purple-100' },
     { label: 'Realizacija danas', value: `${realizationRate}%`, icon: TrendingUp, color: 'text-orange-600 bg-orange-100' },
   ];
 
   return (
     <div>
-      <div className="mb-6">
-        <h2 className="text-2xl font-bold text-gray-900">Dashboard</h2>
-        <p className="text-sm text-gray-500 mt-1">
-          Pregled poslovanja — {format(new Date(), 'dd.MM.yyyy.')}
-        </p>
-      </div>
-
       {/* Statistike */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         {stats.map((stat) => (

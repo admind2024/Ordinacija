@@ -425,13 +425,17 @@ function ExaminationsContent({ loggedDoctor }: { loggedDoctor: Doctor }) {
                 <button
                   key={t.appointment.id}
                   onClick={() => loadPatientData(t.patient_id, t.appointment)}
-                  className={`w-full text-left px-4 py-3 flex items-center gap-4 hover:bg-gray-50 transition-colors ${
-                    t.done ? 'bg-emerald-50/40' : ''
+                  className={`w-full text-left px-4 py-3 flex items-center gap-4 hover:bg-gray-50 transition-colors border-l-4 ${
+                    t.done ? 'bg-emerald-50/40 border-l-emerald-400' : 'border-l-primary-400'
                   }`}
                 >
                   {/* Vrijeme */}
                   <div className="w-14 shrink-0 text-center">
                     <p className="text-base font-bold text-gray-900">{t.time}</p>
+                  </div>
+                  {/* Avatar */}
+                  <div className="w-8 h-8 rounded-full bg-primary-100 text-primary-700 flex items-center justify-center text-xs font-bold shrink-0">
+                    {t.ime.charAt(0)}{t.prezime.charAt(0)}
                   </div>
                   {/* Ime + usluga */}
                   <div className="flex-1 min-w-0">
@@ -481,19 +485,26 @@ function ExaminationsContent({ loggedDoctor }: { loggedDoctor: Doctor }) {
               <button
                 key={dp.patient_id}
                 onClick={() => loadPatientData(dp.patient_id, dp.todayAppointment)}
-                className="text-left px-4 py-3 bg-white rounded-lg border border-border hover:border-primary-300 hover:shadow-sm transition-all group"
+                className={`text-left px-4 py-3 bg-white rounded-lg border transition-all group hover:shadow-md hover:border-primary-400 ${
+                  hasToday ? 'border-l-4 border-l-primary-500 border-border' : 'border-border'
+                }`}
               >
-                <div className="flex items-center justify-between mb-1">
-                  <p className="text-sm font-semibold text-gray-900 truncate">
-                    {dp.ime} {dp.prezime}
-                  </p>
+                <div className="flex items-center gap-3 mb-1">
+                  <div className="w-8 h-8 rounded-full bg-primary-100 text-primary-700 flex items-center justify-center text-xs font-bold shrink-0">
+                    {dp.ime.charAt(0)}{dp.prezime.charAt(0)}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-gray-900 truncate">
+                      {dp.ime} {dp.prezime}
+                    </p>
+                  </div>
                   {hasToday && (
-                    <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-green-100 text-green-700 font-semibold shrink-0 ml-2">
+                    <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-green-100 text-green-700 font-semibold shrink-0">
                       Danas
                     </span>
                   )}
                 </div>
-                <div className="flex items-center justify-between text-[11px]">
+                <div className="flex items-center justify-between text-[11px] pl-11">
                   {dp.telefon ? (
                     <span className="flex items-center gap-1 text-gray-400 truncate">
                       <Phone size={10} /> {dp.telefon}

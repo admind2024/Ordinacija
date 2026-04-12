@@ -124,25 +124,25 @@ export default function PatientKarton(props: PatientKartonProps) {
 
   return (
     // Fixed full-screen overlay preko cijele aplikacije (uklj. lijevi meni)
-    <div className="fixed inset-0 z-50 bg-white grid grid-cols-[280px_1fr]">
-      {/* ================= SIDEBAR ================= */}
-      <aside className="bg-gray-50/70 border-r border-border flex flex-col overflow-y-auto">
+    <div className="fixed inset-0 z-50 bg-white grid grid-cols-[240px_1fr]">
+      {/* ================= SIDEBAR (tamni, kao glavni meni) ================= */}
+      <aside className="bg-sidebar text-white flex flex-col overflow-y-auto">
         {/* Back + patient header */}
-        <div className="px-4 pt-4 pb-5 border-b border-border">
+        <div className="px-4 pt-4 pb-5 border-b border-white/10">
           <button
             onClick={onBack}
-            className="flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900 mb-5 font-medium"
+            className="flex items-center gap-2 text-sm text-white/70 hover:text-white mb-5 font-medium"
           >
-            <ArrowLeft size={15} /> Nazad na listu pacijenata
+            <ArrowLeft size={15} /> Nazad
           </button>
 
-          <div className="w-16 h-16 rounded-full bg-primary-100 text-primary-700 flex items-center justify-center font-bold text-xl mb-3">
+          <div className="w-14 h-14 rounded-full bg-white/15 backdrop-blur text-white flex items-center justify-center font-bold text-lg mb-3">
             {initials || '?'}
           </div>
-          <h2 className="text-base font-semibold text-gray-900 leading-tight break-words">
+          <h2 className="text-base font-semibold text-white leading-tight break-words">
             {patient.ime} {patient.prezime}
           </h2>
-          <p className="text-xs text-gray-500 mt-1">
+          <p className="text-xs text-white/60 mt-1">
             {patient.datum_rodjenja
               ? new Date(patient.datum_rodjenja).toLocaleDateString('sr-Latn-ME')
               : '—'}
@@ -151,40 +151,37 @@ export default function PatientKarton(props: PatientKartonProps) {
           </p>
 
           {loggedDoctor && (
-            <p className="text-[11px] text-gray-400 mt-2">
+            <p className="text-[11px] text-white/40 mt-2">
               Dr. {loggedDoctor.ime} {loggedDoctor.prezime}
             </p>
           )}
         </div>
 
-        {/* Napomena / alergije warning box */}
+        {/* Napomena warning */}
         {patient.napomena && (
-          <div className="mx-3 mt-3 px-3 py-2.5 bg-amber-50 border border-amber-200 rounded-lg flex items-start gap-2">
-            <AlertCircle size={14} className="text-amber-600 shrink-0 mt-0.5" />
+          <div className="mx-3 mt-3 px-3 py-2.5 bg-amber-500/15 border border-amber-500/20 rounded-lg flex items-start gap-2">
+            <AlertCircle size={14} className="text-amber-400 shrink-0 mt-0.5" />
             <div className="min-w-0">
-              <p className="text-[10px] uppercase tracking-wider font-semibold text-amber-700 mb-0.5">Napomena</p>
-              <p className="text-[11px] text-amber-900 leading-snug">
-                {patient.napomena}
-              </p>
+              <p className="text-[10px] uppercase tracking-wider font-semibold text-amber-300 mb-0.5">Napomena</p>
+              <p className="text-[11px] text-amber-100 leading-snug">{patient.napomena}</p>
             </div>
           </div>
         )}
 
         {/* Dug warning */}
         {dugTotal > 0 && (
-          <div className="mx-3 mt-2 px-3 py-2 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2">
-            <Wallet size={14} className="text-red-600 shrink-0" />
+          <div className="mx-3 mt-2 px-3 py-2 bg-red-500/15 border border-red-500/20 rounded-lg flex items-center gap-2">
+            <Wallet size={14} className="text-red-400 shrink-0" />
             <div className="flex-1 min-w-0">
-              <p className="text-[10px] uppercase tracking-wider font-semibold text-red-700">Dug</p>
-              <p className="text-xs font-bold text-red-900">{dugTotal.toFixed(0)} €</p>
+              <p className="text-[10px] uppercase tracking-wider font-semibold text-red-300">Dug</p>
+              <p className="text-xs font-bold text-red-200">{dugTotal.toFixed(0)} €</p>
             </div>
           </div>
         )}
 
         {/* Info grid */}
-        <div className="px-4 py-3 mt-3 border-b border-border">
+        <div className="px-4 py-3 mt-3 border-b border-white/10">
           {[
-            ['Br. kartona', patient.id.slice(0, 8).toUpperCase()],
             ['Telefon', patient.telefon],
             ['Email', patient.email || '—'],
             ['Grad', patient.grad || '—'],
@@ -193,8 +190,8 @@ export default function PatientKarton(props: PatientKartonProps) {
             ['Popust', patient.popust > 0 ? `${patient.popust}%` : '—'],
           ].map(([k, v]) => (
             <div key={k} className="flex justify-between items-center py-1 text-[11px]">
-              <span className="text-gray-400">{k}</span>
-              <span className="font-semibold text-gray-800 text-right max-w-[150px] truncate" title={String(v)}>
+              <span className="text-white/40">{k}</span>
+              <span className="font-semibold text-white text-right max-w-[130px] truncate" title={String(v)}>
                 {v}
               </span>
             </div>
@@ -203,9 +200,9 @@ export default function PatientKarton(props: PatientKartonProps) {
 
         {/* Tagovi */}
         {patient.tagovi.length > 0 && (
-          <div className="px-4 py-3 border-b border-border flex flex-wrap gap-1.5">
+          <div className="px-4 py-3 border-b border-white/10 flex flex-wrap gap-1.5">
             {patient.tagovi.map((t) => (
-              <span key={t} className="px-2 py-0.5 text-[10px] font-medium bg-primary-50 text-primary-700 rounded-full border border-primary-100">
+              <span key={t} className="px-2 py-0.5 text-[10px] font-medium bg-white/10 text-white/80 rounded-full">
                 {t}
               </span>
             ))}
@@ -213,28 +210,28 @@ export default function PatientKarton(props: PatientKartonProps) {
         )}
 
         {/* Kontakt quick links */}
-        <div className="px-4 py-3 border-b border-border space-y-2">
+        <div className="px-4 py-3 border-b border-white/10 space-y-2">
           {patient.telefon && (
-            <a href={`tel:${patient.telefon}`} className="flex items-center gap-2 text-xs text-primary-600 hover:text-primary-700">
+            <a href={`tel:${patient.telefon}`} className="flex items-center gap-2 text-xs text-primary-300 hover:text-white">
               <Phone size={12} /> Pozovi
             </a>
           )}
           {patient.email && (
-            <a href={`mailto:${patient.email}`} className="flex items-center gap-2 text-xs text-primary-600 hover:text-primary-700">
+            <a href={`mailto:${patient.email}`} className="flex items-center gap-2 text-xs text-primary-300 hover:text-white">
               <Mail size={12} /> Email
             </a>
           )}
           {(patient.adresa || patient.grad) && (
-            <div className="flex items-center gap-2 text-xs text-gray-500">
-              <MapPin size={12} className="text-gray-400" />
+            <div className="flex items-center gap-2 text-xs text-white/50">
+              <MapPin size={12} />
               <span className="truncate">{patient.adresa ? `${patient.adresa}, ` : ''}{patient.grad || ''}</span>
             </div>
           )}
         </div>
 
-        {/* Nav */}
-        <nav className="flex-1 px-3 py-3">
-          <div className="text-[10px] uppercase tracking-wider text-gray-400 font-semibold mb-2 px-2">
+        {/* Nav — isti stil kao glavni sidebar */}
+        <nav className="flex-1 px-2 py-3">
+          <div className="text-[10px] uppercase tracking-wider text-white/30 font-semibold mb-2 px-3">
             Sadržaj kartona
           </div>
           {NAV_ITEMS.map((item) => {
@@ -245,12 +242,12 @@ export default function PatientKarton(props: PatientKartonProps) {
                 key={item.id}
                 onClick={() => !disabled && setNav(item.id)}
                 disabled={disabled}
-                className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors mb-0.5 ${
+                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors mb-0.5 ${
                   active
-                    ? 'bg-white text-gray-900 font-semibold shadow-sm border border-gray-200'
+                    ? 'bg-primary-600 text-white font-semibold'
                     : disabled
-                      ? 'text-gray-300 cursor-not-allowed'
-                      : 'text-gray-600 hover:bg-white/60'
+                      ? 'text-white/20 cursor-not-allowed'
+                      : 'text-gray-300 hover:bg-sidebar-hover hover:text-white'
                 }`}
               >
                 <span className={`w-1.5 h-1.5 rounded-full ${item.dot}`} />
@@ -291,7 +288,7 @@ export default function PatientKarton(props: PatientKartonProps) {
         <div className="px-6 py-3 border-b border-border grid grid-cols-4 gap-3 shrink-0 bg-gray-50/50">
           <KpiCell icon={<Calendar size={14} className="text-blue-600" />} label="Posjeta" value={brojPosjeta} />
           <KpiCell icon={<Clock size={14} className="text-amber-600" />} label="Zakazano" value={brojZakazanih} />
-          <KpiCell icon={<ClipboardList size={14} className="text-indigo-600" />} label="Dijagnoza" value={exams.filter((e) => e.nalaz).length} />
+          <KpiCell icon={<ClipboardList size={14} className="text-primary-600" />} label="Dijagnoza" value={exams.filter((e) => e.nalaz).length} />
           <KpiCell icon={<Wallet size={14} className={dugTotal > 0 ? 'text-red-600' : 'text-gray-400'} />} label="Dug" value={`${dugTotal.toFixed(0)} €`} color={dugTotal > 0 ? 'text-red-700' : 'text-gray-900'} />
         </div>
 
@@ -684,10 +681,10 @@ function MaterijaliView({
         ) : (
           <div className="space-y-1.5">
             {usedMaterials.map((um) => (
-              <div key={um.id} className="flex items-center justify-between bg-purple-50 rounded-lg px-3 py-2.5">
-                <span className="text-sm text-purple-800 font-medium">{um.naziv}</span>
+              <div key={um.id} className="flex items-center justify-between bg-primary-50 rounded-lg px-3 py-2.5">
+                <span className="text-sm text-primary-800 font-medium">{um.naziv}</span>
                 <div className="flex items-center gap-3">
-                  <span className="text-sm font-semibold text-purple-900">{um.kolicina} {um.jedinica}</span>
+                  <span className="text-sm font-semibold text-primary-900">{um.kolicina} {um.jedinica}</span>
                   <button onClick={() => onRemove(um.id)} className="text-gray-400 hover:text-red-500 transition-colors">
                     <Trash2 size={14} />
                   </button>

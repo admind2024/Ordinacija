@@ -28,3 +28,4 @@ dist-ssr
 *.sw?
 supabase/.temp/
 .vercel
+.claude/

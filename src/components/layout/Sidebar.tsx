@@ -54,12 +54,15 @@ export default function Sidebar({ collapsed, setCollapsed }: SidebarProps) {
         ${collapsed ? 'w-16' : 'w-60'}`}
     >
       {/* Logo */}
-      <div className={`flex items-center justify-center h-16 border-b border-white/10 ${collapsed ? 'px-2' : 'px-4'}`}>
+      <div className={`flex items-center h-16 border-b border-white/10 ${collapsed ? 'justify-center px-2' : 'gap-3 px-4'}`}>
         <img
           src="https://pedgschrivtpbzcoqniu.supabase.co/storage/v1/object/public/Razno/MOA%20LOGO%201.png"
           alt="MOA"
-          className={`object-contain shrink-0 ${collapsed ? 'h-10' : 'h-12'}`}
+          className={`object-contain shrink-0 ${collapsed ? 'h-9' : 'h-11'}`}
         />
+        {!collapsed && (
+          <span className="font-semibold text-sm truncate">MOA</span>
+        )}
       </div>
 
       {/* Navigacija */}

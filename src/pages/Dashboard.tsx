@@ -482,56 +482,83 @@ export default function Dashboard() {
               </div>
             </div>
             <div className="divide-y divide-border max-h-[400px] overflow-y-auto">
-              {todayExams.map((exam) => (
-                <div key={exam.id} className="px-6 py-3 flex items-center gap-4">
-                  <div className="w-1 h-10 rounded-full bg-green-500 shrink-0" />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-gray-900">
-                      {exam.patient ? `${exam.patient.ime} ${exam.patient.prezime}` : '—'}
-                    </p>
-                    <p className="text-xs text-gray-500">
-                      {exam.doctor ? `${exam.doctor.titula || 'Dr'} ${exam.doctor.ime} ${exam.doctor.prezime}` : ''}
-                      {exam.appointmentServices && exam.appointmentServices.length > 0
-                        ? ` — ${exam.appointmentServices.map((s: any) => s.naziv).join(', ')}`
-                        : ''}
-                    </p>
-                  </div>
-                  {(exam.appointmentTotal || 0) > 0 && (
-                    <span className="text-sm font-bold text-green-700 bg-green-50 px-2 py-1 rounded shrink-0">
-                      {exam.appointmentTotal?.toFixed(2)} EUR
-                    </span>
-                  )}
-                  <div className="flex gap-1 shrink-0">
-                    <button
-                      onClick={() => setViewExam(exam)}
-                      className="p-2 text-gray-400 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors"
-                      title="Pogledaj nalaz"
-                    >
-                      <Eye size={16} />
-                    </button>
-                    <button
-                      onClick={() => handlePrintExam(exam)}
-                      className="p-2 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors"
-                      title="Stampaj nalaz"
-                    >
-                      <Printer size={16} />
-                    </button>
-                    {fiscalData[exam.id]?.success ? (
-                      <span className="p-2 text-green-600 bg-green-50 rounded-lg" title={`FIC: ${fiscalData[exam.id]?.fic}`}>
-                        <CheckCircle size={16} />
-                      </span>
-                    ) : (
-                      <button
-                        className="p-2 rounded-lg transition-colors text-gray-400 hover:text-purple-600 hover:bg-purple-50"
-                        title="Naplata"
-                        onClick={() => openPayment(exam)}
-                      >
-                        <Banknote size={16} />
-                      </button>
+              {todayExams.map((exam) => {
+                const isPaid = !!fiscalData[exam.id]?.success;
+                const hasAmount = (exam.appointmentTotal || 0) > 0;
+                const needsPayment = hasAmount && !isPaid;
+
+                return (
+                  <div
+                    key={exam.id}
+                    className={`px-6 py-3 flex items-center gap-4 transition-colors ${
+                      needsPayment ? 'bg-amber-50/60' : ''
+                    }`}
+                  >
+                    {/* Status bar */}
+                    <div className={`w-1 h-10 rounded-full shrink-0 ${isPaid ? 'bg-green-500' : needsPayment ? 'bg-amber-400 animate-pulse' : 'bg-green-500'}`} />
+
+                    {/* Info */}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-900">
+                        {exam.patient ? `${exam.patient.ime} ${exam.patient.prezime}` : '—'}
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        {exam.doctor ? `${exam.doctor.titula || 'Dr'} ${exam.doctor.ime} ${exam.doctor.prezime}` : ''}
+                        {exam.appointmentServices && exam.appointmentServices.length > 0
+                          ? ` — ${exam.appointmentServices.map((s: any) => s.naziv).join(', ')}`
+                          : ''}
+                      </p>
+                    </div>
+
+                    {/* Iznos + status naplate */}
+                    {hasAmount && (
+                      <div className="shrink-0 text-right">
+                        <span className={`text-sm font-bold px-2 py-1 rounded ${
+                          isPaid
+                            ? 'text-green-700 bg-green-50'
+                            : 'text-amber-800 bg-amber-100'
+                        }`}>
+                          {exam.appointmentTotal?.toFixed(2)} €
+                        </span>
+                        {!isPaid && (
+                          <p className="text-[9px] text-amber-600 font-semibold mt-0.5 uppercase tracking-wider">Nije naplaćeno</p>
+                        )}
+                      </div>
                     )}
+
+                    {/* Akcije */}
+                    <div className="flex gap-1 shrink-0">
+                      <button
+                        onClick={() => setViewExam(exam)}
+                        className="p-2 text-gray-400 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors"
+                        title="Pogledaj nalaz"
+                      >
+                        <Eye size={16} />
+                      </button>
+                      <button
+                        onClick={() => handlePrintExam(exam)}
+                        className="p-2 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                        title="Stampaj nalaz"
+                      >
+                        <Printer size={16} />
+                      </button>
+                      {isPaid ? (
+                        <span className="p-2 text-green-600 bg-green-50 rounded-lg" title={`FIC: ${fiscalData[exam.id]?.fic}`}>
+                          <CheckCircle size={16} />
+                        </span>
+                      ) : (
+                        <button
+                          className="p-2 rounded-lg transition-colors text-amber-600 bg-amber-50 hover:bg-amber-100 animate-pulse"
+                          title="Naplata — nije realizovano!"
+                          onClick={() => openPayment(exam)}
+                        >
+                          <Banknote size={16} />
+                        </button>
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </Card>
         </div>

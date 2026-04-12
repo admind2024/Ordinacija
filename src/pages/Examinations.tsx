@@ -265,9 +265,9 @@ function ExaminationsContent({ loggedDoctor }: { loggedDoctor: Doctor }) {
     if (finish && selectedAppointment) {
       updateAppointmentStatus(selectedAppointment.id, 'zavrsen');
 
-      // Automatski posalji anketu pacijentu preko SMS-a (ako postoji aktivna anketa i pacijent ima telefon)
-      if (patient?.telefon && patient.telefon !== '000') {
-        (async () => {
+      // Automatski posalji anketu pacijentu SMS-om nakon 2 sekunde
+      if (patient?.telefon && patient.telefon !== '000' && patient.telefon.length >= 6) {
+        setTimeout(async () => {
           try {
             const { data: activeSurvey } = await supabase
               .from('surveys')
@@ -278,21 +278,19 @@ function ExaminationsContent({ loggedDoctor }: { loggedDoctor: Doctor }) {
 
             if (activeSurvey) {
               const surveyLink = `${window.location.origin}/anketa/${activeSurvey.id}`;
-              const { getSmsConfig } = await import('../lib/smsService');
+              const { getSmsConfig, sendSms } = await import('../lib/smsService');
               const cfg = getSmsConfig();
               if (cfg.apiKey && cfg.senderName) {
-                const text = `Hvala na posjeti MOA klinici! Molimo ocijenite nas iskustvo (30 sek): ${surveyLink}`;
-                const { sendSms } = await import('../lib/smsService');
+                const text = `Hvala na posjeti MOA klinici! Molimo ocijenite vase iskustvo (30 sek): ${surveyLink}`;
                 await sendSms(patient.telefon, text);
 
-                // Log u notifications
                 await supabase.from('notifications').insert({
                   patient_id: patient.id,
                   appointment_id: selectedAppointment.id,
                   kanal: 'sms',
                   status: 'sent',
                   sadrzaj: text,
-                  tip: 'potvrda',
+                  tip: 'anketa',
                   patient_ime: `${patient.ime} ${patient.prezime}`,
                   patient_telefon: patient.telefon,
                   datum_slanja: new Date().toISOString(),
@@ -303,8 +301,19 @@ function ExaminationsContent({ loggedDoctor }: { loggedDoctor: Doctor }) {
           } catch (e) {
             console.error('Anketa SMS greska:', e);
           }
-        })();
+        }, 2000);
       }
+
+      // Zatvori karton i vrati na listu pacijenata nakon kratke pauze
+      setTimeout(() => {
+        setSelectedPatientId(null);
+        setSelectedAppointment(null);
+        setCurrentExam(null);
+        setPatient(null);
+        setPatientExams([]);
+        setPatientAppointments([]);
+        setUsedMaterials([]);
+      }, 800);
     }
 
     setSaving(false);

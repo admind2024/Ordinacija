@@ -55,6 +55,7 @@ export interface Doctor {
   aktivan: boolean;
   biografija?: string;
   pin?: string;
+  slika?: string;
 }
 
 // Pacijent

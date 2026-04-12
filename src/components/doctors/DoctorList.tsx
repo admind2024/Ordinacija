@@ -50,12 +50,20 @@ export default function DoctorList({ onSelect }: DoctorListProps) {
                 className="w-full text-left px-5 py-4 flex items-center gap-4 hover:bg-gray-50 transition-colors group"
               >
                 {/* Avatar */}
-                <div
-                  className="w-11 h-11 rounded-full flex items-center justify-center text-white font-bold text-sm shrink-0"
-                  style={{ backgroundColor: doctor.boja }}
-                >
-                  {doctor.ime.charAt(0)}{doctor.prezime.charAt(0)}
-                </div>
+                {doctor.slika ? (
+                  <img
+                    src={doctor.slika}
+                    alt={`${doctor.ime} ${doctor.prezime}`}
+                    className="w-11 h-11 rounded-full object-cover shrink-0"
+                  />
+                ) : (
+                  <div
+                    className="w-11 h-11 rounded-full flex items-center justify-center text-white font-bold text-sm shrink-0"
+                    style={{ backgroundColor: doctor.boja }}
+                  >
+                    {doctor.ime.charAt(0)}{doctor.prezime.charAt(0)}
+                  </div>
+                )}
 
                 {/* Info */}
                 <div className="flex-1 min-w-0">

@@ -50,12 +50,16 @@ export default function Doctors() {
               <ArrowLeft size={20} />
             </button>
             <div className="flex items-center gap-4">
-              <div
-                className="w-14 h-14 rounded-full flex items-center justify-center text-white font-bold text-xl"
-                style={{ backgroundColor: selected.boja }}
-              >
-                {selected.ime.charAt(0)}{selected.prezime.charAt(0)}
-              </div>
+              {selected.slika ? (
+                <img src={selected.slika} alt={`${selected.ime} ${selected.prezime}`} className="w-14 h-14 rounded-full object-cover" />
+              ) : (
+                <div
+                  className="w-14 h-14 rounded-full flex items-center justify-center text-white font-bold text-xl"
+                  style={{ backgroundColor: selected.boja }}
+                >
+                  {selected.ime.charAt(0)}{selected.prezime.charAt(0)}
+                </div>
+              )}
               <div>
                 <h2 className="text-2xl font-bold text-gray-900">
                   {selected.titula} {selected.ime} {selected.prezime}

@@ -42,7 +42,7 @@ export default defineConfig({
         // NE cache-uj Supabase API/auth/storage/realtime — potpuno propusti kroz mrezu.
         // Prethodni NetworkFirst bez timeout-a je blokirao ucitavanje kad je mreza spora
         // i bacao `no-response` kad je cache bio prazan ili je URL bio u query param-ima.
-        navigateFallbackDenylist: [/^\/api\//, /supabase\.co/],
+        navigateFallbackDenylist: [/^\/api\//, /supabase\.co/, /^\/anketa\//],
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/.*\.supabase\.co\/.*/i,

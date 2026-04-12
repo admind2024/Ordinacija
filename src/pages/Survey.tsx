@@ -153,6 +153,10 @@ export default function SurveyPage() {
     navigator.clipboard.writeText(getSurveyLink(survey));
   }
 
+  function openLink(survey: Survey) {
+    window.open(getSurveyLink(survey), '_blank');
+  }
+
   const filteredResponses = useMemo(() => {
     if (selectedSurveyId === 'all') return responses;
     return responses.filter((r) => r.survey_id === selectedSurveyId);
@@ -253,6 +257,9 @@ export default function SurveyPage() {
                   <div className="mt-auto flex items-center gap-2 pt-3 border-t border-border flex-wrap">
                     <button onClick={() => setPreviewSurvey(s)} className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors">
                       <Eye size={12} /> Pregled
+                    </button>
+                    <button onClick={() => openLink(s)} className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium rounded-lg border border-primary-200 text-primary-700 bg-primary-50 hover:bg-primary-100 transition-colors">
+                      <Eye size={12} /> Otvori
                     </button>
                     <button onClick={() => copyLink(s)} className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors">
                       <Copy size={12} /> Link

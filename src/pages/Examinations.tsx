@@ -265,9 +265,9 @@ function ExaminationsContent({ loggedDoctor }: { loggedDoctor: Doctor }) {
     if (finish && selectedAppointment) {
       updateAppointmentStatus(selectedAppointment.id, 'zavrsen');
 
-      // Automatski posalji anketu pacijentu SMS-om nakon 2 sekunde
+      // Zakazi anketa SMS za 30 minuta — upisuje u queue, edge function salje
       if (patient?.telefon && patient.telefon !== '000' && patient.telefon.length >= 6) {
-        setTimeout(async () => {
+        (async () => {
           try {
             const { data: activeSurvey } = await supabase
               .from('surveys')
@@ -277,31 +277,21 @@ function ExaminationsContent({ loggedDoctor }: { loggedDoctor: Doctor }) {
               .maybeSingle();
 
             if (activeSurvey) {
-              const surveyLink = `${window.location.origin}/anketa/${activeSurvey.id}`;
-              const { getSmsConfig, sendSms } = await import('../lib/smsService');
-              const cfg = getSmsConfig();
-              if (cfg.apiKey && cfg.senderName) {
-                const text = `Hvala na posjeti MOA klinici! Molimo ocijenite vase iskustvo (30 sek): ${surveyLink}`;
-                await sendSms(patient.telefon, text);
-
-                await supabase.from('notifications').insert({
-                  patient_id: patient.id,
-                  appointment_id: selectedAppointment.id,
-                  kanal: 'sms',
-                  status: 'sent',
-                  sadrzaj: text,
-                  tip: 'anketa',
-                  patient_ime: `${patient.ime} ${patient.prezime}`,
-                  patient_telefon: patient.telefon,
-                  datum_slanja: new Date().toISOString(),
-                  channel_used: 'sms',
-                });
-              }
+              const scheduledAt = new Date(Date.now() + 30 * 60 * 1000).toISOString(); // 30 min od sad
+              await supabase.from('survey_sms_queue').insert({
+                patient_id: patient.id,
+                appointment_id: selectedAppointment.id,
+                survey_id: activeSurvey.id,
+                patient_ime: `${patient.ime} ${patient.prezime}`,
+                patient_telefon: patient.telefon,
+                scheduled_at: scheduledAt,
+                status: 'pending',
+              });
             }
           } catch (e) {
-            console.error('Anketa SMS greska:', e);
+            console.error('Anketa queue greska:', e);
           }
-        }, 2000);
+        })();
       }
 
       // Zatvori karton i vrati na listu pacijenata nakon kratke pauze

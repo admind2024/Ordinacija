@@ -94,6 +94,12 @@ export default function Dashboard() {
       });
     supabase.from('establishments').select('*').limit(1).single()
       .then(({ data }) => { if (data) setEstablishment(data as Establishment); });
+
+    // Ucitaj koja appointments imaju uplate iz payments tabele
+    supabase.from('payments').select('appointment_id').then(({ data }) => {
+      const ids = new Set((data || []).map((p: any) => p.appointment_id).filter(Boolean));
+      setPaidAppointmentIds(ids);
+    });
   }, [patients, doctors]);
 
   function handlePrintExam(exam: ExamWithDetails) {
@@ -122,6 +128,8 @@ export default function Dashboard() {
   const [, setFiscalizing] = useState<string | null>(null);
   const [fiscalResult, setFiscalResult] = useState<{ id: string; result: FiscalResult } | null>(null);
   const [fiscalData, setFiscalData] = useState<Record<string, FiscalResult>>({});
+  // Appointment IDs koji imaju uplate u payments tabeli (iz baze, ne memorije)
+  const [paidAppointmentIds, setPaidAppointmentIds] = useState<Set<string>>(new Set());
 
   // Payment modal state
   const [payExam, setPayExam] = useState<ExamWithDetails | null>(null);
@@ -483,7 +491,7 @@ export default function Dashboard() {
             </div>
             <div className="divide-y divide-border max-h-[400px] overflow-y-auto">
               {todayExams.map((exam) => {
-                const isPaid = !!fiscalData[exam.id]?.success;
+                const isPaid = !!fiscalData[exam.id]?.success || (exam.appointment_id ? paidAppointmentIds.has(exam.appointment_id) : false);
                 const hasAmount = (exam.appointmentTotal || 0) > 0;
                 const needsPayment = hasAmount && !isPaid;
 

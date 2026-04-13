@@ -25,7 +25,7 @@ export default function AppointmentModal({
   defaultDate,
   defaultTime,
 }: AppointmentModalProps) {
-  const { createAppointment, updateAppointment, doctors, rooms, services, serviceCategories, materials } = useCalendar();
+  const { createAppointment, updateAppointment, doctors, rooms, services, materials } = useCalendar();
   const { patients } = usePatients();
   const isEdit = !!editAppointment;
 
@@ -95,13 +95,6 @@ export default function AppointmentModal({
   }, [patientSearch, patients]);
 
   const selectedPatient = patients.find((p) => p.id === selectedPatientId);
-
-  const groupedServices = useMemo(() => {
-    return serviceCategories.map((cat) => ({
-      ...cat,
-      services: services.filter((s) => s.kategorija_id === cat.id),
-    }));
-  }, [serviceCategories, services]);
 
   const filteredServiceResults = useMemo(() => {
     const q = serviceSearch.toLowerCase().trim();

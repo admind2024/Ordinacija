@@ -81,7 +81,7 @@ function CalendarContent() {
 
       {/* Modal za kreiranje/editovanje */}
       <AppointmentModal
-        key={editingAppointment?.id || 'new'}
+        key={editingAppointment?.id || `new-${defaultDate?.toISOString() ?? ''}-${defaultTime ?? ''}`}
         isOpen={modalOpen}
         onClose={() => {
           setModalOpen(false);

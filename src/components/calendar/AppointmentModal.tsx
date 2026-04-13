@@ -339,7 +339,7 @@ export default function AppointmentModal({
               className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
             />
             {showServiceList && (
-              <div className="absolute z-50 left-0 right-0 mt-1 bg-white border border-border rounded-lg shadow-lg max-h-52 overflow-y-auto">
+              <div className="absolute z-50 left-0 right-0 bottom-full mb-1 bg-white border border-border rounded-lg shadow-lg max-h-52 overflow-y-auto">
                 {filteredServiceResults.length > 0 ? (
                   filteredServiceResults.map((s) => (
                     <button

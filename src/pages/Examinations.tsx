@@ -60,7 +60,7 @@ function ExaminationsContent({ loggedDoctor }: { loggedDoctor: Doctor }) {
   const [saving, setSaving] = useState(false);
   const [usedMaterials, setUsedMaterials] = useState<UsedMaterial[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [showOnlyToday, setShowOnlyToday] = useState(false);
+  const [showOnlyToday, setShowOnlyToday] = useState(true);
   const [patientAppointments, setPatientAppointments] = useState<Appointment[]>([]);
 
   const today = new Date();

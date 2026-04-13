@@ -98,11 +98,10 @@ export default function AppointmentModal({
 
   const filteredServiceResults = useMemo(() => {
     const q = serviceSearch.toLowerCase().trim();
-    if (!q) return [];
     const already = new Set(selectedServices.map((s) => s.service_id));
     return services
-      .filter((s) => !already.has(s.id) && (s.naziv.toLowerCase().includes(q)))
-      .slice(0, 8);
+      .filter((s) => !already.has(s.id) && (!q || s.naziv.toLowerCase().includes(q)))
+      .slice(0, 20);
   }, [serviceSearch, services, selectedServices]);
 
   const ukupnaCijena = selectedServices.reduce((sum, s) => sum + s.ukupno, 0);
@@ -339,28 +338,27 @@ export default function AppointmentModal({
               placeholder="Pretraži uslugu..."
               className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
             />
-            {showServiceList && filteredServiceResults.length > 0 && (
+            {showServiceList && (
               <div className="absolute z-50 left-0 right-0 mt-1 bg-white border border-border rounded-lg shadow-lg max-h-52 overflow-y-auto">
-                {filteredServiceResults.map((s) => (
-                  <button
-                    key={s.id}
-                    type="button"
-                    onMouseDown={() => {
-                      addService(s.id);
-                      setServiceSearch('');
-                      setShowServiceList(false);
-                    }}
-                    className="w-full text-left px-3 py-2 text-sm hover:bg-primary-50 flex items-center justify-between gap-2"
-                  >
-                    <span className="font-medium text-gray-800">{s.naziv}</span>
-                    <span className="text-xs text-gray-400 shrink-0">{s.cijena} EUR · {s.trajanje} min</span>
-                  </button>
-                ))}
-              </div>
-            )}
-            {showServiceList && serviceSearch.length > 0 && filteredServiceResults.length === 0 && (
-              <div className="absolute z-50 left-0 right-0 mt-1 bg-white border border-border rounded-lg shadow-sm px-3 py-2 text-sm text-gray-400">
-                Nema rezultata
+                {filteredServiceResults.length > 0 ? (
+                  filteredServiceResults.map((s) => (
+                    <button
+                      key={s.id}
+                      type="button"
+                      onMouseDown={() => {
+                        addService(s.id);
+                        setServiceSearch('');
+                        setShowServiceList(false);
+                      }}
+                      className="w-full text-left px-3 py-2 text-sm hover:bg-primary-50 flex items-center justify-between gap-2"
+                    >
+                      <span className="font-medium text-gray-800">{s.naziv}</span>
+                      <span className="text-xs text-gray-400 shrink-0">{s.cijena} EUR · {s.trajanje} min</span>
+                    </button>
+                  ))
+                ) : (
+                  <p className="px-3 py-2 text-sm text-gray-400">Nema rezultata</p>
+                )}
               </div>
             )}
           </div>

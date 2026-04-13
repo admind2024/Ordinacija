@@ -27,9 +27,6 @@ function AppRoutes() {
 
   return (
     <Routes>
-      {/* Public route — anketa za pacijente (bez login-a) */}
-      <Route path="/anketa/:id" element={<SurveyPublic />} />
-
       <Route path="/login" element={user ? <Navigate to="/" replace /> : <Login />} />
 
       <Route
@@ -119,15 +116,24 @@ function AppRoutes() {
 export default function App() {
   return (
     <BrowserRouter>
-      <AuthProvider>
-        <CalendarProvider>
-          <PatientsProvider>
-            <BillingProvider>
-              <AppRoutes />
-            </BillingProvider>
-          </PatientsProvider>
-        </CalendarProvider>
-      </AuthProvider>
+      <Routes>
+        {/* Anketa je 100% javna — render prije bilo kakvih providera/auth */}
+        <Route path="/anketa/:id" element={<SurveyPublic />} />
+        <Route
+          path="*"
+          element={
+            <AuthProvider>
+              <CalendarProvider>
+                <PatientsProvider>
+                  <BillingProvider>
+                    <AppRoutes />
+                  </BillingProvider>
+                </PatientsProvider>
+              </CalendarProvider>
+            </AuthProvider>
+          }
+        />
+      </Routes>
     </BrowserRouter>
   );
 }

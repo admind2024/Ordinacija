@@ -60,6 +60,7 @@ function ExaminationsContent({ loggedDoctor }: { loggedDoctor: Doctor }) {
   const [saving, setSaving] = useState(false);
   const [usedMaterials, setUsedMaterials] = useState<UsedMaterial[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
+  const [showOnlyToday, setShowOnlyToday] = useState(false);
   const [patientAppointments, setPatientAppointments] = useState<Appointment[]>([]);
 
   const today = new Date();
@@ -158,6 +159,10 @@ function ExaminationsContent({ loggedDoctor }: { loggedDoctor: Doctor }) {
   const filteredPatients = useMemo(() => {
     let list = doctorPatients;
 
+    if (showOnlyToday) {
+      list = list.filter((p) => !!p.todayAppointment);
+    }
+
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase().trim();
       list = list.filter((p) =>
@@ -172,7 +177,7 @@ function ExaminationsContent({ loggedDoctor }: { loggedDoctor: Doctor }) {
       if (!a.todayAppointment && b.todayAppointment) return 1;
       return b.lastAppointment.localeCompare(a.lastAppointment);
     });
-  }, [doctorPatients, searchQuery]);
+  }, [doctorPatients, searchQuery, showOnlyToday]);
 
   const todayCount = doctorPatients.filter((p) => p.todayAppointment).length;
 
@@ -467,6 +472,20 @@ function ExaminationsContent({ loggedDoctor }: { loggedDoctor: Doctor }) {
         <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wider">
           Svi moji pacijenti ({filteredPatients.length})
         </h3>
+        <div className="ml-auto flex items-center gap-1 bg-gray-100 rounded-lg p-0.5">
+          <button
+            onClick={() => setShowOnlyToday(false)}
+            className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${!showOnlyToday ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+          >
+            Svi
+          </button>
+          <button
+            onClick={() => setShowOnlyToday(true)}
+            className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${showOnlyToday ? 'bg-white text-primary-700 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+          >
+            Samo danas
+          </button>
+        </div>
       </div>
 
       {filteredPatients.length === 0 ? (
@@ -513,7 +532,7 @@ function ExaminationsContent({ loggedDoctor }: { loggedDoctor: Doctor }) {
                     <span className="text-gray-300">—</span>
                   )}
                   <span className="text-gray-400 shrink-0 ml-2">
-                    {dp.appointmentCount} {dp.appointmentCount === 1 ? 'termin' : 'termina'}
+                    uk. {dp.appointmentCount} {dp.appointmentCount === 1 ? 'termin' : 'termina'}
                   </span>
                 </div>
               </button>

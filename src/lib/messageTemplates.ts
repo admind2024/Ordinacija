@@ -6,7 +6,7 @@ import { supabase } from './supabase';
  * Omogucava korisniku da iz Settings menjanja Sms i Viber tekstove za svaki tip poruke.
  */
 
-export type MessageTip = 'potvrda' | 'podsjetnik' | 'otkazivanje' | 'potvrdjivanje';
+export type MessageTip = 'potvrda' | 'podsjetnik' | 'otkazivanje' | 'potvrdjivanje' | 'anketa';
 export type MessageKanal = 'sms' | 'viber';
 
 export interface TemplateSet {
@@ -14,6 +14,7 @@ export interface TemplateSet {
   podsjetnik: string;
   otkazivanje: string;
   potvrdjivanje: string;
+  anketa: string;
 }
 
 export interface MessageTemplates {
@@ -27,12 +28,14 @@ export const DEFAULT_TEMPLATES: MessageTemplates = {
     podsjetnik: 'Podsjetnik: {ime_prezime}, imate termin {datum} u {vrijeme}h. Molimo potvrdite dolazak.',
     otkazivanje: 'Postovani/a {ime_prezime}, vas termin zakazan za {datum} u {vrijeme}h je otkazan. Molimo kontaktirajte nas za novi termin.',
     potvrdjivanje: 'Postovani/a {ime_prezime}, vas termin za {datum} u {vrijeme}h je potvrdjen. Ljekar: {doktor}.',
+    anketa: 'Hvala na posjeti MOA klinici! Molimo ocijenite vase iskustvo (30 sek): {link}',
   },
   viber: {
     potvrda: 'Postovani/a {ime_prezime}, vas termin je zakazan za {datum} u {vrijeme}h. Ljekar: {doktor}. Vidimo se u MOA klinici!',
     podsjetnik: 'Postovani/a {ime_prezime}, podsjecamo vas na vas termin {datum} u {vrijeme}h. Ljekar: {doktor}. Molimo potvrdite dolazak.',
     otkazivanje: 'Postovani/a {ime_prezime}, vas termin zakazan za {datum} u {vrijeme}h je otkazan. Molimo kontaktirajte nas za novi termin.',
     potvrdjivanje: 'Postovani/a {ime_prezime}, vas termin za {datum} u {vrijeme}h je potvrdjen. Ljekar: {doktor}.',
+    anketa: 'Hvala na posjeti MOA klinici! Molimo ocijenite vase iskustvo (30 sek): {link}',
   },
 };
 
@@ -107,6 +110,7 @@ export interface RenderParams {
   prezime?: string;
   datum?: string; // ISO timestamp
   doctor?: string;
+  link?: string;
 }
 
 export function renderTemplate(template: string, params: RenderParams): string {
@@ -130,7 +134,8 @@ export function renderTemplate(template: string, params: RenderParams): string {
     .replaceAll('{prezime}', prezime)
     .replaceAll('{datum}', d)
     .replaceAll('{vrijeme}', v)
-    .replaceAll('{doktor}', params.doctor ?? '');
+    .replaceAll('{doktor}', params.doctor ?? '')
+    .replaceAll('{link}', params.link ?? '');
 }
 
 export function getMessage(

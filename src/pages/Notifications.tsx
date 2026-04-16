@@ -33,6 +33,7 @@ const tipLabels: Record<string, string> = {
   podsjetnik: 'Podsjetnik',
   otkazivanje: 'Otkazivanje',
   potvrdjivanje: 'Potvrda statusa',
+  anketa: 'Anketa',
 };
 
 export default function Notifications() {
@@ -809,6 +810,7 @@ export default function Notifications() {
                     <option value="podsjetnik">Podsjetnik</option>
                     <option value="otkazivanje">Otkazivanje</option>
                     <option value="potvrdjivanje">Potvrda statusa</option>
+                    <option value="anketa">Anketa</option>
                   </select>
                   <button
                     onClick={handleRefreshIzvjestaj}

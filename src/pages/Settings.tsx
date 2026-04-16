@@ -357,7 +357,7 @@ export default function Settings() {
                 <div>
                   <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider">Sabloni poruka</h3>
                   <p className="text-xs text-gray-400 mt-1">
-                    Placeholder-i: <code>{'{ime}'}</code>, <code>{'{prezime}'}</code>, <code>{'{ime_prezime}'}</code>, <code>{'{datum}'}</code>, <code>{'{vrijeme}'}</code>, <code>{'{doktor}'}</code>
+                    Placeholder-i: <code>{'{ime}'}</code>, <code>{'{prezime}'}</code>, <code>{'{ime_prezime}'}</code>, <code>{'{datum}'}</code>, <code>{'{vrijeme}'}</code>, <code>{'{doktor}'}</code>, <code>{'{link}'}</code> (samo za anketu)
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
@@ -380,12 +380,13 @@ export default function Settings() {
               </div>
 
               <div className="space-y-5">
-                {(['potvrda', 'podsjetnik', 'otkazivanje', 'potvrdjivanje'] as MessageTip[]).map((tip) => {
+                {(['potvrda', 'podsjetnik', 'otkazivanje', 'potvrdjivanje', 'anketa'] as MessageTip[]).map((tip) => {
                   const labels: Record<MessageTip, string> = {
                     potvrda: 'Potvrda termina',
                     podsjetnik: 'Podsjetnik',
                     otkazivanje: 'Otkazivanje termina',
                     potvrdjivanje: 'Potvrda statusa',
+                    anketa: 'Anketa nakon posjete',
                   };
                   const value = templates[activeTemplateKanal][tip];
                   const isDefault = value === DEFAULT_TEMPLATES[activeTemplateKanal][tip];

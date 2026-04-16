@@ -44,7 +44,11 @@ Deno.serve(async (req) => {
     }
 
     const DEFAULT_SMS_TEMPLATE = 'Hvala na posjeti MOA klinici! Molimo ocijenite vase iskustvo (30 sek): {link}';
-    const smsTemplate: string = settings?.message_templates?.survey_sms || DEFAULT_SMS_TEMPLATE;
+    // Prvo nova lokacija (sms.anketa iz Podesavanja/Sabloni), pa fallback na stari survey_sms
+    const smsTemplate: string =
+      settings?.message_templates?.sms?.anketa
+      || settings?.message_templates?.survey_sms
+      || DEFAULT_SMS_TEMPLATE;
 
     // 2. Pokupi pending redove ciji je scheduled_at prosao
     const { data: queue } = await supabase
@@ -71,10 +75,12 @@ Deno.serve(async (req) => {
         continue;
       }
 
-      // Generiši link — koristimo SUPABASE_URL kao proxy za origin (edge function nema window.location)
-      // Ali zapravo treba produkcijski URL — dohvati iz env ili hardcode
+      // Generiši link sa jednokratnim tokenom (zakljucava se nakon submita)
       const appUrl = Deno.env.get('APP_URL') || 'https://ordinacija-rademilosevic87-3335s-projects.vercel.app';
-      const surveyLink = `${appUrl}/anketa/${item.survey_id}`;
+      // item.token postoji od migracije 20260416_survey_token.sql (auto-gen UUID),
+      // fallback na survey_id za stare redove bez tokena
+      const linkParam = item.token || item.survey_id;
+      const surveyLink = `${appUrl}/anketa/${linkParam}`;
       const text = stripDiacritics(smsTemplate.replace('{link}', surveyLink));
 
       try {

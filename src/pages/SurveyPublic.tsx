@@ -9,8 +9,11 @@ import { supabase } from '../lib/supabase';
 
 export default function SurveyPublic() {
   const { id } = useParams<{ id: string }>();
-  const [exists, setExists] = useState<boolean | null>(null);
+  // exists: null = loading, true = OK za prikaz, false = nije dostupna, 'used' = token potrosen
+  const [exists, setExists] = useState<boolean | null | 'used'>(null);
   const [surveyId, setSurveyId] = useState('');
+  // Queue token row id (ako je otvoreno preko jednokratnog linka)
+  const [queueRowId, setQueueRowId] = useState<string | null>(null);
 
   // Answer state
   const [starsQ1, setStarsQ1] = useState(0);
@@ -30,18 +33,52 @@ export default function SurveyPublic() {
 
   useEffect(() => {
     if (!id) { setExists(false); return; }
-    supabase
-      .from('surveys')
-      .select('id, aktivan')
-      .eq('id', id)
-      .maybeSingle()
-      .then(({ data }) => {
-        if (data?.aktivan) { setExists(true); setSurveyId(data.id); }
-        else setExists(false);
-      });
+    (async () => {
+      // 1) Probaj kao jednokratan token iz survey_sms_queue
+      const { data: queueRow } = await supabase
+        .from('survey_sms_queue')
+        .select('id, survey_id, used_at')
+        .eq('token', id)
+        .maybeSingle();
+
+      if (queueRow) {
+        // Token pronadjen — provjeri da li je vec iskoristen
+        if (queueRow.used_at) {
+          setExists('used');
+          return;
+        }
+        // Provjeri da je anketa jos aktivna
+        const { data: sv } = await supabase
+          .from('surveys')
+          .select('id, aktivan')
+          .eq('id', queueRow.survey_id)
+          .maybeSingle();
+        if (sv?.aktivan) {
+          setExists(true);
+          setSurveyId(sv.id);
+          setQueueRowId(queueRow.id);
+        } else {
+          setExists(false);
+        }
+        return;
+      }
+
+      // 2) Fallback: tretiraj kao direktan survey_id (npr. "Kopiraj link" iz admin panela)
+      const { data: sv } = await supabase
+        .from('surveys')
+        .select('id, aktivan')
+        .eq('id', id)
+        .maybeSingle();
+      if (sv?.aktivan) {
+        setExists(true);
+        setSurveyId(sv.id);
+      } else {
+        setExists(false);
+      }
+    })();
   }, [id]);
 
-  // Provjeri da li je vec popunjena u ovom browseru
+  // Dodatna provjera u ovom browseru (za ne-tokenizirane linkove)
   const alreadyDone = typeof window !== 'undefined' && localStorage.getItem(`survey_done_${id}`) === 'true';
 
   async function handleSubmit() {
@@ -61,7 +98,15 @@ export default function SurveyPublic() {
       },
     });
 
-    // Oznaci kao popunjeno u localStorage
+    // Zakljucaj jednokratan token (ako je otvoren preko SMS linka)
+    if (queueRowId) {
+      await supabase
+        .from('survey_sms_queue')
+        .update({ used_at: new Date().toISOString() })
+        .eq('id', queueRowId);
+    }
+
+    // Oznaci kao popunjeno i u localStorage (dodatna zastita)
     localStorage.setItem(`survey_done_${id}`, 'true');
 
     setSubmitted(true);
@@ -74,8 +119,8 @@ export default function SurveyPublic() {
     return <Body><p style={S.loading}>Ucitavanje...</p></Body>;
   }
 
-  // ── Already submitted ──
-  if (alreadyDone) {
+  // ── Token potrosen (server-side) ili vec popunjeno u ovom browseru ──
+  if (exists === 'used' || alreadyDone) {
     return (
       <Body>
         <Header />
@@ -95,7 +140,7 @@ export default function SurveyPublic() {
   }
 
   // ── Not found ──
-  if (!exists) {
+  if (exists === false) {
     return (
       <Body>
         <div style={{ textAlign: 'center', padding: '60px 0' }}>

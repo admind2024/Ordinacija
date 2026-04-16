@@ -3,7 +3,7 @@ import { addDays, addWeeks, addMonths, isWithinInterval, parseISO } from 'date-f
 import type { Appointment, AppointmentStatus, Doctor, Room, Service, ServiceCategory, Material } from '../types';
 import { supabase } from '../lib/supabase';
 import { isSmsConfigured, sendSms, stripDiacritics } from '../lib/smsService';
-import { smsPotvrda } from '../lib/smsTemplates';
+import { getMessage, loadTemplatesFromDb } from '../lib/messageTemplates';
 
 export type CalendarView = 'day' | 'week' | 'month' | 'agenda';
 export type ColorSource = 'doctor' | 'status' | 'room';
@@ -16,7 +16,7 @@ export interface SmsLogEntry {
   status: 'sent' | 'failed';
   error?: string;
   datum: string;
-  tip: 'potvrda' | 'podsjetnik' | 'otkazivanje' | 'potvrdjivanje';
+  tip: 'potvrda' | 'podsjetnik' | 'otkazivanje' | 'potvrdjivanje' | 'anketa';
 }
 
 interface CalendarFilters {
@@ -166,6 +166,8 @@ export function CalendarProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     fetchData();
+    // Osvjezi SMS sablone iz DB-a da SMS potvrde koriste aktuelne template-e
+    loadTemplatesFromDb().catch(() => { /* fallback na localStorage/default */ });
   }, [fetchData]);
 
   const goToToday = useCallback(() => setSelectedDate(new Date()), []);
@@ -294,7 +296,7 @@ export function CalendarProvider({ children }: { children: ReactNode }) {
           const doctorName = doctor
             ? `${doctor.titula ?? ''} ${doctor.ime ?? ''} ${doctor.prezime ?? ''}`.trim()
             : undefined;
-          const rawText = smsPotvrda({ imeIPrezime, datum: aptData.pocetak, doctor: doctorName });
+          const rawText = getMessage('potvrda', 'sms', { imeIPrezime, datum: aptData.pocetak, doctor: doctorName });
           const text = stripDiacritics(rawText);
           const result = await sendSms(patientInfo.telefon, text);
 

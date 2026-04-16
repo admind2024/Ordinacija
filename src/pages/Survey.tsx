@@ -84,8 +84,8 @@ export default function SurveyPage() {
     if (!selectedSurveyId && surveyList.length > 0) {
       setSelectedSurveyId(surveyList[0].id);
     }
-    // Ucitaj SMS sablon ako postoji
-    const tmpl = settings?.message_templates?.survey_sms;
+    // Ucitaj SMS sablon — prvo nova lokacija sms.anketa, pa fallback na stari survey_sms
+    const tmpl = settings?.message_templates?.sms?.anketa || settings?.message_templates?.survey_sms;
     if (tmpl) setSmsTemplate(tmpl);
     setLoading(false);
   }
@@ -98,7 +98,14 @@ export default function SurveyPage() {
       .select('id, message_templates')
       .limit(1)
       .maybeSingle();
-    const templates = { ...(current?.message_templates || {}), survey_sms: smsTemplate };
+    // Pisi u obje lokacije: novu (sms.anketa / viber.anketa) i staru (survey_sms) za backward compat
+    const existing = current?.message_templates || {};
+    const templates = {
+      ...existing,
+      survey_sms: smsTemplate,
+      sms: { ...(existing.sms || {}), anketa: smsTemplate },
+      viber: { ...(existing.viber || {}), anketa: smsTemplate },
+    };
     if (current?.id) {
       await supabase.from('reminder_settings').update({ message_templates: templates }).eq('id', current.id);
     }

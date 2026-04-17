@@ -318,23 +318,23 @@ export default function Dashboard() {
   return (
     <div className="space-y-6">
       {/* ====== GREETING ====== */}
-      <div className="flex items-center justify-between flex-wrap gap-4">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-            {greeting} <GreetIcon size={24} className="text-accent-500" />
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <div className="min-w-0">
+          <h2 className="text-xl md:text-2xl font-bold text-gray-900 flex items-center gap-2">
+            {greeting} <GreetIcon size={22} className="text-accent-500" />
           </h2>
-          <p className="text-sm text-gray-500 mt-1">
+          <p className="text-xs md:text-sm text-gray-500 mt-0.5 md:mt-1">
             Pregled za {format(new Date(), 'EEEE, dd. MMMM yyyy.', { locale: sr })}
           </p>
         </div>
-        <div className="px-4 py-2 bg-primary-50 border border-primary-100 rounded-xl">
-          <p className="text-sm font-semibold text-primary-700">{format(new Date(), 'dd. MMMM', { locale: sr })}</p>
-          <p className="text-[10px] text-primary-500 uppercase tracking-wider">{format(new Date(), 'EEEE', { locale: sr })}</p>
+        <div className="px-3 md:px-4 py-1.5 md:py-2 bg-primary-50 border border-primary-100 rounded-xl shrink-0">
+          <p className="text-xs md:text-sm font-semibold text-primary-700">{format(new Date(), 'dd. MMMM', { locale: sr })}</p>
+          <p className="text-[9px] md:text-[10px] text-primary-500 uppercase tracking-wider">{format(new Date(), 'EEEE', { locale: sr })}</p>
         </div>
       </div>
 
       {/* ====== KPI KARTICE ====== */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
         <KpiCard icon={<CalendarDays size={22} />} label="Termini danas" value={todayAppointments.length} bg="bg-primary-50" iconColor="text-primary-600" />
         <KpiCard icon={<Users size={22} />} label="Pacijenata" value={todayUniquePatients} bg="bg-primary-50" iconColor="text-primary-600" />
         <KpiCard icon={<CreditCard size={22} />} label="Prihod danas" value={`${(todayRevenue || todayExamsTotal).toFixed(0)} €`} bg="bg-accent-50" iconColor="text-accent-600" />
@@ -345,7 +345,7 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Današnji termini sa timeline */}
         <Card padding={false}>
-          <div className="px-5 py-4 border-b border-border flex items-center justify-between">
+          <div className="px-4 md:px-5 py-3 md:py-4 border-b border-border flex items-center justify-between">
             <h3 className="text-sm font-semibold text-gray-700">Današnji termini</h3>
             <span className="text-xs text-gray-400">{todayAppointments.length} termina</span>
           </div>
@@ -403,7 +403,7 @@ export default function Dashboard() {
 
         {/* Mini kalendar + termini odabranog dana */}
         <Card padding={false}>
-          <div className="px-5 py-4 border-b border-border">
+          <div className="px-4 md:px-5 py-3 md:py-4 border-b border-border">
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-sm font-semibold text-gray-700">
                 {isSameDay(selectedCalDay, new Date())
@@ -473,14 +473,14 @@ export default function Dashboard() {
       {todayExams.length > 0 && (
         <div>
           <Card padding={false}>
-            <div className="px-6 py-4 border-b border-border flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <FileText size={16} className="text-green-600" />
-                <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider">Zavrseni pregledi danas</h3>
+            <div className="px-4 md:px-6 py-3 md:py-4 border-b border-border flex items-center justify-between flex-wrap gap-2">
+              <div className="flex items-center gap-2 min-w-0">
+                <FileText size={16} className="text-green-600 shrink-0" />
+                <h3 className="text-xs md:text-sm font-semibold text-gray-500 uppercase tracking-wider truncate">Zavrseni pregledi danas</h3>
               </div>
-              <div className="flex items-center gap-3">
-                <span className="text-sm font-semibold text-gray-900">{todayExamsTotal.toFixed(2)} EUR ukupno</span>
-                <span className="text-xs text-gray-400">{todayExams.length} pregleda</span>
+              <div className="flex items-center gap-2 md:gap-3 text-xs md:text-sm shrink-0">
+                <span className="font-semibold text-gray-900">{todayExamsTotal.toFixed(2)} EUR</span>
+                <span className="text-gray-400">{todayExams.length} pr.</span>
               </div>
             </div>
             <div className="divide-y divide-border max-h-[400px] overflow-y-auto">
@@ -492,69 +492,99 @@ export default function Dashboard() {
                 return (
                   <div
                     key={exam.id}
-                    className={`px-6 py-3 flex items-center gap-4 transition-colors ${
+                    className={`px-3 md:px-6 py-3 transition-colors ${
                       needsPayment ? 'bg-amber-50/60' : ''
                     }`}
                   >
-                    {/* Status bar */}
-                    <div className={`w-1 h-10 rounded-full shrink-0 ${isPaid ? 'bg-green-500' : needsPayment ? 'bg-amber-400 animate-pulse' : 'bg-green-500'}`} />
+                    <div className="flex items-start md:items-center gap-3">
+                      {/* Status bar */}
+                      <div className={`w-1 h-10 rounded-full shrink-0 ${isPaid ? 'bg-green-500' : needsPayment ? 'bg-amber-400 animate-pulse' : 'bg-green-500'}`} />
 
-                    {/* Info */}
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-gray-900">
-                        {exam.patient ? `${exam.patient.ime} ${exam.patient.prezime}` : '—'}
-                      </p>
-                      <p className="text-xs text-gray-500">
-                        {exam.doctor ? `${exam.doctor.titula || 'Dr'} ${exam.doctor.ime} ${exam.doctor.prezime}` : ''}
-                        {exam.appointmentServices && exam.appointmentServices.length > 0
-                          ? ` — ${exam.appointmentServices.map((s: any) => s.naziv).join(', ')}`
-                          : ''}
-                      </p>
-                    </div>
+                      {/* Info */}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-gray-900 truncate">
+                          {exam.patient ? `${exam.patient.ime} ${exam.patient.prezime}` : '—'}
+                        </p>
+                        <p className="text-[11px] md:text-xs text-gray-500 truncate">
+                          {exam.doctor ? `${exam.doctor.titula || 'Dr'} ${exam.doctor.ime} ${exam.doctor.prezime}` : ''}
+                          {exam.appointmentServices && exam.appointmentServices.length > 0
+                            ? ` — ${exam.appointmentServices.map((s: any) => s.naziv).join(', ')}`
+                            : ''}
+                        </p>
+                      </div>
 
-                    {/* Iznos + status naplate */}
-                    {hasAmount && (
-                      <div className="shrink-0 text-right">
-                        <span className={`text-sm font-bold px-2 py-1 rounded ${
-                          isPaid
-                            ? 'text-green-700 bg-green-50'
-                            : 'text-amber-800 bg-amber-100'
-                        }`}>
-                          {exam.appointmentTotal?.toFixed(2)} €
-                        </span>
-                        {!isPaid && (
-                          <p className="text-[9px] text-amber-600 font-semibold mt-0.5 uppercase tracking-wider">Nije naplaćeno</p>
+                      {/* Iznos — desktop inline desno; mobilno ostaje tu (kompaktnije) */}
+                      {hasAmount && (
+                        <div className="shrink-0 text-right">
+                          <span className={`text-xs md:text-sm font-bold px-2 py-1 rounded ${
+                            isPaid
+                              ? 'text-green-700 bg-green-50'
+                              : 'text-amber-800 bg-amber-100'
+                          }`}>
+                            {exam.appointmentTotal?.toFixed(2)} €
+                          </span>
+                          {!isPaid && (
+                            <p className="text-[9px] text-amber-600 font-semibold mt-0.5 uppercase tracking-wider">Nije naplaceno</p>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Akcije — desktop inline */}
+                      <div className="hidden md:flex gap-1 shrink-0">
+                        <button
+                          onClick={() => setViewExam(exam)}
+                          className="p-2 text-gray-400 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors"
+                          title="Pogledaj nalaz"
+                        >
+                          <Eye size={16} />
+                        </button>
+                        <button
+                          onClick={() => handlePrintExam(exam)}
+                          className="p-2 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                          title="Stampaj nalaz"
+                        >
+                          <Printer size={16} />
+                        </button>
+                        {isPaid ? (
+                          <span className="p-2 text-green-600 bg-green-50 rounded-lg" title={`FIC: ${fiscalData[exam.id]?.fic}`}>
+                            <CheckCircle size={16} />
+                          </span>
+                        ) : (
+                          <button
+                            className="p-2 rounded-lg transition-colors text-amber-600 bg-amber-50 hover:bg-amber-100 animate-pulse"
+                            title="Naplata — nije realizovano!"
+                            onClick={() => openPayment(exam)}
+                          >
+                            <Banknote size={16} />
+                          </button>
                         )}
                       </div>
-                    )}
+                    </div>
 
-                    {/* Akcije */}
-                    <div className="flex gap-1 shrink-0">
+                    {/* Akcije — mobile: puno-sirina dugmad ispod (tap-friendly) */}
+                    <div className="md:hidden flex gap-2 mt-3 pl-4">
                       <button
                         onClick={() => setViewExam(exam)}
-                        className="p-2 text-gray-400 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors"
-                        title="Pogledaj nalaz"
+                        className="flex-1 py-2 text-xs font-medium text-primary-700 bg-primary-50 hover:bg-primary-100 rounded-lg flex items-center justify-center gap-1.5 transition-colors"
                       >
-                        <Eye size={16} />
+                        <Eye size={14} /> Nalaz
                       </button>
                       <button
                         onClick={() => handlePrintExam(exam)}
-                        className="p-2 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors"
-                        title="Stampaj nalaz"
+                        className="flex-1 py-2 text-xs font-medium text-green-700 bg-green-50 hover:bg-green-100 rounded-lg flex items-center justify-center gap-1.5 transition-colors"
                       >
-                        <Printer size={16} />
+                        <Printer size={14} /> Stampa
                       </button>
                       {isPaid ? (
-                        <span className="p-2 text-green-600 bg-green-50 rounded-lg" title={`FIC: ${fiscalData[exam.id]?.fic}`}>
-                          <CheckCircle size={16} />
+                        <span className="flex-1 py-2 text-xs font-medium text-green-700 bg-green-100 rounded-lg flex items-center justify-center gap-1.5">
+                          <CheckCircle size={14} /> Placeno
                         </span>
                       ) : (
                         <button
-                          className="p-2 rounded-lg transition-colors text-amber-600 bg-amber-50 hover:bg-amber-100 animate-pulse"
-                          title="Naplata — nije realizovano!"
                           onClick={() => openPayment(exam)}
+                          className="flex-1 py-2 text-xs font-semibold text-white bg-amber-500 hover:bg-amber-600 rounded-lg flex items-center justify-center gap-1.5 transition-colors"
                         >
-                          <Banknote size={16} />
+                          <Banknote size={14} /> Naplati
                         </button>
                       )}
                     </div>
@@ -886,13 +916,13 @@ function KpiCard({ icon, label, value, bg, iconColor }: {
   icon: React.ReactNode; label: string; value: string | number; bg: string; iconColor: string;
 }) {
   return (
-    <div className="bg-white border border-border rounded-xl px-5 py-4 flex items-center gap-4">
-      <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${bg} ${iconColor} shrink-0`}>
+    <div className="bg-white border border-border rounded-xl px-3 md:px-5 py-3 md:py-4 flex items-center gap-2 md:gap-4">
+      <div className={`w-10 h-10 md:w-12 md:h-12 rounded-xl flex items-center justify-center ${bg} ${iconColor} shrink-0`}>
         {icon}
       </div>
-      <div className="min-w-0">
-        <p className="text-2xl font-bold text-gray-900">{value}</p>
-        <p className="text-xs text-gray-500">{label}</p>
+      <div className="min-w-0 flex-1">
+        <p className="text-lg md:text-2xl font-bold text-gray-900 truncate">{value}</p>
+        <p className="text-[10px] md:text-xs text-gray-500 truncate">{label}</p>
       </div>
     </div>
   );

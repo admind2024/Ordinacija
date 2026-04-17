@@ -10,7 +10,7 @@ import Input from '../components/ui/Input';
 import { supabase } from '../lib/supabase';
 import {
   isOmniConfigured, estimateSmsParts, sendCampaign, estimateCampaignCost,
-  type ChannelMode,
+  loadOmniConfigFromDb, type ChannelMode,
 } from '../lib/omniService';
 
 // ============================================================
@@ -103,15 +103,27 @@ const statusLabels: Record<string, string> = {
 // ============================================================
 export default function Marketing() {
   const [tab, setTab] = useState<MarketingTab>('kampanje');
-  const omniOk = isOmniConfigured();
+  const [omniOk, setOmniOk] = useState(isOmniConfigured());
+  const [omniChecked, setOmniChecked] = useState(false);
+
+  // Provjeri Omni konfiguraciju u bazi (za slucaj da localStorage nije popunjen — novi uredjaj)
+  useEffect(() => {
+    (async () => {
+      if (!isOmniConfigured()) {
+        await loadOmniConfigFromDb();
+      }
+      setOmniOk(isOmniConfigured());
+      setOmniChecked(true);
+    })();
+  }, []);
 
   return (
     <div>
-      {!omniOk && (
+      {omniChecked && !omniOk && (
         <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-6 flex items-start gap-2">
           <Megaphone size={18} className="text-amber-600 mt-0.5" />
           <p className="text-sm text-amber-800">
-            Omni Messaging nije konfigurisan — Viber kampanje nece raditi. Podesi kredencijale u <strong>Notifikacije → Konfiguracija → Omni Messaging</strong>.
+            Omni Messaging nije konfigurisan — Viber kampanje nece raditi. Podesi kredencijale u <strong>Podesavanja → Viber (Omni)</strong>.
           </p>
         </div>
       )}

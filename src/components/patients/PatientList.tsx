@@ -42,33 +42,84 @@ export default function PatientList({ onSelect, onNew }: PatientListProps) {
   return (
     <div>
       {/* Toolbar */}
-      <div className="flex items-center justify-between gap-4 mb-4 flex-wrap">
-        <div className="relative flex-1 max-w-md">
+      <div className="flex items-center justify-between gap-2 md:gap-4 mb-4 flex-wrap">
+        <div className="relative flex-1 min-w-0 md:max-w-md">
           <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
           <input
             type="text"
-            placeholder="Pretrazite po imenu, telefonu, emailu..."
+            placeholder="Pretrazi..."
             value={searchQuery}
             onChange={(e) => {
               setSearchQuery(e.target.value);
               setPage(0);
             }}
-            className="w-full pl-10 pr-4 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 bg-surface"
+            className="w-full pl-10 pr-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 bg-surface"
           />
         </div>
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-gray-500">
+        <div className="flex items-center gap-2 shrink-0">
+          <span className="hidden md:inline text-sm text-gray-500">
             {filteredPatients.length} pacijenata
           </span>
           <Button size="sm" onClick={onNew}>
             <Plus size={16} />
-            Novi pacijent
+            <span className="hidden sm:inline">Novi pacijent</span>
+            <span className="sm:hidden">Novi</span>
           </Button>
         </div>
       </div>
 
-      {/* Tabela */}
-      <div className="bg-surface border border-border rounded-xl overflow-hidden">
+      <p className="md:hidden text-xs text-gray-500 mb-2">{filteredPatients.length} pacijenata</p>
+
+      {/* ====== MOBILE: card-rows ====== */}
+      <div className="md:hidden space-y-2">
+        {pagePatients.map((patient) => {
+          const dug = debtsByPatient.get(patient.id) || 0;
+          const initials = `${patient.ime?.[0] || ''}${patient.prezime?.[0] || ''}`.toUpperCase();
+          return (
+            <button
+              key={patient.id}
+              onClick={() => onSelect(patient)}
+              className="w-full text-left bg-surface border border-border rounded-xl p-3 flex items-center gap-3 active:bg-primary-50 transition-colors"
+            >
+              <div className="w-10 h-10 rounded-full bg-primary-100 text-primary-700 flex items-center justify-center text-sm font-semibold shrink-0">
+                {initials || '?'}
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <p className="font-medium text-sm text-gray-900 truncate">
+                    {patient.ime} {patient.prezime}
+                  </p>
+                  {dug > 0 && (
+                    <span className="shrink-0 px-1.5 py-0.5 rounded-full bg-red-50 text-red-700 font-semibold text-[10px]">
+                      {dug.toFixed(0)}€
+                    </span>
+                  )}
+                </div>
+                <p className="text-xs text-gray-500 font-mono truncate">{patient.telefon || '—'}</p>
+                {patient.tagovi.length > 0 && (
+                  <div className="flex gap-1 flex-wrap mt-1">
+                    {patient.tagovi.slice(0, 3).map((tag) => (
+                      <span
+                        key={tag}
+                        className={`px-1.5 py-0.5 rounded-full text-[10px] font-medium ${tagColors[tag] || 'bg-gray-100 text-gray-600'}`}
+                      >
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <ChevronRight size={18} className="text-gray-300 shrink-0" />
+            </button>
+          );
+        })}
+        {pagePatients.length === 0 && (
+          <p className="text-center py-8 text-sm text-gray-400">Nema pacijenata</p>
+        )}
+      </div>
+
+      {/* ====== DESKTOP: tabela ====== */}
+      <div className="hidden md:block bg-surface border border-border rounded-xl overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
@@ -156,42 +207,37 @@ export default function PatientList({ onSelect, onNew }: PatientListProps) {
           </table>
         </div>
 
-        {/* Paginacija */}
-        {totalPages > 1 && (
-          <div className="flex items-center justify-between px-4 py-3 border-t border-border bg-gray-50">
-            <span className="text-xs text-gray-500">
-              Prikazano {page * PAGE_SIZE + 1}-{Math.min((page + 1) * PAGE_SIZE, filteredPatients.length)} od {filteredPatients.length}
-            </span>
-            <div className="flex items-center gap-1">
-              <button
-                onClick={() => setPage((p) => Math.max(0, p - 1))}
-                disabled={page === 0}
-                className="p-1.5 text-gray-500 hover:bg-gray-200 rounded disabled:opacity-30"
-              >
-                <ChevronLeft size={16} />
-              </button>
-              {Array.from({ length: totalPages }, (_, i) => (
-                <button
-                  key={i}
-                  onClick={() => setPage(i)}
-                  className={`w-8 h-8 text-xs rounded ${
-                    page === i ? 'bg-primary-600 text-white' : 'text-gray-600 hover:bg-gray-200'
-                  }`}
-                >
-                  {i + 1}
-                </button>
-              ))}
-              <button
-                onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
-                disabled={page === totalPages - 1}
-                className="p-1.5 text-gray-500 hover:bg-gray-200 rounded disabled:opacity-30"
-              >
-                <ChevronRight size={16} />
-              </button>
-            </div>
-          </div>
-        )}
       </div>
+
+      {/* Paginacija — unified mobile + desktop */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between mt-4 px-3 md:px-4 py-2 md:py-3 border border-border rounded-xl bg-gray-50">
+          <span className="text-[11px] md:text-xs text-gray-500">
+            {page * PAGE_SIZE + 1}-{Math.min((page + 1) * PAGE_SIZE, filteredPatients.length)} / {filteredPatients.length}
+          </span>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => setPage((p) => Math.max(0, p - 1))}
+              disabled={page === 0}
+              className="p-2 text-gray-500 hover:bg-gray-200 rounded disabled:opacity-30"
+              aria-label="Prethodna"
+            >
+              <ChevronLeft size={16} />
+            </button>
+            <span className="text-xs font-medium text-gray-700 px-2 tabular-nums">
+              {page + 1} / {totalPages}
+            </span>
+            <button
+              onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
+              disabled={page === totalPages - 1}
+              className="p-2 text-gray-500 hover:bg-gray-200 rounded disabled:opacity-30"
+              aria-label="Sljedeca"
+            >
+              <ChevronRight size={16} />
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

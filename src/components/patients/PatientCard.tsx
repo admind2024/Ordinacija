@@ -107,30 +107,31 @@ export default function PatientCard({ patient, appointments, onBack, onEdit, onD
   const initials = `${patient.ime?.[0] || ''}${patient.prezime?.[0] || ''}`.toUpperCase();
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 md:space-y-6">
       {/* Hero header */}
-      <div className="bg-gradient-to-br from-primary-600 to-primary-700 rounded-2xl p-6 text-white relative overflow-hidden">
-        <div className="absolute top-4 left-4">
-          <button onClick={onBack} className="p-2 text-white/70 hover:text-white hover:bg-white/10 rounded-lg transition-colors">
+      <div className="bg-gradient-to-br from-primary-600 to-primary-700 rounded-2xl p-4 md:p-6 text-white relative overflow-hidden">
+        {/* Top bar: back + actions u jednom redu */}
+        <div className="flex items-center justify-between mb-3 md:mb-0">
+          <button onClick={onBack} className="p-2 -ml-2 text-white/70 hover:text-white hover:bg-white/10 rounded-lg transition-colors">
             <ArrowLeft size={20} />
           </button>
-        </div>
-        <div className="absolute top-4 right-4 flex gap-2">
-          <Button variant="secondary" size="sm" onClick={onEdit}>
-            <Edit size={14} /> Izmijeni
-          </Button>
-          <Button variant="danger" size="sm" onClick={onDelete}>
-            <Trash2 size={14} /> Obrisi
-          </Button>
+          <div className="flex gap-2 md:absolute md:top-4 md:right-4">
+            <Button variant="secondary" size="sm" onClick={onEdit}>
+              <Edit size={14} /> <span className="hidden sm:inline">Izmijeni</span>
+            </Button>
+            <Button variant="danger" size="sm" onClick={onDelete}>
+              <Trash2 size={14} /> <span className="hidden sm:inline">Obrisi</span>
+            </Button>
+          </div>
         </div>
 
-        <div className="flex items-center gap-5 mt-8">
-          <div className="w-20 h-20 rounded-full bg-white/15 backdrop-blur border-2 border-white/30 flex items-center justify-center text-3xl font-bold shrink-0">
+        <div className="flex items-center gap-3 md:gap-5 md:mt-8">
+          <div className="w-14 h-14 md:w-20 md:h-20 rounded-full bg-white/15 backdrop-blur border-2 border-white/30 flex items-center justify-center text-xl md:text-3xl font-bold shrink-0">
             {initials || '?'}
           </div>
           <div className="flex-1 min-w-0">
-            <h2 className="text-3xl font-bold truncate">{patient.ime} {patient.prezime}</h2>
-            <div className="flex items-center gap-3 mt-2 flex-wrap text-sm text-white/80">
+            <h2 className="text-xl md:text-3xl font-bold truncate">{patient.ime} {patient.prezime}</h2>
+            <div className="flex items-center gap-2 md:gap-3 mt-1 md:mt-2 flex-wrap text-xs md:text-sm text-white/80">
               {godine !== null && <span>{godine} god.</span>}
               {patient.pol && (
                 <>
@@ -224,26 +225,28 @@ export default function PatientCard({ patient, appointments, onBack, onEdit, onD
         </Card>
       </div>
 
-      {/* Tabovi */}
-      <div className="flex gap-1 bg-gray-100 rounded-lg p-0.5 w-fit flex-wrap">
-        {[
-          { key: 'info' as const,       label: 'Osnovno',   icon: Info },
-          { key: 'istorija' as const,   label: 'Istorija',  icon: Stethoscope },
-          { key: 'finansije' as const,  label: 'Finansije', icon: CreditCard },
-          { key: 'dugovanja' as const,  label: 'Dugovanja', icon: Wallet },
-          { key: 'napomene' as const,   label: 'Napomene',  icon: FileText },
-        ].map((t) => (
-          <button
-            key={t.key}
-            onClick={() => setTab(t.key)}
-            className={`px-4 py-2 text-sm font-medium rounded-md transition-colors flex items-center gap-2 ${
-              tab === t.key ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            <t.icon size={14} />
-            {t.label}
-          </button>
-        ))}
+      {/* Tabovi — horizontal scroll na mobilnom */}
+      <div className="-mx-4 md:mx-0 px-4 md:px-0 overflow-x-auto">
+        <div className="flex gap-1 bg-gray-100 rounded-lg p-0.5 w-max md:w-fit">
+          {[
+            { key: 'info' as const,       label: 'Osnovno',   icon: Info },
+            { key: 'istorija' as const,   label: 'Istorija',  icon: Stethoscope },
+            { key: 'finansije' as const,  label: 'Finansije', icon: CreditCard },
+            { key: 'dugovanja' as const,  label: 'Dugovanja', icon: Wallet },
+            { key: 'napomene' as const,   label: 'Napomene',  icon: FileText },
+          ].map((t) => (
+            <button
+              key={t.key}
+              onClick={() => setTab(t.key)}
+              className={`px-3 md:px-4 py-1.5 md:py-2 text-xs md:text-sm font-medium rounded-md transition-colors flex items-center gap-1.5 md:gap-2 whitespace-nowrap ${
+                tab === t.key ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              <t.icon size={14} />
+              {t.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Tab: Osnovno */}

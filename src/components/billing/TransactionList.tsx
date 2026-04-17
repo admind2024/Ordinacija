@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { format } from 'date-fns';
-import { FileText } from 'lucide-react';
+import { FileText, CreditCard } from 'lucide-react';
 import Card from '../ui/Card';
 import { supabase } from '../../lib/supabase';
 
@@ -17,13 +17,30 @@ interface ExamWithServices {
   total: number;
 }
 
+interface PaymentRow {
+  id: string;
+  appointment_id: string;
+  iznos: number;
+  metoda: string;
+  datum: string;
+  patient_ime?: string;
+}
+
 interface DebtSummary {
   totalDug: number;
   aktivnihDuznika: number;
 }
 
+const METODA_LABELS: Record<string, string> = {
+  gotovina: 'Gotovina',
+  kartica: 'Kartica',
+  racun: 'Racun',
+  transfer: 'Transfer',
+};
+
 export default function TransactionList() {
   const [exams, setExams] = useState<ExamWithServices[]>([]);
+  const [paymentsList, setPaymentsList] = useState<PaymentRow[]>([]);
   const [debtSummary, setDebtSummary] = useState<DebtSummary>({ totalDug: 0, aktivnihDuznika: 0 });
   const [loading, setLoading] = useState(true);
   const [period, setPeriod] = useState<'danas' | 'sedmica' | 'mjesec' | 'sve'>('mjesec');
@@ -86,6 +103,25 @@ export default function TransactionList() {
     }
     setExams(enriched);
 
+    // Load actual payments in period (iz payments tabele)
+    let pQuery = supabase
+      .from('payments')
+      .select('id, appointment_id, iznos, metoda, datum, appointment:appointments(patient:patients(ime, prezime))')
+      .order('datum', { ascending: false });
+    if (dateFrom) pQuery = pQuery.gte('datum', dateFrom);
+    const { data: paysData } = await pQuery;
+    const paysList: PaymentRow[] = (paysData || []).map((p: any) => ({
+      id: p.id,
+      appointment_id: p.appointment_id,
+      iznos: Number(p.iznos) || 0,
+      metoda: p.metoda,
+      datum: p.datum,
+      patient_ime: p.appointment?.patient
+        ? `${p.appointment.patient.ime} ${p.appointment.patient.prezime}`
+        : undefined,
+    }));
+    setPaymentsList(paysList);
+
     // Load debt summary
     const { data: debts } = await supabase.from('dugovanja')
       .select('preostalo, patient_id')
@@ -98,10 +134,12 @@ export default function TransactionList() {
   }
 
   const totalFakturisano = exams.reduce((sum, e) => sum + e.total, 0);
-  const totalNaplaceno = totalFakturisano - debtSummary.totalDug;
+  // Stvarno naplaceno iz payments tabele (ne procjena)
+  const totalNaplaceno = paymentsList.reduce((sum, p) => sum + p.iznos, 0);
 
   // Count by payment type estimate (from procedure_log)
   const examCount = exams.length;
+  const paymentCount = paymentsList.length;
 
   if (loading) return <div className="text-center py-16 text-gray-400">Ucitavanje...</div>;
 
@@ -115,8 +153,9 @@ export default function TransactionList() {
           <p className="text-xs text-gray-400 mt-1">{examCount} pregleda</p>
         </Card>
         <Card>
-          <p className="text-sm text-gray-500">Naplaceno (procjena)</p>
-          <p className="text-2xl font-bold text-green-600">{totalNaplaceno > 0 ? totalNaplaceno.toFixed(2) : '0.00'} EUR</p>
+          <p className="text-sm text-gray-500">Naplaceno</p>
+          <p className="text-2xl font-bold text-green-600">{totalNaplaceno.toFixed(2)} EUR</p>
+          <p className="text-xs text-gray-400 mt-1">{paymentCount} uplata</p>
         </Card>
         <Card>
           <p className="text-sm text-gray-500">Ukupan dug</p>
@@ -179,6 +218,35 @@ export default function TransactionList() {
                     <p className="text-sm text-gray-400">0 EUR</p>
                   )}
                   <p className="text-xs text-gray-400">{exam.datum}</p>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </Card>
+
+      {/* Lista stvarnih uplata iz payments tabele */}
+      <Card padding={false}>
+        <div className="px-6 py-4 border-b border-border flex items-center justify-between">
+          <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider">Uplate</h3>
+          <span className="text-xs text-gray-400">{paymentsList.length} uplata · {totalNaplaceno.toFixed(2)} EUR</span>
+        </div>
+        <div className="divide-y divide-border max-h-[500px] overflow-y-auto">
+          {paymentsList.length === 0 ? (
+            <p className="px-6 py-8 text-sm text-gray-400 text-center">Nema uplata u ovom periodu</p>
+          ) : (
+            paymentsList.map((p) => (
+              <div key={p.id} className="px-6 py-3 flex items-center gap-4">
+                <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center shrink-0">
+                  <CreditCard size={18} className="text-blue-600" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-gray-900">{p.patient_ime || 'Nepoznat pacijent'}</p>
+                  <p className="text-xs text-gray-500">{METODA_LABELS[p.metoda] || p.metoda}</p>
+                </div>
+                <div className="text-right shrink-0">
+                  <p className="text-sm font-semibold text-blue-600">{p.iznos.toFixed(2)} EUR</p>
+                  <p className="text-xs text-gray-400">{format(new Date(p.datum), 'dd.MM.yyyy HH:mm')}</p>
                 </div>
               </div>
             ))

@@ -469,34 +469,9 @@ export default function Dashboard() {
         </Card>
       </div>
 
-      {/* ====== OSOBLJE DANAS — horizontalni scroll ====== */}
-      {todayStaff.length > 0 && (
-        <div>
-          <h3 className="text-sm font-semibold text-gray-700 mb-3">Osoblje danas</h3>
-          <div className="flex gap-4 overflow-x-auto pb-2">
-            {todayStaff.map((d) => (
-              <div key={d.id} className="bg-white border border-border rounded-xl p-4 min-w-[160px] flex flex-col items-center text-center shrink-0">
-                {d.slika ? (
-                  <img src={d.slika} alt={d.ime} className="w-14 h-14 rounded-full object-cover mb-2" />
-                ) : (
-                  <div className="w-14 h-14 rounded-full flex items-center justify-center text-white font-bold mb-2" style={{ backgroundColor: d.boja }}>
-                    {d.ime.charAt(0)}{d.prezime.charAt(0)}
-                  </div>
-                )}
-                <p className="text-sm font-semibold text-gray-900 truncate w-full">
-                  {d.titula ? `${d.titula} ` : ''}{d.ime} {d.prezime.charAt(0)}.
-                </p>
-                <p className="text-xs text-gray-500">{d.aptCount} termina</p>
-                {d.revenue > 0 && <p className="text-xs text-primary-700 font-semibold mt-0.5">{d.revenue.toFixed(0)} €</p>}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
       {/* ====== ZAVRŠENI PREGLEDI DANAS ====== */}
       {todayExams.length > 0 && (
-        <div className="mt-6">
+        <div>
           <Card padding={false}>
             <div className="px-6 py-4 border-b border-border flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -588,6 +563,31 @@ export default function Dashboard() {
               })}
             </div>
           </Card>
+        </div>
+      )}
+
+      {/* ====== OSOBLJE DANAS — horizontalni scroll ====== */}
+      {todayStaff.length > 0 && (
+        <div>
+          <h3 className="text-sm font-semibold text-gray-700 mb-3">Osoblje danas</h3>
+          <div className="flex gap-4 overflow-x-auto pb-2">
+            {todayStaff.map((d) => (
+              <div key={d.id} className="bg-white border border-border rounded-xl p-4 min-w-[160px] flex flex-col items-center text-center shrink-0">
+                {d.slika ? (
+                  <img src={d.slika} alt={d.ime} className="w-14 h-14 rounded-full object-cover mb-2" />
+                ) : (
+                  <div className="w-14 h-14 rounded-full flex items-center justify-center text-white font-bold mb-2" style={{ backgroundColor: d.boja }}>
+                    {d.ime.charAt(0)}{d.prezime.charAt(0)}
+                  </div>
+                )}
+                <p className="text-sm font-semibold text-gray-900 truncate w-full">
+                  {d.titula ? `${d.titula} ` : ''}{d.ime} {d.prezime.charAt(0)}.
+                </p>
+                <p className="text-xs text-gray-500">{d.aptCount} termina</p>
+                {d.revenue > 0 && <p className="text-xs text-primary-700 font-semibold mt-0.5">{d.revenue.toFixed(0)} €</p>}
+              </div>
+            ))}
+          </div>
         </div>
       )}
 

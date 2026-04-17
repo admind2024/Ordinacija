@@ -14,6 +14,8 @@ export default function SurveyPublic() {
   const [surveyId, setSurveyId] = useState('');
   // Queue token row id (ako je otvoreno preko jednokratnog linka)
   const [queueRowId, setQueueRowId] = useState<string | null>(null);
+  // Pacijent info iz queue reda (za atribuciju odgovora — admin vidi ko je popunio)
+  const [patientInfo, setPatientInfo] = useState<{ id: string | null; ime: string | null }>({ id: null, ime: null });
 
   // Answer state
   const [starsQ1, setStarsQ1] = useState(0);
@@ -37,7 +39,7 @@ export default function SurveyPublic() {
       // 1) Probaj kao jednokratan token iz survey_sms_queue
       const { data: queueRow } = await supabase
         .from('survey_sms_queue')
-        .select('id, survey_id, used_at')
+        .select('id, survey_id, used_at, patient_id, patient_ime')
         .eq('token', id)
         .maybeSingle();
 
@@ -57,6 +59,9 @@ export default function SurveyPublic() {
           setExists(true);
           setSurveyId(sv.id);
           setQueueRowId(queueRow.id);
+          // Zapamti pacijenta za atribuciju odgovora (respondent vidi "anonimno" u UI,
+          // ali admin u izvjestaju zna ko je popunio)
+          setPatientInfo({ id: queueRow.patient_id, ime: queueRow.patient_ime });
         } else {
           setExists(false);
         }
@@ -88,6 +93,9 @@ export default function SurveyPublic() {
 
     await supabase.from('survey_responses').insert({
       survey_id: surveyId,
+      // Atribucija — admin u izvjestaju zna ko je popunio; respondent to ne vidi
+      patient_id: patientInfo.id,
+      patient_ime: patientInfo.ime,
       odgovori: {
         q1: starsQ1,
         q2: choiceQ2 || null,

@@ -35,8 +35,8 @@ export default function Layout() {
       <div className={`transition-[margin] duration-300 overflow-x-hidden ${collapsed ? 'md:ml-16' : 'md:ml-60'}`}>
         <Header sectionName={sectionName} onOpenMenu={() => setMobileOpen(true)} />
 
-        {/* pb-24 da donji sadrzaj ne nestane iza BottomNav-a + safe-area */}
-        <main className="p-3 md:p-6 pb-24 md:pb-6 max-w-full overflow-x-hidden">
+        {/* Donji padding = BottomNav visina + safe-area na mobilnom; obicno na desktopu */}
+        <main className="p-3 md:p-6 pb-[calc(5rem+env(safe-area-inset-bottom))] md:pb-6 max-w-full overflow-x-hidden">
           <Outlet />
         </main>
       </div>

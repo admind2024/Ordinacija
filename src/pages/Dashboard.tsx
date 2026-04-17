@@ -484,7 +484,7 @@ export default function Dashboard() {
                 <span className="text-gray-400">{todayExams.length} pr.</span>
               </div>
             </div>
-            <div className="divide-y divide-border max-h-[400px] overflow-y-auto">
+            <div className="divide-y divide-border md:max-h-[500px] md:overflow-y-auto">
               {todayExams.map((exam) => {
                 const isPaid = !!fiscalData[exam.id]?.success || (exam.appointment_id ? paidAppointmentIds.has(exam.appointment_id) : false);
                 const hasAmount = (exam.appointmentTotal || 0) > 0;

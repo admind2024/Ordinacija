@@ -398,53 +398,53 @@ function IzvjestajTab() {
         <Card><div className="py-8 text-center text-gray-400">Ucitavam...</div></Card>
       ) : (
         <>
-          {/* Summary stats — 6 cards */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-            <Card>
-              <p className="text-xs text-gray-500">Ukupno primalaca</p>
-              <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
-              <p className="text-xs text-gray-400 mt-1">{campaigns.length} kampanja</p>
-            </Card>
-            <Card>
-              <div className="flex items-center gap-1 mb-1">
-                <CheckCircle size={14} className="text-purple-600" />
-                <p className="text-xs text-purple-600 font-medium">Viber isporuceno</p>
+          {/* Summary stats — 2 kartice po redu na mobilnom, 3/6 na desktopu */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 xs:gap-3">
+            <div className="bg-white border border-border rounded-xl p-3 md:p-4">
+              <p className="text-[10px] xs:text-xs text-gray-500 uppercase tracking-wider">Ukupno</p>
+              <p className="fluid-h2 font-bold text-gray-900 leading-tight">{stats.total}</p>
+              <p className="text-[10px] xs:text-xs text-gray-400 mt-0.5">{campaigns.length} kamp.</p>
+            </div>
+            <div className="bg-purple-50 border border-purple-200 rounded-xl p-3 md:p-4">
+              <div className="flex items-center gap-1.5 mb-0.5">
+                <CheckCircle size={12} className="text-purple-600" />
+                <p className="text-[10px] xs:text-xs text-purple-700 font-semibold uppercase tracking-wider">Viber ✓</p>
               </div>
-              <p className="text-2xl font-bold text-purple-700">{stats.viberDelivered}</p>
-              <p className="text-xs text-gray-400 mt-1">{pct(stats.viberDelivered, stats.total)}% ukupnog</p>
-            </Card>
-            <Card>
-              <div className="flex items-center gap-1 mb-1">
-                <Eye size={14} className="text-green-600" />
-                <p className="text-xs text-green-600 font-medium">Viber seen</p>
+              <p className="fluid-h2 font-bold text-purple-700 leading-tight">{stats.viberDelivered}</p>
+              <p className="text-[10px] xs:text-xs text-purple-600/70 mt-0.5">{pct(stats.viberDelivered, stats.total)}% uk.</p>
+            </div>
+            <div className="bg-green-50 border border-green-200 rounded-xl p-3 md:p-4">
+              <div className="flex items-center gap-1.5 mb-0.5">
+                <Eye size={12} className="text-green-600" />
+                <p className="text-[10px] xs:text-xs text-green-700 font-semibold uppercase tracking-wider">Seen</p>
               </div>
-              <p className="text-2xl font-bold text-green-700">{stats.seen}</p>
-              <p className="text-xs text-gray-400 mt-1">{pct(stats.seen, stats.viberDelivered)}% od delivered</p>
-            </Card>
-            <Card>
-              <div className="flex items-center gap-1 mb-1">
-                <MousePointer size={14} className="text-blue-600" />
-                <p className="text-xs text-blue-600 font-medium">Viber kliknuto</p>
+              <p className="fluid-h2 font-bold text-green-700 leading-tight">{stats.seen}</p>
+              <p className="text-[10px] xs:text-xs text-green-600/70 mt-0.5">{pct(stats.seen, stats.viberDelivered)}% isp.</p>
+            </div>
+            <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 md:p-4">
+              <div className="flex items-center gap-1.5 mb-0.5">
+                <MousePointer size={12} className="text-blue-600" />
+                <p className="text-[10px] xs:text-xs text-blue-700 font-semibold uppercase tracking-wider">Klik</p>
               </div>
-              <p className="text-2xl font-bold text-blue-700">{stats.clicked}</p>
-              <p className="text-xs text-gray-400 mt-1">{pct(stats.clicked, stats.viberDelivered)}% od delivered</p>
-            </Card>
-            <Card>
-              <div className="flex items-center gap-1 mb-1">
-                <Send size={14} className="text-amber-600" />
-                <p className="text-xs text-amber-600 font-medium">SMS fallback</p>
+              <p className="fluid-h2 font-bold text-blue-700 leading-tight">{stats.clicked}</p>
+              <p className="text-[10px] xs:text-xs text-blue-600/70 mt-0.5">{pct(stats.clicked, stats.viberDelivered)}% isp.</p>
+            </div>
+            <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 md:p-4">
+              <div className="flex items-center gap-1.5 mb-0.5">
+                <Send size={12} className="text-amber-600" />
+                <p className="text-[10px] xs:text-xs text-amber-700 font-semibold uppercase tracking-wider">Fallback</p>
               </div>
-              <p className="text-2xl font-bold text-amber-700">{stats.fallback}</p>
-              <p className="text-xs text-gray-400 mt-1">{pct(stats.fallback, stats.total)}% ukupnog</p>
-            </Card>
-            <Card>
-              <div className="flex items-center gap-1 mb-1">
-                <CheckCircle size={14} className="text-sky-600" />
-                <p className="text-xs text-sky-600 font-medium">SMS isporuceno</p>
+              <p className="fluid-h2 font-bold text-amber-700 leading-tight">{stats.fallback}</p>
+              <p className="text-[10px] xs:text-xs text-amber-600/70 mt-0.5">{pct(stats.fallback, stats.total)}% uk.</p>
+            </div>
+            <div className="bg-sky-50 border border-sky-200 rounded-xl p-3 md:p-4">
+              <div className="flex items-center gap-1.5 mb-0.5">
+                <CheckCircle size={12} className="text-sky-600" />
+                <p className="text-[10px] xs:text-xs text-sky-700 font-semibold uppercase tracking-wider">SMS ✓</p>
               </div>
-              <p className="text-2xl font-bold text-sky-700">{stats.smsDelivered}</p>
-              <p className="text-xs text-gray-400 mt-1">ukupno SMS</p>
-            </Card>
+              <p className="fluid-h2 font-bold text-sky-700 leading-tight">{stats.smsDelivered}</p>
+              <p className="text-[10px] xs:text-xs text-sky-600/70 mt-0.5">isporuceno</p>
+            </div>
           </div>
 
           {/* Viber fail reasons breakdown */}
@@ -472,30 +472,33 @@ function IzvjestajTab() {
 
           {/* Hronoloski feed svih poruka (kampanje + podsjetnici + potvrde + testovi) */}
           <Card padding={false}>
-            <div className="px-4 py-3 border-b border-border flex items-center justify-between flex-wrap gap-2">
-              <h3 className="text-sm font-semibold text-gray-600">Sve poruke — hronoloski</h3>
-              <div className="flex items-center gap-2">
+            <div className="px-3 md:px-4 py-3 border-b border-border space-y-2 md:space-y-0 md:flex md:items-center md:justify-between md:flex-wrap md:gap-2">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-semibold text-gray-600">Sve poruke</h3>
+                <span className="text-xs text-gray-500 md:hidden">{unifiedMessages.length}</span>
+              </div>
+              <div className="flex items-center gap-2 flex-wrap">
                 <select
                   value={sourceFilter}
                   onChange={(e) => setSourceFilter(e.target.value as any)}
-                  className="px-2 py-1 border border-border rounded text-xs"
+                  className="flex-1 md:flex-initial px-2 py-1.5 border border-border rounded text-xs"
                 >
                   <option value="sve">Svi tipovi</option>
                   <option value="kampanja">Kampanje</option>
                   <option value="podsjetnik">Podsjetnici</option>
-                  <option value="potvrda">Potvrde termina</option>
-                  <option value="test">Test poruke</option>
+                  <option value="potvrda">Potvrde</option>
+                  <option value="test">Test</option>
                 </select>
                 <select
                   value={channelFilter}
                   onChange={(e) => setChannelFilter(e.target.value as any)}
-                  className="px-2 py-1 border border-border rounded text-xs"
+                  className="flex-1 md:flex-initial px-2 py-1.5 border border-border rounded text-xs"
                 >
                   <option value="sve">Svi kanali</option>
                   <option value="viber">Viber</option>
                   <option value="sms">SMS</option>
                 </select>
-                <span className="text-xs text-gray-500">{unifiedMessages.length} poruka</span>
+                <span className="hidden md:inline text-xs text-gray-500">{unifiedMessages.length} poruka</span>
               </div>
             </div>
             {unifiedMessages.length === 0 ? (
@@ -503,69 +506,129 @@ function IzvjestajTab() {
                 Nema poruka u izabranom periodu / filteru
               </div>
             ) : (
-              <div className="divide-y divide-border max-h-[500px] overflow-y-auto">
-                <div className="px-4 py-2 bg-gray-50 text-[10px] text-gray-500 font-medium flex items-center gap-2 sticky top-0">
-                  <span className="w-28">Vrijeme</span>
-                  <span className="w-36">Primalac</span>
-                  <span className="w-28">Telefon</span>
-                  <span className="w-16">Kanal</span>
-                  <span className="w-20">DLR</span>
-                  <span className="w-14 text-center">Seen</span>
-                  <span className="w-16 text-center">Fallback</span>
-                  <span className="flex-1">Izvor / Tekst</span>
-                </div>
-                {unifiedMessages.slice(0, 300).map((m) => {
-                  const dlr = m.display_dlr;
-                  const dlrColor = dlr === 'delivered' || dlr === 'sent'
-                    ? 'text-green-700 bg-green-50'
-                    : dlr === 'pending'
-                    ? 'text-amber-700 bg-amber-50'
-                    : 'text-red-700 bg-red-50';
-                  return (
-                    <div
-                      key={m.id}
-                      className="px-4 py-2 flex items-center gap-2 text-xs hover:bg-gray-50"
-                      onClick={() => m.campaign_id && setSelectedId(m.campaign_id)}
-                      style={{ cursor: m.campaign_id ? 'pointer' : 'default' }}
-                    >
-                      <span className="w-28 text-gray-500">
-                        {new Date(m.datum).toLocaleString('sr-Latn-ME', { dateStyle: 'short', timeStyle: 'short' })}
-                      </span>
-                      <span className="w-36 font-medium text-gray-900 truncate">{m.primalac}</span>
-                      <span className="w-28 text-gray-600 font-mono">{m.telefon}</span>
-                      <span className={`w-16 px-1.5 py-0.5 rounded text-[10px] font-medium text-center ${
-                        m.kanal === 'viber' ? 'bg-purple-100 text-purple-700'
-                        : m.kanal === 'sms' ? 'bg-sky-100 text-sky-700'
-                        : 'bg-gray-100 text-gray-500'
-                      }`}>{m.kanal}</span>
-                      <span className={`w-20 px-1.5 py-0.5 rounded text-[10px] font-medium text-center truncate ${dlrColor}`}>
-                        {dlr}
-                      </span>
-                      <span className="w-14 text-center">
-                        {m.viber_message_status === 'seen' ? <Eye size={12} className="text-green-600 inline" /> : <span className="text-gray-300">—</span>}
-                      </span>
-                      <span className="w-16 text-center">
-                        {m.fallbacked ? <span className="text-[10px] text-amber-700 bg-amber-100 px-1 py-0.5 rounded">SMS</span> : <span className="text-gray-300">—</span>}
-                      </span>
-                      <span className="flex-1 min-w-0">
-                        <span className={`text-[10px] px-1.5 py-0.5 rounded mr-1 ${
-                          m.source === 'kampanja' ? 'bg-purple-100 text-purple-700'
-                          : m.source === 'podsjetnik' ? 'bg-blue-100 text-blue-700'
-                          : m.source === 'potvrda' ? 'bg-green-100 text-green-700'
-                          : m.source === 'test' ? 'bg-gray-100 text-gray-700'
-                          : 'bg-gray-100 text-gray-600'
-                        }`}>{m.source_label}</span>
-                        {m.error && <span className="text-red-500 ml-1">· {m.error}</span>}
-                      </span>
+              <>
+                {/* Desktop: tabelarni prikaz (overflow-x-auto da ne kida layout) */}
+                <div className="hidden md:block divide-y divide-border max-h-[500px] overflow-y-auto overflow-x-auto">
+                  <div className="min-w-[860px]">
+                    <div className="px-4 py-2 bg-gray-50 text-[10px] text-gray-500 font-medium flex items-center gap-2 sticky top-0 z-10">
+                      <span className="w-28">Vrijeme</span>
+                      <span className="w-36">Primalac</span>
+                      <span className="w-28">Telefon</span>
+                      <span className="w-16">Kanal</span>
+                      <span className="w-20">DLR</span>
+                      <span className="w-14 text-center">Seen</span>
+                      <span className="w-16 text-center">Fallback</span>
+                      <span className="flex-1">Izvor / Tekst</span>
                     </div>
-                  );
-                })}
+                    {unifiedMessages.slice(0, 300).map((m) => {
+                      const dlr = m.display_dlr;
+                      const dlrColor = dlr === 'delivered' || dlr === 'sent'
+                        ? 'text-green-700 bg-green-50'
+                        : dlr === 'pending' ? 'text-amber-700 bg-amber-50'
+                        : 'text-red-700 bg-red-50';
+                      return (
+                        <div
+                          key={m.id}
+                          className="px-4 py-2 flex items-center gap-2 text-xs hover:bg-gray-50"
+                          onClick={() => m.campaign_id && setSelectedId(m.campaign_id)}
+                          style={{ cursor: m.campaign_id ? 'pointer' : 'default' }}
+                        >
+                          <span className="w-28 text-gray-500">
+                            {new Date(m.datum).toLocaleString('sr-Latn-ME', { dateStyle: 'short', timeStyle: 'short' })}
+                          </span>
+                          <span className="w-36 font-medium text-gray-900 truncate">{m.primalac}</span>
+                          <span className="w-28 text-gray-600 font-mono truncate">{m.telefon}</span>
+                          <span className={`w-16 px-1.5 py-0.5 rounded text-[10px] font-medium text-center ${
+                            m.kanal === 'viber' ? 'bg-purple-100 text-purple-700'
+                            : m.kanal === 'sms' ? 'bg-sky-100 text-sky-700'
+                            : 'bg-gray-100 text-gray-500'
+                          }`}>{m.kanal}</span>
+                          <span className={`w-20 px-1.5 py-0.5 rounded text-[10px] font-medium text-center truncate ${dlrColor}`}>
+                            {dlr}
+                          </span>
+                          <span className="w-14 text-center">
+                            {m.viber_message_status === 'seen' ? <Eye size={12} className="text-green-600 inline" /> : <span className="text-gray-300">—</span>}
+                          </span>
+                          <span className="w-16 text-center">
+                            {m.fallbacked ? <span className="text-[10px] text-amber-700 bg-amber-100 px-1 py-0.5 rounded">SMS</span> : <span className="text-gray-300">—</span>}
+                          </span>
+                          <span className="flex-1 min-w-0">
+                            <span className={`text-[10px] px-1.5 py-0.5 rounded mr-1 ${
+                              m.source === 'kampanja' ? 'bg-purple-100 text-purple-700'
+                              : m.source === 'podsjetnik' ? 'bg-blue-100 text-blue-700'
+                              : m.source === 'potvrda' ? 'bg-green-100 text-green-700'
+                              : m.source === 'test' ? 'bg-gray-100 text-gray-700'
+                              : 'bg-gray-100 text-gray-600'
+                            }`}>{m.source_label}</span>
+                            {m.error && <span className="text-red-500 ml-1">· {m.error}</span>}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Mobile: card-rows (vertikalno) */}
+                <div className="md:hidden divide-y divide-border">
+                  {unifiedMessages.slice(0, 300).map((m) => {
+                    const dlr = m.display_dlr;
+                    const dlrColor = dlr === 'delivered' || dlr === 'sent'
+                      ? 'text-green-700 bg-green-50'
+                      : dlr === 'pending' ? 'text-amber-700 bg-amber-50'
+                      : 'text-red-700 bg-red-50';
+                    return (
+                      <div
+                        key={m.id}
+                        className="px-3 py-2.5 text-xs active:bg-gray-50"
+                        onClick={() => m.campaign_id && setSelectedId(m.campaign_id)}
+                        style={{ cursor: m.campaign_id ? 'pointer' : 'default' }}
+                      >
+                        {/* Red 1: ime + iznos/dlr */}
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="font-medium text-sm text-gray-900 truncate">{m.primalac}</p>
+                          <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium whitespace-nowrap shrink-0 ${dlrColor}`}>
+                            {dlr}
+                          </span>
+                        </div>
+                        {/* Red 2: izvor badge + kanal + telefon + vrijeme */}
+                        <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                          <span className={`text-[10px] px-1.5 py-0.5 rounded ${
+                            m.source === 'kampanja' ? 'bg-purple-100 text-purple-700'
+                            : m.source === 'podsjetnik' ? 'bg-blue-100 text-blue-700'
+                            : m.source === 'potvrda' ? 'bg-green-100 text-green-700'
+                            : m.source === 'test' ? 'bg-gray-100 text-gray-700'
+                            : 'bg-gray-100 text-gray-600'
+                          }`}>{m.source_label}</span>
+                          <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium uppercase ${
+                            m.kanal === 'viber' ? 'bg-purple-100 text-purple-700'
+                            : m.kanal === 'sms' ? 'bg-sky-100 text-sky-700'
+                            : 'bg-gray-100 text-gray-500'
+                          }`}>{m.kanal}</span>
+                          {m.fallbacked && (
+                            <span className="text-[10px] text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded font-medium">SMS fallback</span>
+                          )}
+                          {m.viber_message_status === 'seen' && (
+                            <span className="text-[10px] text-green-700 bg-green-100 px-1.5 py-0.5 rounded font-medium flex items-center gap-0.5">
+                              <Eye size={10} /> seen
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex items-center justify-between mt-1 text-[11px] text-gray-400">
+                          <span className="font-mono truncate">{m.telefon}</span>
+                          <span className="shrink-0 ml-2">{new Date(m.datum).toLocaleString('sr-Latn-ME', { dateStyle: 'short', timeStyle: 'short' })}</span>
+                        </div>
+                        {m.error && <p className="text-[11px] text-red-600 mt-1 truncate">⚠ {m.error}</p>}
+                      </div>
+                    );
+                  })}
+                </div>
+
                 {unifiedMessages.length > 300 && (
                   <div className="px-4 py-2 text-center text-xs text-gray-400 bg-gray-50">
                     Prikazano prvih 300 od {unifiedMessages.length} — suzi filter po datumu
                   </div>
                 )}
-              </div>
+              </>
             )}
           </Card>
 
@@ -580,37 +643,94 @@ function IzvjestajTab() {
                 <p>Nema kampanja u izabranom periodu</p>
               </div>
             ) : (
-              <div className="divide-y divide-border">
-                <div className="px-4 py-2 bg-gray-50 text-[11px] text-gray-500 font-medium flex items-center gap-3">
-                  <span className="flex-1">Naziv</span>
-                  <span className="w-16 text-right">Poslato</span>
-                  <span className="w-16 text-right">Viber ✓</span>
-                  <span className="w-16 text-right">Seen</span>
-                  <span className="w-16 text-right">Click</span>
-                  <span className="w-16 text-right">Fallback</span>
-                  <span className="w-16 text-right">SMS ✓</span>
-                  <span className="w-16 text-right">Failed</span>
-                </div>
-                {campaigns.map((c) => (
-                  <div
-                    key={c.id}
-                    onClick={() => setSelectedId(c.id)}
-                    className="px-4 py-2 flex items-center gap-3 text-sm hover:bg-gray-50 cursor-pointer"
-                  >
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium text-gray-900 truncate">{c.naziv}</p>
-                      <p className="text-xs text-gray-400">{c.channel_mode} · {new Date(c.created_at).toLocaleDateString('sr-Latn-ME')}</p>
+              <>
+                {/* Desktop: tabelarni prikaz — overflow-x-auto sprecava kidanje */}
+                <div className="hidden md:block divide-y divide-border overflow-x-auto">
+                  <div className="min-w-[720px]">
+                    <div className="px-4 py-2 bg-gray-50 text-[11px] text-gray-500 font-medium flex items-center gap-3">
+                      <span className="flex-1">Naziv</span>
+                      <span className="w-16 text-right">Poslato</span>
+                      <span className="w-16 text-right">Viber ✓</span>
+                      <span className="w-16 text-right">Seen</span>
+                      <span className="w-16 text-right">Click</span>
+                      <span className="w-16 text-right">Fallback</span>
+                      <span className="w-16 text-right">SMS ✓</span>
+                      <span className="w-16 text-right">Failed</span>
                     </div>
-                    <span className="w-16 text-right text-gray-600">{c.total_recipients}</span>
-                    <span className="w-16 text-right text-purple-700 font-medium">{c.viber_delivered_count || 0}</span>
-                    <span className="w-16 text-right text-green-700 font-medium">{c.seen_count || 0}</span>
-                    <span className="w-16 text-right text-blue-700 font-medium">{c.clicked_count || 0}</span>
-                    <span className="w-16 text-right text-amber-700 font-medium">{c.fallback_count || 0}</span>
-                    <span className="w-16 text-right text-sky-700 font-medium">{c.sms_delivered_count || 0}</span>
-                    <span className="w-16 text-right text-red-700 font-medium">{c.failed_count || 0}</span>
+                    {campaigns.map((c) => (
+                      <div
+                        key={c.id}
+                        onClick={() => setSelectedId(c.id)}
+                        className="px-4 py-2 flex items-center gap-3 text-sm hover:bg-gray-50 cursor-pointer"
+                      >
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-gray-900 truncate">{c.naziv}</p>
+                          <p className="text-xs text-gray-400">{c.channel_mode} · {new Date(c.created_at).toLocaleDateString('sr-Latn-ME')}</p>
+                        </div>
+                        <span className="w-16 text-right text-gray-600">{c.total_recipients}</span>
+                        <span className="w-16 text-right text-purple-700 font-medium">{c.viber_delivered_count || 0}</span>
+                        <span className="w-16 text-right text-green-700 font-medium">{c.seen_count || 0}</span>
+                        <span className="w-16 text-right text-blue-700 font-medium">{c.clicked_count || 0}</span>
+                        <span className="w-16 text-right text-amber-700 font-medium">{c.fallback_count || 0}</span>
+                        <span className="w-16 text-right text-sky-700 font-medium">{c.sms_delivered_count || 0}</span>
+                        <span className="w-16 text-right text-red-700 font-medium">{c.failed_count || 0}</span>
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
+                </div>
+
+                {/* Mobile: card-rows */}
+                <div className="md:hidden divide-y divide-border">
+                  {campaigns.map((c) => (
+                    <div
+                      key={c.id}
+                      onClick={() => setSelectedId(c.id)}
+                      className="px-3 py-3 active:bg-gray-50"
+                      style={{ cursor: 'pointer' }}
+                    >
+                      <div className="flex items-start justify-between gap-2 mb-2">
+                        <div className="min-w-0 flex-1">
+                          <p className="font-semibold text-sm text-gray-900 truncate">{c.naziv}</p>
+                          <p className="text-[11px] text-gray-400 mt-0.5">
+                            {c.channel_mode} · {new Date(c.created_at).toLocaleDateString('sr-Latn-ME')}
+                          </p>
+                        </div>
+                        <div className="text-right shrink-0">
+                          <p className="text-xs text-gray-500">Poslato</p>
+                          <p className="text-base font-bold text-gray-900">{c.total_recipients}</p>
+                        </div>
+                      </div>
+                      {/* Statistika: 3 kolone kompaktno */}
+                      <div className="grid grid-cols-3 gap-1.5 text-center">
+                        <div className="bg-purple-50 rounded-lg py-1.5 px-1">
+                          <p className="text-sm font-bold text-purple-700">{c.viber_delivered_count || 0}</p>
+                          <p className="text-[9px] text-purple-600/70 uppercase tracking-wider">Viber</p>
+                        </div>
+                        <div className="bg-green-50 rounded-lg py-1.5 px-1">
+                          <p className="text-sm font-bold text-green-700">{c.seen_count || 0}</p>
+                          <p className="text-[9px] text-green-600/70 uppercase tracking-wider">Seen</p>
+                        </div>
+                        <div className="bg-blue-50 rounded-lg py-1.5 px-1">
+                          <p className="text-sm font-bold text-blue-700">{c.clicked_count || 0}</p>
+                          <p className="text-[9px] text-blue-600/70 uppercase tracking-wider">Click</p>
+                        </div>
+                        <div className="bg-amber-50 rounded-lg py-1.5 px-1">
+                          <p className="text-sm font-bold text-amber-700">{c.fallback_count || 0}</p>
+                          <p className="text-[9px] text-amber-600/70 uppercase tracking-wider">Fallback</p>
+                        </div>
+                        <div className="bg-sky-50 rounded-lg py-1.5 px-1">
+                          <p className="text-sm font-bold text-sky-700">{c.sms_delivered_count || 0}</p>
+                          <p className="text-[9px] text-sky-600/70 uppercase tracking-wider">SMS</p>
+                        </div>
+                        <div className="bg-red-50 rounded-lg py-1.5 px-1">
+                          <p className="text-sm font-bold text-red-700">{c.failed_count || 0}</p>
+                          <p className="text-[9px] text-red-600/70 uppercase tracking-wider">Failed</p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </>
             )}
           </Card>
         </>

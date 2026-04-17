@@ -318,17 +318,18 @@ export default function Dashboard() {
   return (
     <div className="space-y-6">
       {/* ====== GREETING ====== */}
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <div className="min-w-0">
-          <h2 className="text-xl md:text-2xl font-bold text-gray-900 flex items-center gap-2">
-            {greeting} <GreetIcon size={22} className="text-accent-500" />
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <h2 className="fluid-title font-bold text-gray-900 flex items-center gap-2">
+            <span className="truncate">{greeting}</span>
+            <GreetIcon size={20} className="text-accent-500 shrink-0" />
           </h2>
-          <p className="text-xs md:text-sm text-gray-500 mt-0.5 md:mt-1">
+          <p className="fluid-small text-gray-500 mt-0.5 md:mt-1 line-clamp-1">
             Pregled za {format(new Date(), 'EEEE, dd. MMMM yyyy.', { locale: sr })}
           </p>
         </div>
-        <div className="px-3 md:px-4 py-1.5 md:py-2 bg-primary-50 border border-primary-100 rounded-xl shrink-0">
-          <p className="text-xs md:text-sm font-semibold text-primary-700">{format(new Date(), 'dd. MMMM', { locale: sr })}</p>
+        <div className="px-2.5 xs:px-3 md:px-4 py-1.5 md:py-2 bg-primary-50 border border-primary-100 rounded-xl shrink-0 text-center">
+          <p className="fluid-small font-semibold text-primary-700 whitespace-nowrap">{format(new Date(), 'd. MMM', { locale: sr })}</p>
           <p className="text-[9px] md:text-[10px] text-primary-500 uppercase tracking-wider">{format(new Date(), 'EEEE', { locale: sr })}</p>
         </div>
       </div>
@@ -916,13 +917,13 @@ function KpiCard({ icon, label, value, bg, iconColor }: {
   icon: React.ReactNode; label: string; value: string | number; bg: string; iconColor: string;
 }) {
   return (
-    <div className="bg-white border border-border rounded-xl px-3 md:px-5 py-3 md:py-4 flex items-center gap-2 md:gap-4">
-      <div className={`w-10 h-10 md:w-12 md:h-12 rounded-xl flex items-center justify-center ${bg} ${iconColor} shrink-0`}>
+    <div className="bg-white border border-border rounded-xl px-2.5 xs:px-3 md:px-5 py-2.5 xs:py-3 md:py-4 flex items-center gap-2 md:gap-4">
+      <div className={`w-9 h-9 xs:w-10 xs:h-10 md:w-12 md:h-12 rounded-lg md:rounded-xl flex items-center justify-center ${bg} ${iconColor} shrink-0`}>
         {icon}
       </div>
       <div className="min-w-0 flex-1">
-        <p className="text-lg md:text-2xl font-bold text-gray-900 truncate">{value}</p>
-        <p className="text-[10px] md:text-xs text-gray-500 truncate">{label}</p>
+        <p className="fluid-h2 font-bold text-gray-900 truncate leading-tight">{value}</p>
+        <p className="text-[10px] xs:text-[11px] md:text-xs text-gray-500 truncate">{label}</p>
       </div>
     </div>
   );

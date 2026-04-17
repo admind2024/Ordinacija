@@ -20,20 +20,20 @@ export default function Header({ sectionName = 'MOA', onOpenMenu }: HeaderProps)
   };
 
   return (
-    <header className="sticky top-0 z-20 h-14 md:h-16 bg-surface border-b border-border flex items-center justify-between px-3 md:px-6 safe-top">
-      <div className="flex items-center gap-2 min-w-0">
+    <header className="sticky top-0 z-20 h-14 md:h-16 bg-surface border-b border-border flex items-center justify-between gap-2 px-2 xs:px-3 md:px-6 safe-top safe-left safe-right">
+      <div className="flex items-center gap-1.5 xs:gap-2 min-w-0 flex-1">
         {/* Hamburger — samo na mobilnom */}
         <button
           onClick={onOpenMenu}
-          className="md:hidden p-2 -ml-1 text-gray-600 hover:text-gray-900 rounded-lg hover:bg-gray-100 transition-colors"
+          className="md:hidden p-2 -ml-0.5 text-gray-600 active:text-gray-900 rounded-lg active:bg-gray-100 transition-colors shrink-0"
           aria-label="Otvori meni"
         >
           <Menu size={22} />
         </button>
-        <h1 className="text-base md:text-lg font-semibold text-gray-900 truncate">{sectionName}</h1>
+        <h1 className="text-sm xs:text-base md:text-lg font-semibold text-gray-900 truncate">{sectionName}</h1>
       </div>
 
-      <div className="flex items-center gap-2 md:gap-4 shrink-0">
+      <div className="flex items-center gap-1 xs:gap-2 md:gap-4 shrink-0">
         {/* Desktop: puno ime + uloga */}
         <div className="hidden md:flex items-center gap-2 text-sm">
           <div className="w-8 h-8 bg-primary-100 text-primary-700 rounded-full flex items-center justify-center">

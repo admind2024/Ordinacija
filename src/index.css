@@ -1,5 +1,10 @@
 @import "tailwindcss";
 
+/* Custom breakpoint: xs (475px) — granica izmedju malog i normalnog telefona */
+@theme {
+  --breakpoint-xs: 475px;
+}
+
 @theme {
   --color-primary-50: #E6F5F5;
   --color-primary-100: #CCF0F0;
@@ -64,6 +69,14 @@ body {
 /* Safe-area insets — iPhone notch / home indicator */
 .safe-top { padding-top: max(env(safe-area-inset-top), 0px); }
 .safe-bottom { padding-bottom: max(env(safe-area-inset-bottom), 0px); }
+.safe-left { padding-left: max(env(safe-area-inset-left), 0px); }
+.safe-right { padding-right: max(env(safe-area-inset-right), 0px); }
+
+/* Fluidni tekst — ska lira se glatko izmedju 320px i 475px ekrana */
+.fluid-title { font-size: clamp(1.125rem, 1rem + 1.5vw, 1.5rem); line-height: 1.2; }
+.fluid-h2 { font-size: clamp(1rem, 0.9rem + 1vw, 1.25rem); }
+.fluid-body { font-size: clamp(0.8125rem, 0.75rem + 0.4vw, 0.9375rem); }
+.fluid-small { font-size: clamp(0.6875rem, 0.65rem + 0.2vw, 0.8125rem); }
 
 /* PWA standalone rezim — kad je instalirano na home screen */
 @media all and (display-mode: standalone) {

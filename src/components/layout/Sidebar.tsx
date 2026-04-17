@@ -64,9 +64,9 @@ export default function Sidebar({ collapsed, setCollapsed, mobileOpen, onMobileC
 
       <aside
         className={`
-          fixed left-0 top-0 h-full bg-sidebar text-white z-50 flex flex-col transition-all duration-300 safe-top safe-bottom
+          fixed left-0 top-0 h-full bg-sidebar text-white z-50 flex flex-col transition-transform duration-300 safe-top safe-bottom
           ${collapsed ? 'md:w-16' : 'md:w-60'}
-          w-72
+          w-[85vw] max-w-[280px]
           ${mobileOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
         `}
       >

@@ -23,7 +23,7 @@ export default function Layout() {
   const sectionName = currentNav?.name || 'MOA';
 
   return (
-    <div className="min-h-screen bg-background overflow-x-hidden">
+    <div className="min-h-screen bg-background">
       <Sidebar
         collapsed={collapsed}
         setCollapsed={setCollapsed}
@@ -32,11 +32,11 @@ export default function Layout() {
       />
 
       {/* Main content — na mobilnom full-width, na desktopu offset za sidebar */}
-      <div className={`transition-[margin] duration-300 overflow-x-hidden ${collapsed ? 'md:ml-16' : 'md:ml-60'}`}>
+      <div className={`transition-[margin] duration-300 ${collapsed ? 'md:ml-16' : 'md:ml-60'}`}>
         <Header sectionName={sectionName} onOpenMenu={() => setMobileOpen(true)} />
 
         {/* Donji padding = BottomNav visina + safe-area na mobilnom; obicno na desktopu */}
-        <main className="p-3 md:p-6 pb-[calc(5rem+env(safe-area-inset-bottom))] md:pb-6 max-w-full overflow-x-hidden">
+        <main className="p-3 md:p-6 pb-[calc(5rem+env(safe-area-inset-bottom))] md:pb-6">
           <Outlet />
         </main>
       </div>

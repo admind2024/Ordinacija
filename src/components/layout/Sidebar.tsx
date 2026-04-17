@@ -17,6 +17,7 @@ import {
   ChevronRight,
   ClipboardList,
   ListOrdered,
+  X,
 } from 'lucide-react';
 
 export const navigation = [
@@ -39,9 +40,11 @@ export const navigation = [
 interface SidebarProps {
   collapsed: boolean;
   setCollapsed: (v: boolean) => void;
+  mobileOpen: boolean;
+  onMobileClose: () => void;
 }
 
-export default function Sidebar({ collapsed, setCollapsed }: SidebarProps) {
+export default function Sidebar({ collapsed, setCollapsed, mobileOpen, onMobileClose }: SidebarProps) {
   const { user } = useAuth();
 
   const visibleNav = navigation.filter(
@@ -49,54 +52,79 @@ export default function Sidebar({ collapsed, setCollapsed }: SidebarProps) {
   );
 
   return (
-    <aside
-      className={`fixed left-0 top-0 h-full bg-sidebar text-white z-40 flex flex-col transition-all duration-300
-        ${collapsed ? 'w-16' : 'w-60'}`}
-    >
-      {/* Logo */}
-      <div className={`flex items-center h-16 border-b border-white/10 ${collapsed ? 'justify-center px-2' : 'gap-3 px-4'}`}>
-        <img
-          src="https://pedgschrivtpbzcoqniu.supabase.co/storage/v1/object/public/Razno/MOA%20LOGO%201.png"
-          alt="MOA"
-          className={`object-contain shrink-0 ${collapsed ? 'h-9' : 'h-11'}`}
+    <>
+      {/* Mobile backdrop */}
+      {mobileOpen && (
+        <div
+          onClick={onMobileClose}
+          className="md:hidden fixed inset-0 z-40 bg-black/50 backdrop-blur-sm transition-opacity"
+          aria-hidden="true"
         />
-        {!collapsed && (
-          <span className="font-semibold text-sm truncate">MOA</span>
-        )}
-      </div>
+      )}
 
-      {/* Navigacija */}
-      <nav className="flex-1 py-4 overflow-y-auto">
-        <ul className="space-y-1 px-2">
-          {visibleNav.map((item) => (
-            <li key={item.path}>
-              <NavLink
-                to={item.path}
-                end={item.path === '/'}
-                className={({ isActive }) =>
-                  `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors
-                  ${isActive
-                    ? 'bg-primary-600 text-white'
-                    : 'text-gray-300 hover:bg-sidebar-hover hover:text-white'
-                  }`
-                }
-                title={collapsed ? item.name : undefined}
-              >
-                <item.icon size={20} className="shrink-0" />
-                {!collapsed && <span>{item.name}</span>}
-              </NavLink>
-            </li>
-          ))}
-        </ul>
-      </nav>
-
-      {/* Collapse toggle */}
-      <button
-        onClick={() => setCollapsed(!collapsed)}
-        className="flex items-center justify-center h-12 border-t border-white/10 text-gray-400 hover:text-white transition-colors"
+      <aside
+        className={`
+          fixed left-0 top-0 h-full bg-sidebar text-white z-50 flex flex-col transition-all duration-300 safe-top safe-bottom
+          ${collapsed ? 'md:w-16' : 'md:w-60'}
+          w-72
+          ${mobileOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
+        `}
       >
-        {collapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
-      </button>
-    </aside>
+        {/* Logo + mobile close */}
+        <div className={`flex items-center h-16 border-b border-white/10 shrink-0 ${collapsed ? 'md:justify-center md:px-2' : 'px-4'} justify-between gap-3 px-4`}>
+          <div className={`flex items-center ${collapsed ? 'md:gap-0' : 'gap-3'} gap-3 min-w-0`}>
+            <img
+              src="https://pedgschrivtpbzcoqniu.supabase.co/storage/v1/object/public/Razno/MOA%20LOGO%201.png"
+              alt="MOA"
+              className={`object-contain shrink-0 ${collapsed ? 'md:h-9' : 'h-11'} h-11`}
+            />
+            <span className={`font-semibold text-sm truncate ${collapsed ? 'md:hidden' : ''}`}>MOA</span>
+          </div>
+          {/* Mobile close button */}
+          <button
+            onClick={onMobileClose}
+            className="md:hidden p-2 -mr-2 text-white/70 hover:text-white"
+            aria-label="Zatvori meni"
+          >
+            <X size={20} />
+          </button>
+        </div>
+
+        {/* Navigacija */}
+        <nav className="flex-1 py-4 overflow-y-auto">
+          <ul className="space-y-1 px-2">
+            {visibleNav.map((item) => (
+              <li key={item.path}>
+                <NavLink
+                  to={item.path}
+                  end={item.path === '/'}
+                  onClick={onMobileClose}
+                  className={({ isActive }) =>
+                    `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors
+                    ${isActive
+                      ? 'bg-primary-600 text-white'
+                      : 'text-gray-300 hover:bg-sidebar-hover hover:text-white'
+                    }`
+                  }
+                  title={collapsed ? item.name : undefined}
+                >
+                  <item.icon size={20} className="shrink-0" />
+                  <span className={collapsed ? 'md:hidden' : ''}>{item.name}</span>
+                </NavLink>
+              </li>
+            ))}
+          </ul>
+        </nav>
+
+        {/* Collapse toggle — samo desktop */}
+        <button
+          onClick={() => setCollapsed(!collapsed)}
+          className="hidden md:flex items-center justify-center h-12 border-t border-white/10 text-gray-400 hover:text-white transition-colors shrink-0"
+          aria-label={collapsed ? 'Prosiri meni' : 'Suzi meni'}
+        >
+          {collapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
+        </button>
+      </aside>
+    </>
   );
 }

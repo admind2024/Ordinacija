@@ -1,10 +1,11 @@
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, CalendarDays, CreditCard } from 'lucide-react';
+import { LayoutDashboard, CalendarDays, CreditCard, BarChart3, Megaphone } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 
 /**
  * Bottom tab bar — vidljiv samo na mobilnom (<md).
- * Minimalni set glavnih tabova za brze reakcije; ostalo u hamburger meniju.
+ * Brze reakcije: Pocetna / Kalendar / Naplata / Izvjestaji / Marketing.
+ * Pacijenti, Pregled i ostalo dostupno kroz hamburger meni.
  */
 
 interface Tab {
@@ -15,9 +16,11 @@ interface Tab {
 }
 
 const TABS: Tab[] = [
-  { path: '/',         label: 'Pocetna',  icon: LayoutDashboard, roles: ['admin', 'menadzer', 'recepcija', 'ljekar', 'marketing'] },
-  { path: '/kalendar', label: 'Kalendar', icon: CalendarDays,    roles: ['admin', 'menadzer', 'recepcija', 'ljekar'] },
-  { path: '/naplata',  label: 'Naplata',  icon: CreditCard,      roles: ['admin', 'menadzer', 'recepcija'] },
+  { path: '/',           label: 'Pocetna',    icon: LayoutDashboard, roles: ['admin', 'menadzer', 'recepcija', 'ljekar', 'marketing'] },
+  { path: '/kalendar',   label: 'Kalendar',   icon: CalendarDays,    roles: ['admin', 'menadzer', 'recepcija', 'ljekar'] },
+  { path: '/naplata',    label: 'Naplata',    icon: CreditCard,      roles: ['admin', 'menadzer', 'recepcija'] },
+  { path: '/izvjestaji', label: 'Izvjestaj',  icon: BarChart3,       roles: ['admin', 'menadzer'] },
+  { path: '/marketing',  label: 'Marketing',  icon: Megaphone,       roles: ['admin', 'menadzer', 'marketing'] },
 ];
 
 export default function BottomNav() {

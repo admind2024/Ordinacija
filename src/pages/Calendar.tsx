@@ -1,4 +1,5 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
+import { Plus } from 'lucide-react';
 import { useCalendar } from '../contexts/CalendarContext';
 import CalendarToolbar from '../components/calendar/CalendarToolbar';
 import FilterPanel from '../components/calendar/FilterPanel';
@@ -12,6 +13,18 @@ import type { Appointment } from '../types';
 
 function CalendarContent() {
   const { view, setView, setSelectedDate } = useCalendar();
+
+  // Na mobilnom: uvijek forsiraj agenda view i postavi selectedDate = danas
+  // da pacijentu/adminu odmah pokazemo aktuelni dan (kao quick-reaction tool)
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const isMobile = window.innerWidth < 768;
+    if (isMobile) {
+      if (view !== 'agenda') setView('agenda');
+      setSelectedDate(new Date());
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
@@ -100,6 +113,16 @@ function CalendarContent() {
           onEdit={handleEditFromPopover}
         />
       )}
+
+      {/* FAB za novi termin — samo na mobilnom, iznad BottomNav-a sa safe-area */}
+      <button
+        onClick={handleNewAppointment}
+        className="md:hidden fixed right-4 z-40 w-14 h-14 rounded-full bg-primary-600 text-white shadow-xl shadow-primary-600/40 flex items-center justify-center active:scale-95 transition-transform"
+        style={{ bottom: 'calc(5rem + env(safe-area-inset-bottom))' }}
+        aria-label="Novi termin"
+      >
+        <Plus size={26} strokeWidth={2.5} />
+      </button>
     </div>
   );
 }

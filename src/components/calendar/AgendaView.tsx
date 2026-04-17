@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { format, startOfWeek, endOfWeek, addDays, parseISO, isSameDay, differenceInMinutes } from 'date-fns';
 import { srLatn as sr } from 'date-fns/locale';
 import { MapPin, Stethoscope } from 'lucide-react';
@@ -14,10 +15,22 @@ export default function AgendaView({ onAppointmentClick }: AgendaViewProps) {
   const { selectedDate, getFilteredAppointments, doctors, rooms } = useCalendar();
   const { patients } = usePatients();
 
-  const weekStart = startOfWeek(selectedDate, { weekStartsOn: 1 });
-  const weekEnd = endOfWeek(selectedDate, { weekStartsOn: 1 });
-  const days = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
-  const appointments = getFilteredAppointments(weekStart, addDays(weekEnd, 1));
+  // Responsive: na mobilnom prikazujemo 7 dana pocev od selectedDate (po defaultu danas).
+  // Na desktopu ostaje originalna nedjelja (pon-ned) — bolji pregled.
+  const [isMobile, setIsMobile] = useState(() =>
+    typeof window !== 'undefined' ? window.innerWidth < 768 : false,
+  );
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const onResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
+
+  const rangeStart = isMobile ? selectedDate : startOfWeek(selectedDate, { weekStartsOn: 1 });
+  const rangeEnd = isMobile ? addDays(selectedDate, 6) : endOfWeek(selectedDate, { weekStartsOn: 1 });
+  const days = Array.from({ length: 7 }, (_, i) => addDays(rangeStart, i));
+  const appointments = getFilteredAppointments(rangeStart, addDays(rangeEnd, 1));
 
   return (
     <div className="space-y-4">
@@ -52,14 +65,14 @@ export default function AgendaView({ onAppointmentClick }: AgendaViewProps) {
                     <button
                       key={apt.id}
                       onClick={(e) => onAppointmentClick(apt, e)}
-                      className="w-full text-left px-4 py-3 hover:bg-gray-50 transition-colors flex items-start gap-4"
+                      className="w-full text-left px-3 md:px-4 py-3 hover:bg-gray-50 active:bg-gray-100 transition-colors flex items-start gap-2 md:gap-4"
                     >
                       {/* Vrijeme */}
-                      <div className="w-16 shrink-0 text-center">
+                      <div className="w-12 md:w-16 shrink-0 text-center">
                         <p className="text-sm font-semibold text-gray-900">
                           {format(parseISO(apt.pocetak), 'HH:mm')}
                         </p>
-                        <p className="text-xs text-gray-400">{duration} min</p>
+                        <p className="text-[10px] md:text-xs text-gray-400">{duration} min</p>
                       </div>
 
                       {/* Status bar */}
@@ -70,12 +83,12 @@ export default function AgendaView({ onAppointmentClick }: AgendaViewProps) {
 
                       {/* Detalji */}
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <p className="text-sm font-medium text-gray-900">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className="text-sm font-medium text-gray-900 truncate">
                             {patient ? `${patient.ime} ${patient.prezime}` : 'Nepoznat'}
                           </p>
                           <span
-                            className="text-[10px] px-2 py-0.5 rounded-full font-medium"
+                            className="text-[10px] px-1.5 md:px-2 py-0.5 rounded-full font-medium shrink-0"
                             style={{
                               backgroundColor: APPOINTMENT_STATUS_COLORS[apt.status] + '20',
                               color: APPOINTMENT_STATUS_COLORS[apt.status],
@@ -86,21 +99,21 @@ export default function AgendaView({ onAppointmentClick }: AgendaViewProps) {
                         </div>
 
                         {apt.services && apt.services.length > 0 && (
-                          <p className="text-xs text-gray-500 mt-0.5">
+                          <p className="text-[11px] md:text-xs text-gray-500 mt-0.5 truncate">
                             {apt.services.map((s) => s.naziv).join(', ')}
                           </p>
                         )}
 
-                        <div className="flex items-center gap-3 mt-1 text-xs text-gray-400">
+                        <div className="flex items-center gap-2 md:gap-3 mt-1 text-[10px] md:text-xs text-gray-400 flex-wrap">
                           {doctor && (
-                            <span className="flex items-center gap-1">
-                              <Stethoscope size={12} />
-                              {doctor.titula} {doctor.ime} {doctor.prezime.charAt(0)}.
+                            <span className="flex items-center gap-1 truncate">
+                              <Stethoscope size={11} className="shrink-0" />
+                              <span className="truncate">{doctor.titula} {doctor.ime} {doctor.prezime.charAt(0)}.</span>
                             </span>
                           )}
                           {room && (
                             <span className="flex items-center gap-1">
-                              <MapPin size={12} />
+                              <MapPin size={11} className="shrink-0" />
                               {room.naziv}
                             </span>
                           )}
@@ -110,8 +123,8 @@ export default function AgendaView({ onAppointmentClick }: AgendaViewProps) {
                       {/* Cijena */}
                       {apt.services && apt.services.length > 0 && (
                         <div className="text-right shrink-0">
-                          <p className="text-sm font-semibold text-gray-900">
-                            {apt.services.reduce((sum, s) => sum + s.ukupno, 0).toFixed(0)} EUR
+                          <p className="text-xs md:text-sm font-semibold text-gray-900">
+                            {apt.services.reduce((sum, s) => sum + s.ukupno, 0).toFixed(0)} €
                           </p>
                         </div>
                       )}

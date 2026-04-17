@@ -1,5 +1,4 @@
 import { useState, useCallback, useEffect } from 'react';
-import { Plus } from 'lucide-react';
 import { useCalendar } from '../contexts/CalendarContext';
 import CalendarToolbar from '../components/calendar/CalendarToolbar';
 import FilterPanel from '../components/calendar/FilterPanel';
@@ -113,16 +112,6 @@ function CalendarContent() {
           onEdit={handleEditFromPopover}
         />
       )}
-
-      {/* FAB za novi termin — samo na mobilnom, iznad BottomNav-a sa safe-area */}
-      <button
-        onClick={handleNewAppointment}
-        className="md:hidden fixed right-4 z-40 w-14 h-14 rounded-full bg-primary-600 text-white shadow-xl shadow-primary-600/40 flex items-center justify-center active:scale-95 transition-transform"
-        style={{ bottom: 'calc(5rem + env(safe-area-inset-bottom))' }}
-        aria-label="Novi termin"
-      >
-        <Plus size={26} strokeWidth={2.5} />
-      </button>
     </div>
   );
 }

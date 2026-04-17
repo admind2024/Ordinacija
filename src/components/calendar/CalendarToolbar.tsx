@@ -42,40 +42,52 @@ export default function CalendarToolbar({ onNewAppointment, onToggleFilters, fil
   }
 
   return (
-    <div className="flex items-center justify-between gap-4 mb-4 flex-wrap">
-      {/* Lijeva strana — navigacija */}
-      <div className="flex items-center gap-2">
-        <Button variant="secondary" size="sm" onClick={goToToday}>
-          Danas
-        </Button>
-        <div className="flex items-center">
-          <button
-            onClick={goBack}
-            className="p-1.5 text-gray-500 hover:bg-gray-100 rounded-lg transition-colors"
-          >
-            <ChevronLeft size={20} />
-          </button>
-          <button
-            onClick={goForward}
-            className="p-1.5 text-gray-500 hover:bg-gray-100 rounded-lg transition-colors"
-          >
-            <ChevronRight size={20} />
-          </button>
+    <div className="mb-4 space-y-2 md:space-y-0">
+      {/* Red 1: navigacija + datum */}
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-1 md:gap-2 min-w-0">
+          <Button variant="secondary" size="sm" onClick={goToToday}>
+            Danas
+          </Button>
+          <div className="flex items-center">
+            <button
+              onClick={goBack}
+              className="p-1.5 text-gray-500 hover:bg-gray-100 rounded-lg transition-colors"
+              aria-label="Prethodno"
+            >
+              <ChevronLeft size={20} />
+            </button>
+            <button
+              onClick={goForward}
+              className="p-1.5 text-gray-500 hover:bg-gray-100 rounded-lg transition-colors"
+              aria-label="Sljedece"
+            >
+              <ChevronRight size={20} />
+            </button>
+          </div>
+          <h3 className="text-sm md:text-lg font-semibold text-gray-900 truncate md:whitespace-nowrap">
+            {getDateLabel()}
+          </h3>
         </div>
-        <h3 className="text-lg font-semibold text-gray-900 whitespace-nowrap">
-          {getDateLabel()}
-        </h3>
+
+        {/* Novi termin — vidljiv i na mobilnom i na desktopu */}
+        <div className="flex items-center gap-2 shrink-0">
+          <Button size="sm" onClick={onNewAppointment}>
+            <Plus size={16} />
+            <span className="hidden xs:inline">Novi termin</span>
+            <span className="xs:hidden">Novi</span>
+          </Button>
+        </div>
       </div>
 
-      {/* Desna strana — prikaz i akcije */}
-      <div className="flex items-center gap-2">
-        {/* View toggle */}
-        <div className="flex bg-gray-100 rounded-lg p-0.5">
+      {/* Red 2: view toggle + filter */}
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex bg-gray-100 rounded-lg p-0.5 overflow-x-auto">
           {(Object.keys(viewLabels) as CalendarView[]).map((v) => (
             <button
               key={v}
               onClick={() => setView(v)}
-              className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors
+              className={`px-2.5 md:px-3 py-1.5 text-xs md:text-sm font-medium rounded-md transition-colors whitespace-nowrap
                 ${view === v
                   ? 'bg-white text-gray-900 shadow-sm'
                   : 'text-gray-500 hover:text-gray-700'
@@ -86,20 +98,13 @@ export default function CalendarToolbar({ onNewAppointment, onToggleFilters, fil
           ))}
         </div>
 
-        {/* Filter */}
         <Button
           variant={filtersOpen ? 'primary' : 'secondary'}
           size="sm"
           onClick={onToggleFilters}
         >
           <Filter size={16} />
-          Filteri
-        </Button>
-
-        {/* Novi termin */}
-        <Button size="sm" onClick={onNewAppointment}>
-          <Plus size={16} />
-          Novi termin
+          <span className="hidden sm:inline">Filteri</span>
         </Button>
       </div>
     </div>

@@ -293,9 +293,25 @@ export function CalendarProvider({ children }: { children: ReactNode }) {
           if (!patientInfo?.telefon) return;
 
           const imeIPrezime = `${patientInfo.ime ?? ''} ${patientInfo.prezime ?? ''}`.trim();
-          const doctorName = doctor
-            ? `${doctor.titula ?? ''} ${doctor.ime ?? ''} ${doctor.prezime ?? ''}`.trim()
+
+          // Dovuci doktora: prvo iz prosledjenog objekta, pa iz state liste,
+          // pa kao fallback iz baze — da SMS uvijek ima ime ljekara
+          let doctorInfo: any = doctor;
+          if (!doctorInfo && aptData.doctor_id) {
+            doctorInfo = doctors.find((d) => d.id === aptData.doctor_id);
+          }
+          if (!doctorInfo && aptData.doctor_id) {
+            const { data: dd } = await supabase
+              .from('doctors')
+              .select('ime, prezime, titula')
+              .eq('id', aptData.doctor_id)
+              .maybeSingle();
+            doctorInfo = dd;
+          }
+          const doctorName = doctorInfo
+            ? `${doctorInfo.titula ?? ''} ${doctorInfo.ime ?? ''} ${doctorInfo.prezime ?? ''}`.trim()
             : undefined;
+
           const rawText = getMessage('potvrda', 'sms', { imeIPrezime, datum: aptData.pocetak, doctor: doctorName });
           const text = stripDiacritics(rawText);
           const result = await sendSms(patientInfo.telefon, text);

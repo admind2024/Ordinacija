@@ -128,7 +128,7 @@ export function renderTemplate(template: string, params: RenderParams): string {
     } catch { /* ignore */ }
   }
 
-  return template
+  let result = template
     .replaceAll('{ime_prezime}', fullName)
     .replaceAll('{ime}', ime)
     .replaceAll('{prezime}', prezime)
@@ -136,6 +136,17 @@ export function renderTemplate(template: string, params: RenderParams): string {
     .replaceAll('{vrijeme}', v)
     .replaceAll('{doktor}', params.doctor ?? '')
     .replaceAll('{link}', params.link ?? '');
+
+  // Cleanup: ako je {doktor} prazan, ukloni "Ljekar: ." frazu da SMS ne izgleda ruzno
+  if (!params.doctor) {
+    result = result
+      .replace(/\s*Ljekar:\s*\.?/gi, '')
+      .replace(/\s*Doktor:\s*\.?/gi, '')
+      .replace(/\s{2,}/g, ' ')
+      .trim();
+  }
+
+  return result;
 }
 
 export function getMessage(

@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import {
   Calendar, TrendingUp, CreditCard, Users, FileText, Package,
-  Printer, Download,
+  Printer, Download, Receipt, ReceiptText, Wallet,
 } from 'lucide-react';
 import Card from '../components/ui/Card';
 import { useCalendar } from '../contexts/CalendarContext';
@@ -89,6 +89,37 @@ export default function Reports() {
       .gte('datum', dateFrom)
       .lte('datum', dateTo)
       .then(({ count }) => setExamCount(count || 0));
+  }, [dateFrom, dateTo]);
+
+  // Payments u periodu — podjela fiskal vs bez fiskala
+  const [paymentsAgg, setPaymentsAgg] = useState({
+    total: 0, count: 0,
+    fiskalTotal: 0, fiskalCount: 0,
+    neFiskalTotal: 0, neFiskalCount: 0,
+    dug: 0, duznika: 0,
+  });
+
+  useEffect(() => {
+    (async () => {
+      const fromTs = `${dateFrom}T00:00:00`;
+      const toTs = `${dateTo}T23:59:59`;
+      const [{ data: pays }, { data: debts }] = await Promise.all([
+        supabase.from('payments').select('iznos, metoda, fiskalni_status').gte('datum', fromTs).lte('datum', toTs),
+        supabase.from('dugovanja').select('preostalo, patient_id').eq('status', 'aktivan'),
+      ]);
+      let total = 0, count = 0, fiskalTotal = 0, fiskalCount = 0, neFiskalTotal = 0, neFiskalCount = 0;
+      for (const p of pays || []) {
+        const iznos = Number(p.iznos) || 0;
+        const metoda = p.metoda || '';
+        const isFiskal = metoda.endsWith('_fiskalni') || p.fiskalni_status === 'done';
+        total += iznos; count++;
+        if (isFiskal) { fiskalTotal += iznos; fiskalCount++; }
+        else { neFiskalTotal += iznos; neFiskalCount++; }
+      }
+      const dug = (debts || []).reduce((s, d) => s + Number(d.preostalo || 0), 0);
+      const duznika = new Set((debts || []).map((d) => d.patient_id)).size;
+      setPaymentsAgg({ total, count, fiskalTotal, fiskalCount, neFiskalTotal, neFiskalCount, dug, duznika });
+    })();
   }, [dateFrom, dateTo]);
 
   // Materijali iz material_usage u izabranom periodu
@@ -421,6 +452,74 @@ export default function Reports() {
           <p className="text-2xl font-bold text-accent-600">{materialTotals.ukupnoVrijednost.toFixed(0)} €</p>
           <p className="text-[11px] text-gray-400 mt-1">{materialTotals.ukupnoStavki} stavki</p>
         </Card>
+      </div>
+
+      {/* ====== NAPLATA: Fiskal / Bez fiskala / Dug ====== */}
+      <div className="mb-6">
+        <h3 className="text-[11px] uppercase tracking-wider text-gray-400 font-semibold mb-2">Naplata u periodu</h3>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 xs:gap-3">
+          {/* Ukupno naplaceno */}
+          <div className="bg-white border border-border rounded-xl p-3 md:p-4">
+            <div className="flex items-center gap-2 mb-1">
+              <CreditCard size={14} className="text-green-500" />
+              <p className="text-[10px] xs:text-xs text-gray-500 uppercase tracking-wider">Naplaceno</p>
+            </div>
+            <p className="fluid-h2 font-bold text-green-600 leading-tight">{paymentsAgg.total.toFixed(0)} €</p>
+            <p className="text-[10px] xs:text-xs text-gray-400 mt-0.5">{paymentsAgg.count} uplata</p>
+          </div>
+
+          {/* Fiskalizovano */}
+          <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3 md:p-4">
+            <div className="flex items-center gap-2 mb-1">
+              <Receipt size={14} className="text-emerald-600" />
+              <p className="text-[10px] xs:text-xs text-emerald-700 uppercase tracking-wider font-medium">Fiskalizovano</p>
+            </div>
+            <p className="fluid-h2 font-bold text-emerald-700 leading-tight">{paymentsAgg.fiskalTotal.toFixed(0)} €</p>
+            <p className="text-[10px] xs:text-xs text-emerald-600/70 mt-0.5">{paymentsAgg.fiskalCount} uplata</p>
+          </div>
+
+          {/* Bez fiskala */}
+          <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 md:p-4">
+            <div className="flex items-center gap-2 mb-1">
+              <ReceiptText size={14} className="text-amber-600" />
+              <p className="text-[10px] xs:text-xs text-amber-700 uppercase tracking-wider font-medium">Bez fiskala</p>
+            </div>
+            <p className="fluid-h2 font-bold text-amber-700 leading-tight">{paymentsAgg.neFiskalTotal.toFixed(0)} €</p>
+            <p className="text-[10px] xs:text-xs text-amber-600/70 mt-0.5">{paymentsAgg.neFiskalCount} uplata</p>
+          </div>
+
+          {/* Dug */}
+          <div className="bg-white border border-border rounded-xl p-3 md:p-4">
+            <div className="flex items-center gap-2 mb-1">
+              <Wallet size={14} className="text-red-500" />
+              <p className="text-[10px] xs:text-xs text-gray-500 uppercase tracking-wider">Dug (aktuelni)</p>
+            </div>
+            <p className="fluid-h2 font-bold text-red-600 leading-tight">{paymentsAgg.dug.toFixed(0)} €</p>
+            <p className="text-[10px] xs:text-xs text-gray-400 mt-0.5">{paymentsAgg.duznika} duznika</p>
+          </div>
+        </div>
+
+        {/* Proporcije fiskal/bez */}
+        {paymentsAgg.total > 0 && (
+          <div className="mt-3 bg-white border border-border rounded-xl p-3">
+            <div className="flex items-center justify-between mb-1.5">
+              <span className="text-[11px] text-gray-500 uppercase tracking-wider">Udio fiskalizacije</span>
+              <span className="text-xs font-semibold text-gray-900">
+                {((paymentsAgg.fiskalTotal / paymentsAgg.total) * 100).toFixed(0)}%
+              </span>
+            </div>
+            <div className="flex h-2 rounded-full overflow-hidden bg-amber-100">
+              <div
+                className="bg-emerald-500"
+                style={{ width: `${(paymentsAgg.fiskalTotal / paymentsAgg.total) * 100}%` }}
+              />
+            </div>
+            <div className="flex justify-between mt-1 text-[10px] text-gray-400">
+              <span>fiskalno</span>
+              <span>bez fiskala</span>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* ====== GRAFIKONI ====== */}

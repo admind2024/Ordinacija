@@ -115,7 +115,7 @@ export default function TransactionList() {
     const { data: paysData } = await pQuery;
     const paysList: PaymentRow[] = (paysData || []).map((p: any) => {
       const metoda = p.metoda || '';
-      const isFiskal = metoda.endsWith('_fiskalni') || p.fiskalni_status === 'done';
+      const isFiskal = metoda.endsWith('_fiskalni') || p.fiskalni_status === 'success' || p.fiskalni_status === 'done';
       return {
         id: p.id,
         appointment_id: p.appointment_id,

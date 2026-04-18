@@ -111,7 +111,7 @@ export default function Reports() {
       for (const p of pays || []) {
         const iznos = Number(p.iznos) || 0;
         const metoda = p.metoda || '';
-        const isFiskal = metoda.endsWith('_fiskalni') || p.fiskalni_status === 'done';
+        const isFiskal = metoda.endsWith('_fiskalni') || p.fiskalni_status === 'success' || p.fiskalni_status === 'done';
         total += iznos; count++;
         if (isFiskal) { fiskalTotal += iznos; fiskalCount++; }
         else { neFiskalTotal += iznos; neFiskalCount++; }

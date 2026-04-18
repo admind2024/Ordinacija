@@ -95,16 +95,36 @@ export default function Dashboard() {
     supabase.from('establishments').select('*').limit(1).single()
       .then(({ data }) => { if (data) setEstablishment(data as Establishment); });
 
-    // Ucitaj koja appointments imaju uplate iz payments tabele
-    supabase.from('payments').select('appointment_id').then(({ data }) => {
-      const ids = new Set((data || []).map((p: any) => p.appointment_id).filter(Boolean));
-      setPaidAppointmentIds(ids);
-    });
+    // Ucitaj uplate + fiskalne detalje iz payments tabele
+    supabase
+      .from('payments')
+      .select('appointment_id, fiskalni_status, fiskalni_broj, fic, iic, qr_code_url')
+      .then(({ data }) => {
+        const ids = new Set((data || []).map((p: any) => p.appointment_id).filter(Boolean));
+        setPaidAppointmentIds(ids);
+
+        // Fiskalna data po appointment_id za exam-ove koji su fiskalizovani
+        const map: Record<string, FiscalResult> = {};
+        for (const p of data || []) {
+          const pp: any = p;
+          if (pp.fiskalni_status === 'success' && pp.appointment_id) {
+            map[pp.appointment_id] = {
+              success: true,
+              fic: pp.fic,
+              iic: pp.iic,
+              invoiceNumber: pp.fiskalni_broj,
+              qrCodeUrl: pp.qr_code_url,
+            };
+          }
+        }
+        setFiscalByAppointment(map);
+      });
   }, [patients, doctors]);
 
   function handlePrintExam(exam: ExamWithDetails) {
     if (!exam.patient || !exam.doctor) return;
-    const fd = fiscalData[exam.id];
+    // Pokusaj iz state-a (freski fiskal) ILI iz baze (perzistovani po appointment_id)
+    const fd = fiscalData[exam.id] || (exam.appointment_id ? fiscalByAppointment[exam.appointment_id] : undefined);
     const fiscal: FiscalPrintData | undefined = fd?.success ? {
       fic: fd.fic,
       iic: fd.iic,
@@ -128,6 +148,8 @@ export default function Dashboard() {
   const [, setFiscalizing] = useState<string | null>(null);
   const [fiscalResult, setFiscalResult] = useState<{ id: string; result: FiscalResult } | null>(null);
   const [fiscalData, setFiscalData] = useState<Record<string, FiscalResult>>({});
+  // Fiskalni podaci perzistovani u bazi — ucitavaju se po appointment_id
+  const [fiscalByAppointment, setFiscalByAppointment] = useState<Record<string, FiscalResult>>({});
   // Appointment IDs koji imaju uplate u payments tabeli (iz baze, ne memorije)
   const [paidAppointmentIds, setPaidAppointmentIds] = useState<Set<string>>(new Set());
 
@@ -148,7 +170,9 @@ export default function Dashboard() {
   const payZaNaplatu = Math.max(0, payBruto - payPopustIznos);
 
   function openPayment(exam: ExamWithDetails) {
-    if (fiscalData[exam.id]?.success) {
+    const alreadyFiscalized = fiscalData[exam.id]?.success
+      || (exam.appointment_id ? fiscalByAppointment[exam.appointment_id]?.success : false);
+    if (alreadyFiscalized) {
       setFiscalResult({ id: exam.id, result: { success: false, error: 'Ovaj pregled je vec fiskalizovan!' } });
       setTimeout(() => setFiscalResult(null), 4000);
       return;
@@ -186,7 +210,8 @@ export default function Dashboard() {
     const remaining = examTotal - payAmount;
     const willCreateDebt = remaining > 0.01;
 
-    // Ako treba fiskalizacija
+    // Ako treba fiskalizacija — wrap u try/catch da payment uvijek snimi
+    let fiscalResultData: FiscalResult | null = null;
     if (payFiskalizuj) {
       if (!payExam.appointmentServices || payExam.appointmentServices.length === 0) {
         setFiscalResult({ id: payExam.id, result: { success: false, error: 'Nema usluga za fiskalizaciju' } });
@@ -195,26 +220,31 @@ export default function Dashboard() {
       }
 
       setFiscalizing(payExam.id);
-      await loadTeconioCertificate();
+      try {
+        await loadTeconioCertificate();
 
-      const items: FiscalItem[] = payExam.appointmentServices.map((svc: any) => ({
-        name: svc.naziv,
-        unit: 'kom',
-        quantity: Number(svc.kolicina) || 1,
-        unitPriceWithVAT: Number(svc.ukupno) / (Number(svc.kolicina) || 1),
-        vatRate: 21,
-      }));
+        const items: FiscalItem[] = payExam.appointmentServices.map((svc: any) => ({
+          name: svc.naziv,
+          unit: 'kom',
+          quantity: Number(svc.kolicina) || 1,
+          unitPriceWithVAT: Number(svc.ukupno) / (Number(svc.kolicina) || 1),
+          vatRate: 21,
+        }));
 
-      const fiscalMethod = payMethod === 'kartica' ? 'CARD' : 'BANKNOTE';
-      const result = await fiscalizeInvoice(items, [
-        { method: fiscalMethod, amount: payAmount },
-      ]);
+        const fiscalMethod = payMethod === 'kartica' ? 'CARD' : 'BANKNOTE';
+        fiscalResultData = await fiscalizeInvoice(items, [
+          { method: fiscalMethod, amount: payAmount },
+        ]);
+      } catch (e: any) {
+        console.error('Fiskalizacija greska:', e);
+        fiscalResultData = { success: false, error: e?.message || 'Greska pri fiskalizaciji' };
+      }
 
-      setFiscalResult({ id: payExam.id, result });
+      setFiscalResult({ id: payExam.id, result: fiscalResultData });
       setFiscalizing(null);
 
-      if (result.success) {
-        setFiscalData((prev) => ({ ...prev, [payExam.id]: result }));
+      if (fiscalResultData.success) {
+        setFiscalData((prev) => ({ ...prev, [payExam.id]: fiscalResultData! }));
         // Stampaj nakon uspjesne fiskalizacije
         if (payExam.patient && payExam.doctor) {
           setTimeout(() => {
@@ -225,13 +255,13 @@ export default function Dashboard() {
               establishment,
               services: payExam.appointmentServices as any,
               fiscal: {
-                fic: result.fic,
-                iic: result.iic,
-                invoiceNumber: result.invoiceNumber,
-                qrCodeUrl: result.qrCodeUrl,
-                totalWithoutVAT: result.totals?.totalWithoutVAT,
-                totalVAT: result.totals?.totalVAT,
-                totalPrice: result.totals?.totalPrice,
+                fic: fiscalResultData!.fic,
+                iic: fiscalResultData!.iic,
+                invoiceNumber: fiscalResultData!.invoiceNumber,
+                qrCodeUrl: fiscalResultData!.qrCodeUrl,
+                totalWithoutVAT: fiscalResultData!.totals?.totalWithoutVAT,
+                totalVAT: fiscalResultData!.totals?.totalVAT,
+                totalPrice: fiscalResultData!.totals?.totalPrice,
               },
             });
           }, 500);
@@ -240,23 +270,34 @@ export default function Dashboard() {
       setTimeout(() => setFiscalResult(null), 8000);
     }
 
-    // Snimi uplatu u payments tabelu
+    // Snimi uplatu u payments tabelu — UVIJEK, cak i ako fiskalizacija faila
+    // (fiskalni_status biljezi rezultat; CHECK constraint dozvoljava: pending/success/failed/offline)
+    const fiskalOK = !!fiscalResultData?.success;
     const paymentMethod = payFiskalizuj
       ? (payMethod === 'kartica' ? 'kartica_fiskalni' : 'gotovina_fiskalni')
-      : (payMethod === 'kartica' ? 'kartica_fiskalni' : 'gotovina');
+      : (payMethod === 'kartica' ? 'kartica' : 'gotovina');
 
     if (payExam.appointment_id) {
-      await supabase.from('payments').insert({
+      const { error: payError } = await supabase.from('payments').insert({
         appointment_id: payExam.appointment_id,
         iznos: payAmount,
         metoda: paymentMethod,
         napomena: payNapomena || null,
         datum: new Date().toISOString(),
-        fiskalni_status: payFiskalizuj ? 'done' : null,
+        fiskalni_status: payFiskalizuj ? (fiskalOK ? 'success' : 'failed') : null,
+        fiskalni_broj: fiscalResultData?.invoiceNumber || null,
+        fic: fiscalResultData?.fic || null,
+        iic: fiscalResultData?.iic || null,
+        qr_code_url: fiscalResultData?.qrCodeUrl || null,
       });
 
-      // Azuriraj lokalni set za instant prikaz
-      setPaidAppointmentIds((prev) => new Set([...prev, payExam.appointment_id!]));
+      if (payError) {
+        console.error('Greska pri snimanju uplate:', payError);
+        alert(`Greska pri snimanju uplate: ${payError.message}`);
+      } else {
+        // Azuriraj lokalni set za instant prikaz
+        setPaidAppointmentIds((prev) => new Set([...prev, payExam.appointment_id!]));
+      }
     }
 
     // Kreiranje dugovanja ako je placeno manje
@@ -547,7 +588,7 @@ export default function Dashboard() {
                           <Printer size={16} />
                         </button>
                         {isPaid ? (
-                          <span className="p-2 text-green-600 bg-green-50 rounded-lg" title={`FIC: ${fiscalData[exam.id]?.fic}`}>
+                          <span className="p-2 text-green-600 bg-green-50 rounded-lg" title={`FIC: ${fiscalData[exam.id]?.fic || (exam.appointment_id ? fiscalByAppointment[exam.appointment_id]?.fic : '') || ''}`}>
                             <CheckCircle size={16} />
                           </span>
                         ) : (

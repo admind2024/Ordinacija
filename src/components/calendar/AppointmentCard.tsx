@@ -2,6 +2,7 @@ import { format, parseISO, differenceInMinutes } from 'date-fns';
 import { Check, CheckCheck, X, CircleSlash, Clock } from 'lucide-react';
 import { useCalendar } from '../../contexts/CalendarContext';
 import { usePatients } from '../../contexts/PatientsContext';
+import { APPOINTMENT_STATUS_LABELS } from '../../types';
 import type { Appointment, AppointmentStatus } from '../../types';
 
 interface AppointmentCardProps {
@@ -67,10 +68,28 @@ export default function AppointmentCard({ appointment, onClick, compact = false 
   const visual = getStatusVisual(appointment.status);
   const badge = getStatusBadge(appointment);
 
+  // Hover tooltip — prikazuje status + sve detalje kad recepcija prevuce preko kartice
+  const endTimeStr = format(parseISO(appointment.kraj), 'HH:mm');
+  const confirmedExtra =
+    appointment.status === 'potvrdjen' && appointment.confirmed_source === 'patient_link'
+      ? ' (pacijent potvrdio)'
+      : '';
+  const tooltip = [
+    patient ? `${patient.ime} ${patient.prezime}` : '—',
+    `Status: ${APPOINTMENT_STATUS_LABELS[appointment.status]}${confirmedExtra}`,
+    `${timeStr}–${endTimeStr} (${duration} min)`,
+    doctor ? `${doctor.titula ? doctor.titula + ' ' : ''}${doctor.ime} ${doctor.prezime}` : null,
+    serviceName ? `Usluga: ${serviceName}` : null,
+    appointment.napomena ? `Napomena: ${appointment.napomena}` : null,
+  ]
+    .filter(Boolean)
+    .join('\n');
+
   if (compact) {
     return (
       <button
         onClick={() => onClick(appointment)}
+        title={tooltip}
         className="relative w-full text-left pl-1.5 pr-4 py-0.5 rounded text-xs truncate transition-opacity hover:opacity-80"
         style={{
           backgroundColor: color + '20',
@@ -84,7 +103,6 @@ export default function AppointmentCard({ appointment, onClick, compact = false 
         {patient ? `${patient.ime} ${patient.prezime.charAt(0)}.` : ''}
         {badge && (
           <span
-            title={badge.title}
             className="absolute right-0.5 top-1/2 -translate-y-1/2 flex items-center justify-center rounded-full"
             style={{ backgroundColor: badge.bg, color: badge.fg, width: '12px', height: '12px' }}
           >
@@ -98,6 +116,7 @@ export default function AppointmentCard({ appointment, onClick, compact = false 
   return (
     <button
       onClick={() => onClick(appointment)}
+      title={tooltip}
       className="absolute left-1 right-1 rounded-lg px-2 py-1 text-left overflow-hidden cursor-pointer
         transition-all hover:shadow-md hover:z-10 border border-transparent hover:border-white/50"
       style={{
@@ -110,7 +129,6 @@ export default function AppointmentCard({ appointment, onClick, compact = false 
     >
       {badge && (
         <span
-          title={badge.title}
           className="absolute top-1 right-1 flex items-center justify-center rounded-full shadow-sm"
           style={{ backgroundColor: badge.bg, color: badge.fg, width: '16px', height: '16px' }}
         >

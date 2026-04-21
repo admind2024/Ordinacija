@@ -383,6 +383,51 @@ export default function Dashboard() {
         <KpiCard icon={<TrendingUp size={22} />} label="Realizacija" value={`${realizationRate}%`} bg="bg-primary-50" iconColor="text-primary-600" />
       </div>
 
+      {/* ====== OSOBLJE DANAS — horizontalni scroll ====== */}
+      {todayStaff.length > 0 && (
+        <div>
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-semibold text-gray-700">Osoblje danas</h3>
+            <span className="text-xs text-gray-400">{todayStaff.length} {todayStaff.length === 1 ? 'clan' : 'clana'}</span>
+          </div>
+          <div className="flex gap-3 md:gap-4 overflow-x-auto pb-2 -mx-1 px-1">
+            {todayStaff.map((d) => (
+              <div
+                key={d.id}
+                className="bg-white border border-border rounded-xl p-3 md:p-4 min-w-[140px] md:min-w-[160px] flex flex-col items-center text-center shrink-0 hover:shadow-md transition-shadow"
+              >
+                {d.slika ? (
+                  <img
+                    src={d.slika}
+                    alt={`${d.ime} ${d.prezime}`}
+                    loading="lazy"
+                    className="w-16 h-16 md:w-20 md:h-20 rounded-full object-cover mb-2 ring-2 ring-white"
+                    style={{ boxShadow: `0 0 0 2px ${d.boja}` }}
+                  />
+                ) : (
+                  <div
+                    className="w-16 h-16 md:w-20 md:h-20 rounded-full flex items-center justify-center text-white font-bold text-lg mb-2"
+                    style={{ backgroundColor: d.boja }}
+                  >
+                    {d.ime.charAt(0)}{d.prezime.charAt(0)}
+                  </div>
+                )}
+                <p className="text-sm font-semibold text-gray-900 truncate w-full">
+                  {d.titula ? `${d.titula} ` : ''}{d.ime} {d.prezime.charAt(0)}.
+                </p>
+                <p className="text-xs text-gray-500 truncate w-full">{d.specijalizacija}</p>
+                <p className="text-xs text-gray-600 mt-1">
+                  <span className="font-semibold">{d.aptCount}</span> {d.aptCount === 1 ? 'termin' : 'termina'}
+                </p>
+                {d.revenue > 0 && (
+                  <p className="text-xs text-primary-700 font-semibold">{d.revenue.toFixed(0)} €</p>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* ====== TWO-COL: Termini + Mini kalendar ====== */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Današnji termini sa timeline */}
@@ -643,31 +688,6 @@ export default function Dashboard() {
               })}
             </div>
           </Card>
-        </div>
-      )}
-
-      {/* ====== OSOBLJE DANAS — horizontalni scroll ====== */}
-      {todayStaff.length > 0 && (
-        <div>
-          <h3 className="text-sm font-semibold text-gray-700 mb-3">Osoblje danas</h3>
-          <div className="flex gap-4 overflow-x-auto pb-2">
-            {todayStaff.map((d) => (
-              <div key={d.id} className="bg-white border border-border rounded-xl p-4 min-w-[160px] flex flex-col items-center text-center shrink-0">
-                {d.slika ? (
-                  <img src={d.slika} alt={d.ime} className="w-14 h-14 rounded-full object-cover mb-2" />
-                ) : (
-                  <div className="w-14 h-14 rounded-full flex items-center justify-center text-white font-bold mb-2" style={{ backgroundColor: d.boja }}>
-                    {d.ime.charAt(0)}{d.prezime.charAt(0)}
-                  </div>
-                )}
-                <p className="text-sm font-semibold text-gray-900 truncate w-full">
-                  {d.titula ? `${d.titula} ` : ''}{d.ime} {d.prezime.charAt(0)}.
-                </p>
-                <p className="text-xs text-gray-500">{d.aptCount} termina</p>
-                {d.revenue > 0 && <p className="text-xs text-primary-700 font-semibold mt-0.5">{d.revenue.toFixed(0)} €</p>}
-              </div>
-            ))}
-          </div>
         </div>
       )}
 

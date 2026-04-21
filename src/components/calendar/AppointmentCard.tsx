@@ -1,5 +1,5 @@
 import { format, parseISO, differenceInMinutes } from 'date-fns';
-import { Check, X, Smartphone, CircleSlash } from 'lucide-react';
+import { Check, CheckCheck, X, CircleSlash, Clock } from 'lucide-react';
 import { useCalendar } from '../../contexts/CalendarContext';
 import { usePatients } from '../../contexts/PatientsContext';
 import type { Appointment, AppointmentStatus } from '../../types';
@@ -34,11 +34,13 @@ interface BadgeSpec {
 }
 
 function getStatusBadge(appointment: Appointment): BadgeSpec | null {
-  // Potvrda od pacijenta preko linka ima svoj marker — bitno za recepciju
+  // Pacijent potvrdio preko linka — dvostruka kvacica (kao "isporuceno" u Viber-u)
   if (appointment.status === 'potvrdjen' && appointment.confirmed_source === 'patient_link') {
-    return { icon: Smartphone, bg: '#0EA5E9', fg: '#FFFFFF', title: 'Pacijent potvrdio preko linka' };
+    return { icon: CheckCheck, bg: '#0EA5E9', fg: '#FFFFFF', title: 'Pacijent potvrdio preko linka' };
   }
   switch (appointment.status) {
+    case 'zakazan':
+      return { icon: Clock, bg: '#3B82F6', fg: '#FFFFFF', title: 'Zakazan — ceka potvrdu' };
     case 'potvrdjen':
       return { icon: Check, bg: '#22C55E', fg: '#FFFFFF', title: 'Potvrđen' };
     case 'zavrsen':

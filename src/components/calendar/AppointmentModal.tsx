@@ -25,7 +25,7 @@ export default function AppointmentModal({
   defaultDate,
   defaultTime,
 }: AppointmentModalProps) {
-  const { createAppointment, updateAppointment, doctors, rooms, services, materials } = useCalendar();
+  const { createAppointment, updateAppointment, doctors, rooms, services, materials, appointments } = useCalendar();
   const { patients } = usePatients();
   const isEdit = !!editAppointment;
 
@@ -146,6 +146,35 @@ export default function AppointmentModal({
 
     const pocetak = new Date(`${datum}T${vrijeme}:00`);
     const kraj = addMinutes(pocetak, trajanje);
+
+    // Provjera: da li je ordinacija/oprema vec zauzeta u ovom intervalu?
+    // Ne moze se istovremeno rezervisati ista prostorija za dva termina.
+    // Editovani termin i otkazani termini se iskljucuju.
+    const conflicts = appointments.filter((a) => {
+      if (a.room_id !== roomId) return false;
+      if (a.status === 'otkazan') return false;
+      if (editAppointment && a.id === editAppointment.id) return false;
+      const aStart = new Date(a.pocetak).getTime();
+      const aEnd = new Date(a.kraj).getTime();
+      // Preklapanje: NE(novi.kraj <= postojeci.start) I NE(novi.start >= postojeci.kraj)
+      return !(kraj.getTime() <= aStart || pocetak.getTime() >= aEnd);
+    });
+
+    if (conflicts.length > 0) {
+      const roomName = rooms.find((r) => r.id === roomId)?.naziv || 'ova prostorija';
+      const prvi = conflicts[0];
+      const prviPacijent = patients.find((p) => p.id === prvi.patient_id);
+      const prviStart = format(new Date(prvi.pocetak), 'HH:mm');
+      const prviEnd = format(new Date(prvi.kraj), 'HH:mm');
+      const pacijentIme = prviPacijent ? `${prviPacijent.ime} ${prviPacijent.prezime}` : '(nepoznat pacijent)';
+      alert(
+        `${roomName} je vec zauzeta u ovom intervalu.\n\n` +
+          `${prviStart}–${prviEnd}: ${pacijentIme}` +
+          (conflicts.length > 1 ? `\n(+ jos ${conflicts.length - 1} preklapanje)` : '') +
+          `\n\nIzaberi drugu prostoriju ili drugo vrijeme.`,
+      );
+      return;
+    }
 
     if (isEdit && editAppointment) {
       updateAppointment(editAppointment.id, {

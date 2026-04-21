@@ -51,7 +51,7 @@ interface CalendarContextType {
 
   createAppointment: (appointment: Omit<Appointment, 'id' | 'created_at'>) => Promise<Appointment | null>;
   updateAppointment: (id: string, updates: Partial<Appointment>) => void;
-  deleteAppointment: (id: string) => void;
+  deleteAppointment: (id: string) => Promise<{ success: boolean; error?: string }>;
   updateAppointmentStatus: (id: string, status: AppointmentStatus) => void;
 
   getFilteredAppointments: (start: Date, end: Date) => Appointment[];
@@ -380,10 +380,11 @@ export function CalendarProvider({ children }: { children: ReactNode }) {
 
     if (error) {
       console.error('Greska pri brisanju termina:', error);
-      return;
+      return { success: false, error: error.message };
     }
 
     setAppointments((prev) => prev.filter((apt) => apt.id !== id));
+    return { success: true };
   }, []);
 
   const updateAppointmentStatus = useCallback(async (id: string, status: AppointmentStatus) => {

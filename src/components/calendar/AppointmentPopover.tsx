@@ -165,8 +165,13 @@ export default function AppointmentPopover({ appointment, onClose, onEdit }: App
           <Button
             variant="danger"
             size="sm"
-            onClick={() => {
-              deleteAppointment(appointment.id);
+            onClick={async () => {
+              if (!confirm('Obrisati ovaj termin?')) return;
+              const result = await deleteAppointment(appointment.id);
+              if (!result.success) {
+                alert(`Ne mogu da obrisem termin.\n${result.error || ''}`);
+                return;
+              }
               onClose();
             }}
           >

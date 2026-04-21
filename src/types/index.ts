@@ -131,6 +131,9 @@ export interface Appointment {
   status: AppointmentStatus;
   napomena?: string;
   osiguranje?: string;
+  confirm_token?: string;
+  confirmed_at?: string;
+  confirmed_source?: 'patient_link' | 'manual';
   created_at: string;
   // Relacije (opcionalno popunjene)
   patient?: Patient;

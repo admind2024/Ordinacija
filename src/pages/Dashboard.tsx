@@ -1,7 +1,7 @@
 import { useMemo, useState, useEffect } from 'react';
 import { format, parseISO, startOfWeek, addDays, isSameDay } from 'date-fns';
 import { srLatn as sr } from 'date-fns/locale';
-import { CalendarDays, Users, CreditCard, TrendingUp, Printer, Eye, FileText, Banknote, CheckCircle, XCircle, Receipt, AlertTriangle, Tag, Sun, CloudSun, Moon } from 'lucide-react';
+import { CalendarDays, Users, CreditCard, TrendingUp, Printer, Eye, FileText, Banknote, CheckCircle, XCircle, Receipt, AlertTriangle, Tag, Sun, CloudSun, Moon, Smartphone } from 'lucide-react';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import Modal from '../components/ui/Modal';
@@ -425,6 +425,14 @@ export default function Dashboard() {
                       {/* Status + amount */}
                       <div className="flex items-center gap-2 shrink-0">
                         {svcTotal > 0 && <span className="text-xs font-semibold text-gray-600">{svcTotal.toFixed(0)} €</span>}
+                        {apt.confirmed_source === 'patient_link' && (
+                          <span
+                            title="Pacijent potvrdio dolazak preko linka"
+                            className="flex items-center justify-center w-4 h-4 rounded-full bg-sky-500 text-white"
+                          >
+                            <Smartphone size={10} strokeWidth={3} />
+                          </span>
+                        )}
                         <span
                           className="text-[9px] px-1.5 py-0.5 rounded-full font-semibold"
                           style={{

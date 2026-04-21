@@ -21,6 +21,7 @@ import Examinations from './pages/Examinations';
 import Debts from './pages/Debts';
 import ServicesPage from './pages/Services';
 import SurveyPublic from './pages/SurveyPublic';
+import ConfirmAppointment from './pages/ConfirmAppointment';
 
 function AppRoutes() {
   const { user } = useAuth();
@@ -119,6 +120,8 @@ export default function App() {
       <Routes>
         {/* Anketa je 100% javna — render prije bilo kakvih providera/auth */}
         <Route path="/anketa/:id" element={<SurveyPublic />} />
+        {/* Potvrda dolaska je 100% javna — pacijent klikne link iz SMS-a */}
+        <Route path="/potvrda/:token" element={<ConfirmAppointment />} />
         <Route
           path="*"
           element={

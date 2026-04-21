@@ -25,14 +25,14 @@ export interface MessageTemplates {
 export const DEFAULT_TEMPLATES: MessageTemplates = {
   sms: {
     potvrda: 'Postovani/a {ime_prezime}, vas termin je zakazan za {datum} u {vrijeme}h. Ljekar: {doktor}.',
-    podsjetnik: 'Podsjetnik: {ime_prezime}, imate termin {datum} u {vrijeme}h. Molimo potvrdite dolazak.',
+    podsjetnik: 'Podsjetnik: {ime_prezime}, imate termin {datum} u {vrijeme}h. Potvrdite dolazak: {link}',
     otkazivanje: 'Postovani/a {ime_prezime}, vas termin zakazan za {datum} u {vrijeme}h je otkazan. Molimo kontaktirajte nas za novi termin.',
     potvrdjivanje: 'Postovani/a {ime_prezime}, vas termin za {datum} u {vrijeme}h je potvrdjen. Ljekar: {doktor}.',
     anketa: 'Hvala na posjeti MOA klinici! Molimo ocijenite vase iskustvo (30 sek): {link}',
   },
   viber: {
     potvrda: 'Postovani/a {ime_prezime}, vas termin je zakazan za {datum} u {vrijeme}h. Ljekar: {doktor}. Vidimo se u MOA klinici!',
-    podsjetnik: 'Postovani/a {ime_prezime}, podsjecamo vas na vas termin {datum} u {vrijeme}h. Ljekar: {doktor}. Molimo potvrdite dolazak.',
+    podsjetnik: 'Postovani/a {ime_prezime}, podsjecamo vas na vas termin {datum} u {vrijeme}h. Ljekar: {doktor}. Potvrdite dolazak klikom na link: {link}',
     otkazivanje: 'Postovani/a {ime_prezime}, vas termin zakazan za {datum} u {vrijeme}h je otkazan. Molimo kontaktirajte nas za novi termin.',
     potvrdjivanje: 'Postovani/a {ime_prezime}, vas termin za {datum} u {vrijeme}h je potvrdjen. Ljekar: {doktor}.',
     anketa: 'Hvala na posjeti MOA klinici! Molimo ocijenite vase iskustvo (30 sek): {link}',
@@ -142,6 +142,13 @@ export function renderTemplate(template: string, params: RenderParams): string {
     result = result
       .replace(/\s*Ljekar:\s*\.?/gi, '')
       .replace(/\s*Doktor:\s*\.?/gi, '')
+      .replace(/\s{2,}/g, ' ')
+      .trim();
+  }
+  // Cleanup: ako je {link} prazan, ukloni "Potvrdite dolazak: " frazu
+  if (!params.link) {
+    result = result
+      .replace(/\s*Potvrdite dolazak(?: klikom na link)?:\s*\.?/gi, '')
       .replace(/\s{2,}/g, ' ')
       .trim();
   }

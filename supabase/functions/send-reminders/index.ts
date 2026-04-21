@@ -41,8 +41,13 @@ interface AppointmentRow {
   doctor_id: string;
   pocetak: string;
   status: string;
+  confirm_token: string | null;
   patient: { ime: string; prezime: string; telefon: string } | null;
 }
+
+// APP_URL se koristi za gradjenje "Potvrdite dolazak" linka u SMS/Viber podsjetniku.
+// Fallback na produkcijski domen ako env nije postavljen.
+const APP_URL = Deno.env.get('APP_URL') || 'https://www.moa-app.me';
 
 function formatDatum(iso: string): string {
   const d = new Date(iso);
@@ -59,10 +64,13 @@ function stripDiacritics(text: string): string {
   return text.replace(/đ/g, 'dz').replace(/Đ/g, 'Dz').normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 }
 
-function buildReminderText(ime: string, datum: string): string {
-  return stripDiacritics(
-    `Podsjetnik: ${ime}, imate termin ${formatDatum(datum)} u ${formatVrijeme(datum)}h. Molimo potvrdite dolazak.`,
-  );
+function buildReminderText(ime: string, datum: string, token: string | null): string {
+  const base = `Podsjetnik: ${ime}, imate termin ${formatDatum(datum)} u ${formatVrijeme(datum)}h.`;
+  const confirmLine = token ? ` Potvrdite dolazak: ${APP_URL}/potvrda/${token}` : ' Molimo potvrdite dolazak.';
+  // Diakritike skidamo samo na "bosanskom" dijelu poruke — URL ostavljamo netaknut
+  // jer stripDiacritics ne dira ASCII znakove, ali eksplicitno razdvajamo radi
+  // predvidivog ponasanja.
+  return stripDiacritics(base) + stripDiacritics(confirmLine);
 }
 
 function formatPhoneNumber(phone: string): string {
@@ -212,7 +220,7 @@ Deno.serve(async (req) => {
 
       const { data: appointments } = await supabase
         .from('appointments')
-        .select('id, patient_id, doctor_id, pocetak, status, patient:patients(ime, prezime, telefon)')
+        .select('id, patient_id, doctor_id, pocetak, status, confirm_token, patient:patients(ime, prezime, telefon)')
         .gte('pocetak', windowStart.toISOString())
         .lte('pocetak', windowEnd.toISOString())
         .in('status', ['zakazan', 'potvrdjen']);
@@ -254,7 +262,7 @@ Deno.serve(async (req) => {
 
       const { data: appointments } = await supabase
         .from('appointments')
-        .select('id, patient_id, doctor_id, pocetak, status, patient:patients(ime, prezime, telefon)')
+        .select('id, patient_id, doctor_id, pocetak, status, confirm_token, patient:patients(ime, prezime, telefon)')
         .gte('pocetak', `${dateStr}T00:00:00`)
         .lte('pocetak', `${dateStr}T23:59:59`)
         .in('status', ['zakazan', 'potvrdjen']);
@@ -288,7 +296,7 @@ Deno.serve(async (req) => {
       if (!patient?.telefon) continue;
 
       const imeIPrezime = `${patient.ime} ${patient.prezime}`;
-      const text = buildReminderText(imeIPrezime, apt.pocetak);
+      const text = buildReminderText(imeIPrezime, apt.pocetak, apt.confirm_token);
 
       let success = false;
       let errorMsg: string | null = null;

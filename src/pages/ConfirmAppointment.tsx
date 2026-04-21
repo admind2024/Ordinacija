@@ -3,20 +3,21 @@ import { useParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 
 /**
- * Public stranica — /potvrda/:token
+ * Public stranica — /p/:token (i /potvrda/:token za stare SMS-ove)
  *
- * Pacijent klikne link iz SMS/Viber podsjetnika i potvrdi dolazak.
- * Potvrda se NE desava automatski pri ucitavanju — trazi se klik na dugme,
- * jer neki messenger klijenti (Viber, iMessage) pre-fetch URL za preview
- * cime bi nehoteno potvrdili dolazak. Klik = eksplicitna namera.
+ * Pacijent klikne link iz SMS/Viber podsjetnika. Stranica automatski potvrdjuje
+ * dolazak i prikazuje "Hvala, vas dolazak je potvrdjen".
+ *
+ * Napomena: auto-potvrda na GET je prihvatljiva ovdje jer messenger preview
+ * botovi (Viber, iMessage) tipicno NE izvrsavaju JavaScript — samo dohvate
+ * HTML za preview. Nase auto-confirm logika je u JS-u pa bot nista ne radi.
  */
 
 type State =
   | { kind: 'loading' }
   | { kind: 'not_found' }
-  | { kind: 'actionable'; ime: string; pocetak: string; doktor: string; alreadyConfirmed: boolean }
-  | { kind: 'locked'; razlog: 'otkazan' | 'zavrsen' | 'nije_dosao'; pocetak: string; ime: string; doktor: string }
-  | { kind: 'done'; ime: string; pocetak: string; doktor: string; wasAlready: boolean };
+  | { kind: 'done'; ime: string; pocetak: string; doktor: string; wasAlready: boolean }
+  | { kind: 'locked'; razlog: 'otkazan' | 'zavrsen' | 'nije_dosao'; pocetak: string; ime: string; doktor: string };
 
 function formatDatum(iso: string): string {
   const d = new Date(iso);
@@ -32,85 +33,56 @@ function formatVrijeme(iso: string): string {
 export default function ConfirmAppointment() {
   const { token } = useParams<{ token: string }>();
   const [state, setState] = useState<State>({ kind: 'loading' });
-  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     (async () => {
       if (!token) { setState({ kind: 'not_found' }); return; }
-      const { data, error } = await supabase.rpc('fetch_appointment_by_token', { p_token: token });
+
+      // Jedan round-trip: pokusaj potvrdu. RPC je idempotentan i vraca
+      // already_confirmed=true ako je vec ranije kliknuo link.
+      const { data, error } = await supabase.rpc('confirm_appointment_by_token', { p_token: token });
+
       if (error || !data || data.length === 0) {
         setState({ kind: 'not_found' });
         return;
       }
       const row = data[0] as {
+        ok: boolean;
+        razlog: string;
+        already_confirmed: boolean;
+        pocetak: string | null;
         ime_pacijenta: string | null;
-        pocetak: string;
-        kraj: string;
-        status: string;
-        confirmed_at: string | null;
         doktor: string | null;
       };
-      const ime = row.ime_pacijenta || '';
-      const doktor = row.doktor || '';
-      if (row.status === 'otkazan' || row.status === 'zavrsen' || row.status === 'nije_dosao') {
-        setState({ kind: 'locked', razlog: row.status, pocetak: row.pocetak, ime, doktor });
+
+      if (!row.ok) {
+        if (row.razlog === 'otkazan' || row.razlog === 'zavrsen' || row.razlog === 'nije_dosao') {
+          setState({
+            kind: 'locked',
+            razlog: row.razlog,
+            pocetak: row.pocetak || '',
+            ime: row.ime_pacijenta || '',
+            doktor: row.doktor || '',
+          });
+        } else {
+          setState({ kind: 'not_found' });
+        }
         return;
       }
+
       setState({
-        kind: 'actionable',
-        ime,
-        pocetak: row.pocetak,
-        doktor,
-        alreadyConfirmed: row.confirmed_at !== null,
+        kind: 'done',
+        ime: row.ime_pacijenta || '',
+        pocetak: row.pocetak || '',
+        doktor: row.doktor || '',
+        wasAlready: row.already_confirmed,
       });
     })();
   }, [token]);
 
-  async function handleConfirm() {
-    if (!token || state.kind !== 'actionable') return;
-    setSubmitting(true);
-    const { data, error } = await supabase.rpc('confirm_appointment_by_token', { p_token: token });
-    if (error || !data || data.length === 0) {
-      alert('Desila se greska, pokusajte ponovo.');
-      setSubmitting(false);
-      return;
-    }
-    const row = data[0] as {
-      ok: boolean;
-      razlog: string;
-      already_confirmed: boolean;
-      pocetak: string;
-      ime_pacijenta: string | null;
-      doktor: string | null;
-    };
-    if (!row.ok) {
-      if (row.razlog === 'otkazan' || row.razlog === 'zavrsen' || row.razlog === 'nije_dosao') {
-        setState({
-          kind: 'locked',
-          razlog: row.razlog,
-          pocetak: row.pocetak,
-          ime: row.ime_pacijenta || '',
-          doktor: row.doktor || '',
-        });
-      } else {
-        setState({ kind: 'not_found' });
-      }
-      setSubmitting(false);
-      return;
-    }
-    setState({
-      kind: 'done',
-      ime: row.ime_pacijenta || state.ime,
-      pocetak: row.pocetak,
-      doktor: row.doktor || state.doktor,
-      wasAlready: row.already_confirmed,
-    });
-    setSubmitting(false);
-  }
-
   // ── Loading ──
   if (state.kind === 'loading') {
-    return <Body><p style={S.loading}>Ucitavanje...</p></Body>;
+    return <Body><p style={S.loading}>Potvrda u toku...</p></Body>;
   }
 
   // ── Not found / invalid token ──
@@ -121,7 +93,7 @@ export default function ConfirmAppointment() {
           <p style={{ fontSize: 48, marginBottom: 16 }}>🔍</p>
           <h1 style={{ fontSize: 20, fontWeight: 700, marginBottom: 8 }}>Link nije ispravan</h1>
           <p style={{ fontSize: 13, color: '#6B7280' }}>
-            Ovaj link ne odgovara nijednom terminu. Provjerite link iz poruke.
+            Provjerite link iz poruke ili kontaktirajte ordinaciju.
           </p>
         </div>
       </Body>
@@ -132,65 +104,37 @@ export default function ConfirmAppointment() {
   if (state.kind === 'locked') {
     const poruke: Record<typeof state.razlog, string> = {
       otkazan: 'Ovaj termin je otkazan. Molimo kontaktirajte ordinaciju za novi termin.',
-      zavrsen: 'Ovaj termin je zavrsen.',
-      nije_dosao: 'Ovaj termin je oznacen kao neodrzan.',
+      zavrsen: 'Ovaj termin je već završen.',
+      nije_dosao: 'Ovaj termin je označen kao neodržan.',
     };
     return (
       <Body>
         <Header />
         <div style={S.infoCard}>
           <div style={S.infoIcon}>!</div>
-          <h2 style={S.h2}>Termin nije moguce potvrditi</h2>
+          <h2 style={S.h2}>Termin nije moguće potvrditi</h2>
           <p style={S.pSmall}>{poruke[state.razlog]}</p>
-          <TerminInfo ime={state.ime} pocetak={state.pocetak} doktor={state.doktor} muted />
+          {state.pocetak && <TerminInfo ime={state.ime} pocetak={state.pocetak} doktor={state.doktor} muted />}
         </div>
       </Body>
     );
   }
 
-  // ── Done (potvrda zavrsena) ──
-  if (state.kind === 'done') {
-    return (
-      <Body>
-        <Header />
-        <div style={S.successCard}>
-          <div style={S.successIcon}>
-            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#2BA5A5" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M20 6L9 17l-5-5" />
-            </svg>
-          </div>
-          <h2 style={S.h2}>{state.wasAlready ? 'Vec ste potvrdili dolazak' : 'Hvala, vas dolazak je potvrdjen!'}</h2>
-          <p style={S.pSmall}>
-            Vidimo se u MOA klinici.
-          </p>
-          <TerminInfo ime={state.ime} pocetak={state.pocetak} doktor={state.doktor} />
-        </div>
-      </Body>
-    );
-  }
-
-  // ── Actionable (potvrdi dugme) ──
+  // ── Done (potvrda uspesna) ──
   return (
     <Body>
       <Header />
-      <div style={S.qCard}>
-        <h1 style={{ ...S.h2, textAlign: 'center' }}>Potvrda dolaska</h1>
-        <p style={{ ...S.pSmall, textAlign: 'center', marginBottom: 20 }}>
-          {state.alreadyConfirmed
-            ? 'Vas dolazak je vec potvrdjen. Mozete ga jos jednom potvrditi klikom ispod.'
-            : 'Molimo potvrdite svoj dolazak klikom na dugme.'}
-        </p>
-        <TerminInfo ime={state.ime} pocetak={state.pocetak} doktor={state.doktor} />
-        <button
-          onClick={handleConfirm}
-          disabled={submitting}
-          style={{ ...S.submitBtn, opacity: submitting ? 0.6 : 1, marginTop: 20 }}
-        >
-          {submitting ? 'Potvrda u toku...' : 'Potvrdjujem dolazak'}
-        </button>
-        <p style={S.anonNote}>
-          Ako ne mozete doci, molimo pozovite nas da otkazete termin.
-        </p>
+      <div style={S.successCard}>
+        <div style={S.successIcon}>
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#2BA5A5" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M20 6L9 17l-5-5" />
+          </svg>
+        </div>
+        <h2 style={S.h2}>
+          {state.wasAlready ? 'Već ste potvrdili dolazak' : 'Hvala, vaš dolazak je potvrđen!'}
+        </h2>
+        <p style={S.pSmall}>Vidimo se u MOA klinici.</p>
+        {state.pocetak && <TerminInfo ime={state.ime} pocetak={state.pocetak} doktor={state.doktor} />}
       </div>
     </Body>
   );
@@ -242,8 +186,6 @@ function TerminInfo({ ime, pocetak, doktor, muted }: { ime: string; pocetak: str
   );
 }
 
-// ── Styles (usklađeno sa SurveyPublic) ──
-
 const S: Record<string, React.CSSProperties> = {
   body: {
     fontFamily: "'Inter', system-ui, -apple-system, sans-serif",
@@ -260,11 +202,6 @@ const S: Record<string, React.CSSProperties> = {
   headerSub: { fontSize: 13, color: '#7AABAB', letterSpacing: '0.03em' },
   h2: { fontSize: 20, fontWeight: 700, marginBottom: 10 },
   pSmall: { fontSize: 14, color: '#6B7280', lineHeight: 1.6 },
-  qCard: {
-    background: '#fff', border: '1px solid #E0EDED', borderRadius: 18,
-    padding: '24px 24px', boxShadow: '0 1px 3px rgba(43,165,165,.06)',
-    width: '100%', maxWidth: 480,
-  },
   successCard: {
     background: '#fff', border: '1px solid #E0EDED', borderRadius: 18,
     padding: '32px 24px', boxShadow: '0 1px 3px rgba(43,165,165,.06)',
@@ -294,10 +231,4 @@ const S: Record<string, React.CSSProperties> = {
   terminRow: { display: 'flex', justifyContent: 'space-between', fontSize: 13, padding: '4px 0' },
   terminLabel: { color: '#6B7280' },
   terminVal: { fontWeight: 600, color: '#111827' },
-  submitBtn: {
-    width: '100%', padding: '14px 18px', borderRadius: 12, border: 'none',
-    background: '#2BA5A5', color: '#fff', fontSize: 15, fontWeight: 700,
-    cursor: 'pointer', transition: 'background .15s', fontFamily: 'inherit',
-  },
-  anonNote: { fontSize: 11, color: '#9CA3AF', textAlign: 'center', marginTop: 12 },
 };

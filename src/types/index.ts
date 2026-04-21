@@ -327,10 +327,10 @@ export interface UplataDuga {
 
 // Boje statusa termina
 export const APPOINTMENT_STATUS_COLORS: Record<AppointmentStatus, string> = {
-  zakazan: '#3B82F6',     // plava
+  zakazan: '#F97316',     // narandzasta — ceka potvrdu
   potvrdjen: '#22C55E',   // zelena
   stigao: '#A855F7',      // ljubicasta
-  u_toku: '#F97316',      // narandzasta
+  u_toku: '#06B6D4',      // tirkizna
   zavrsen: '#15803D',     // tamnozelena
   otkazan: '#EF4444',     // crvena
   nije_dosao: '#9CA3AF',  // siva

@@ -35,15 +35,13 @@ interface BadgeSpec {
 }
 
 function getStatusBadge(appointment: Appointment): BadgeSpec | null {
-  // Pacijent potvrdio preko linka — dvostruka kvacica (kao "isporuceno" u Viber-u)
-  if (appointment.status === 'potvrdjen' && appointment.confirmed_source === 'patient_link') {
-    return { icon: CheckCheck, bg: '#0EA5E9', fg: '#FFFFFF', title: 'Pacijent potvrdio preko linka' };
+  // Potvrdjen (bilo ko potvrdio: recepcija ili pacijent preko linka) — dvostruka zelena kvacica
+  if (appointment.status === 'potvrdjen') {
+    return { icon: CheckCheck, bg: '#22C55E', fg: '#FFFFFF', title: 'Potvrđen' };
   }
   switch (appointment.status) {
     case 'zakazan':
-      return { icon: Clock, bg: '#3B82F6', fg: '#FFFFFF', title: 'Zakazan — ceka potvrdu' };
-    case 'potvrdjen':
-      return { icon: Check, bg: '#22C55E', fg: '#FFFFFF', title: 'Potvrđen' };
+      return { icon: Clock, bg: '#F97316', fg: '#FFFFFF', title: 'Zakazan — ceka potvrdu' };
     case 'zavrsen':
       return { icon: Check, bg: '#15803D', fg: '#FFFFFF', title: 'Završen' };
     case 'nije_dosao':
@@ -70,13 +68,9 @@ export default function AppointmentCard({ appointment, onClick, compact = false 
 
   // Hover tooltip — prikazuje status + sve detalje kad recepcija prevuce preko kartice
   const endTimeStr = format(parseISO(appointment.kraj), 'HH:mm');
-  const confirmedExtra =
-    appointment.status === 'potvrdjen' && appointment.confirmed_source === 'patient_link'
-      ? ' (pacijent potvrdio)'
-      : '';
   const tooltip = [
     patient ? `${patient.ime} ${patient.prezime}` : '—',
-    `Status: ${APPOINTMENT_STATUS_LABELS[appointment.status]}${confirmedExtra}`,
+    `Status: ${APPOINTMENT_STATUS_LABELS[appointment.status]}`,
     `${timeStr}–${endTimeStr} (${duration} min)`,
     doctor ? `${doctor.titula ? doctor.titula + ' ' : ''}${doctor.ime} ${doctor.prezime}` : null,
     serviceName ? `Usluga: ${serviceName}` : null,

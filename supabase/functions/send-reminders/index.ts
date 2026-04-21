@@ -66,10 +66,8 @@ function stripDiacritics(text: string): string {
 
 function buildReminderText(ime: string, datum: string, token: string | null): string {
   const base = `Podsjetnik: ${ime}, imate termin ${formatDatum(datum)} u ${formatVrijeme(datum)}h.`;
-  const confirmLine = token ? ` Potvrdite dolazak: ${APP_URL}/potvrda/${token}` : ' Molimo potvrdite dolazak.';
-  // Diakritike skidamo samo na "bosanskom" dijelu poruke — URL ostavljamo netaknut
-  // jer stripDiacritics ne dira ASCII znakove, ali eksplicitno razdvajamo radi
-  // predvidivog ponasanja.
+  // Skracena putanja /p/:token stedi ~8 karaktera u SMS-u
+  const confirmLine = token ? ` Potvrdite: ${APP_URL}/p/${token}` : ' Molimo potvrdite dolazak.';
   return stripDiacritics(base) + stripDiacritics(confirmLine);
 }
 

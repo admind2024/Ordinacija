@@ -1,4 +1,3 @@
-import { CheckCheck } from 'lucide-react';
 import { APPOINTMENT_STATUS_COLORS, APPOINTMENT_STATUS_LABELS, type AppointmentStatus } from '../../types';
 
 // Statusi koje recepcija rutinski vidi na kalendaru.
@@ -23,15 +22,6 @@ export default function StatusLegend() {
           <span className="text-gray-700">{APPOINTMENT_STATUS_LABELS[s]}</span>
         </span>
       ))}
-      <span className="flex items-center gap-1.5 whitespace-nowrap">
-        <span
-          className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-sky-500 text-white"
-          title="Pacijent potvrdio preko linka"
-        >
-          <CheckCheck size={10} strokeWidth={3} />
-        </span>
-        <span className="text-gray-700">Pacijent potvrdio</span>
-      </span>
     </div>
   );
 }

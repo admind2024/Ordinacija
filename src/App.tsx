@@ -120,7 +120,10 @@ export default function App() {
       <Routes>
         {/* Anketa je 100% javna — render prije bilo kakvih providera/auth */}
         <Route path="/anketa/:id" element={<SurveyPublic />} />
-        {/* Potvrda dolaska je 100% javna — pacijent klikne link iz SMS-a */}
+        {/* Potvrda dolaska je 100% javna — pacijent klikne link iz SMS-a.
+            /p/:token je kratka varijanta (stedi SMS karaktere).
+            /potvrda/:token je stari URL zbog unazad kompatibilnosti sa vec poslanim SMS-ovima. */}
+        <Route path="/p/:token" element={<ConfirmAppointment />} />
         <Route path="/potvrda/:token" element={<ConfirmAppointment />} />
         <Route
           path="*"

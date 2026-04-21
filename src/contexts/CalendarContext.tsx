@@ -463,10 +463,10 @@ export function CalendarProvider({ children }: { children: ReactNode }) {
         return roomObj?.boja || '#6B7280';
       }
       const statusColors: Record<string, string> = {
-        zakazan: '#3B82F6',
+        zakazan: '#F97316',
         potvrdjen: '#22C55E',
         stigao: '#A855F7',
-        u_toku: '#F97316',
+        u_toku: '#06B6D4',
         zavrsen: '#15803D',
         otkazan: '#EF4444',
         nije_dosao: '#9CA3AF',

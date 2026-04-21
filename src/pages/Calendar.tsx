@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect } from 'react';
 import { useCalendar } from '../contexts/CalendarContext';
 import CalendarToolbar from '../components/calendar/CalendarToolbar';
 import FilterPanel from '../components/calendar/FilterPanel';
+import StatusLegend from '../components/calendar/StatusLegend';
 import WeekView from '../components/calendar/WeekView';
 import DayView from '../components/calendar/DayView';
 import MonthView from '../components/calendar/MonthView';
@@ -76,6 +77,8 @@ function CalendarContent() {
       />
 
       {filtersOpen && <FilterPanel />}
+
+      <StatusLegend />
 
       {/* Prikazi */}
       {view === 'week' && (

@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { AlertTriangle, Receipt, Tag } from 'lucide-react';
 import Modal from '../ui/Modal';
 import Button from '../ui/Button';
@@ -39,6 +39,26 @@ export default function PaymentForm({ isOpen, onClose, appointment }: PaymentFor
   const [fiskalizuj, setFiskalizuj] = useState(false);
   const [napomena, setNapomena] = useState('');
   const [saving, setSaving] = useState(false);
+  // Postojeci aktivan dug ovog pacijenta — prikazujemo u crvenom warning-u
+  // kako bi recepcija vidjela da ce se novi dug nadovezati na postojeci
+  const [existingDebt, setExistingDebt] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!appointment.patient_id) return;
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase
+        .from('dugovanja')
+        .select('preostalo')
+        .eq('patient_id', appointment.patient_id)
+        .eq('status', 'aktivan')
+        .order('datum_nastanka', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (!cancelled) setExistingDebt(data ? Number(data.preostalo || 0) : 0);
+    })();
+    return () => { cancelled = true; };
+  }, [appointment.patient_id]);
 
   const remaining = preostaloZaNaplatu - iznos;
   const willCreateDebt = remaining > 0.01;
@@ -83,18 +103,54 @@ export default function PaymentForm({ isOpen, onClose, appointment }: PaymentFor
       fiskalni_status: fiskalizuj ? 'pending' : undefined,
     });
 
-    // Ako je placeno manje od ukupnog — kreiraj dugovanje automatski
+    // Ako je placeno manje od ukupnog — kreiraj/azuriraj dugovanje.
+    // Ako pacijent vec ima AKTIVAN dug, merge-uje se na postojeci red
+    // (jedan pacijent = jedna aktivna stavka koja se akumulira),
+    // umjesto da se pravi novi red po terminu.
     if (willCreateDebt && appointment.patient_id) {
       const serviceNames = appointment.services?.map((s) => s.naziv).join(', ') || 'Usluge';
-      await supabase.from('dugovanja').insert({
-        patient_id: appointment.patient_id,
-        iznos: zaNaplatu,
-        preostalo: remaining,
-        opis: `${serviceNames} — placeno ${iznos.toFixed(0)}e od ${zaNaplatu.toFixed(0)}e${popust > 0 ? ` (popust ${popust}%)` : ''}`,
-        datum_nastanka: new Date().toISOString().slice(0, 10),
-        status: 'aktivan',
-        napomena: napomena || null,
-      });
+      const datum = new Date().toLocaleDateString('sr-Latn');
+      const opisLine = `${datum}: ${serviceNames} — placeno ${iznos.toFixed(0)}e od ${zaNaplatu.toFixed(0)}e${popust > 0 ? ` (popust ${popust}%)` : ''} (dug +${remaining.toFixed(0)}e)`;
+
+      const { data: existing } = await supabase
+        .from('dugovanja')
+        .select('id, iznos, preostalo, opis, napomena')
+        .eq('patient_id', appointment.patient_id)
+        .eq('status', 'aktivan')
+        .order('datum_nastanka', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (existing) {
+        // Dopuni postojeci aktivan dug
+        const novoPreostalo = Number(existing.preostalo || 0) + remaining;
+        const noviIznos = Number(existing.iznos || 0) + remaining;
+        const noviOpis = existing.opis ? `${existing.opis}\n${opisLine}` : opisLine;
+        const novaNapomena = napomena
+          ? (existing.napomena ? `${existing.napomena}\n${datum}: ${napomena}` : `${datum}: ${napomena}`)
+          : existing.napomena;
+
+        await supabase
+          .from('dugovanja')
+          .update({
+            iznos: noviIznos,
+            preostalo: novoPreostalo,
+            opis: noviOpis,
+            napomena: novaNapomena,
+          })
+          .eq('id', existing.id);
+      } else {
+        // Nema aktivnog duga — napravi novi
+        await supabase.from('dugovanja').insert({
+          patient_id: appointment.patient_id,
+          iznos: remaining,
+          preostalo: remaining,
+          opis: opisLine,
+          datum_nastanka: new Date().toISOString().slice(0, 10),
+          status: 'aktivan',
+          napomena: napomena || null,
+        });
+      }
     }
 
     setSaving(false);
@@ -272,9 +328,16 @@ export default function PaymentForm({ isOpen, onClose, appointment }: PaymentFor
               <p className="text-sm font-semibold text-red-700">
                 Preostaje dug: {remaining.toFixed(2)} EUR
               </p>
-              <p className="text-xs text-red-600 mt-0.5">
-                Automatski ce se kreirati dugovanje za {patient?.ime} {patient?.prezime} u iznosu od {remaining.toFixed(2)} EUR.
-              </p>
+              {existingDebt !== null && existingDebt > 0 ? (
+                <p className="text-xs text-red-600 mt-0.5">
+                  {patient?.ime} {patient?.prezime} vec ima aktivan dug <strong>{existingDebt.toFixed(2)} EUR</strong> —
+                  nadovezuje se na njega (novi ukupan: <strong>{(existingDebt + remaining).toFixed(2)} EUR</strong>).
+                </p>
+              ) : (
+                <p className="text-xs text-red-600 mt-0.5">
+                  Kreirace se novo dugovanje za {patient?.ime} {patient?.prezime} u iznosu od {remaining.toFixed(2)} EUR.
+                </p>
+              )}
             </div>
           </div>
         )}

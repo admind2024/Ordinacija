@@ -98,9 +98,9 @@ export default function AppointmentCard({ appointment, onClick, compact = false 
         {badge && (
           <span
             className="absolute right-0.5 top-1/2 -translate-y-1/2 flex items-center justify-center rounded-full"
-            style={{ backgroundColor: badge.bg, color: badge.fg, width: '12px', height: '12px' }}
+            style={{ backgroundColor: badge.bg, color: badge.fg, width: '14px', height: '14px' }}
           >
-            <badge.icon size={8} strokeWidth={3} />
+            <badge.icon size={10} strokeWidth={3} />
           </span>
         )}
       </button>
@@ -124,9 +124,9 @@ export default function AppointmentCard({ appointment, onClick, compact = false 
       {badge && (
         <span
           className="absolute top-1 right-1 flex items-center justify-center rounded-full shadow-sm"
-          style={{ backgroundColor: badge.bg, color: badge.fg, width: '16px', height: '16px' }}
+          style={{ backgroundColor: badge.bg, color: badge.fg, width: '20px', height: '20px' }}
         >
-          <badge.icon size={10} strokeWidth={3} />
+          <badge.icon size={12} strokeWidth={3} />
         </span>
       )}
       <div className="flex items-center gap-1">

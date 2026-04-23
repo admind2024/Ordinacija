@@ -12,10 +12,9 @@ interface ExaminationFormProps {
 }
 
 export default function ExaminationForm({ initialData, onSave, saving, appointmentServices, appointmentNapomena }: ExaminationFormProps) {
-  // Pre-popuni razlog dolaska sa uslugama iz termina ako nema postojeceg
-  const defaultRazlog = initialData?.razlog_dolaska || '';
-  const [razlogDolaska, setRazlogDolaska] = useState(defaultRazlog);
+  const [razlogDolaska, setRazlogDolaska] = useState(initialData?.razlog_dolaska || '');
   const [nalaz, setNalaz] = useState(initialData?.nalaz || '');
+  const [rezultati, setRezultati] = useState(initialData?.rezultati || '');
   const [terapija, setTerapija] = useState(initialData?.terapija || '');
   const [preporuke, setPreporuke] = useState(initialData?.preporuke || '');
   const [kontrolniPregled, setKontrolniPregled] = useState(initialData?.kontrolni_pregled || '');
@@ -27,6 +26,7 @@ export default function ExaminationForm({ initialData, onSave, saving, appointme
     return {
       razlog_dolaska: razlogDolaska || undefined,
       nalaz: nalaz || undefined,
+      rezultati: rezultati || undefined,
       terapija: terapija || undefined,
       preporuke: preporuke || undefined,
       kontrolni_pregled: kontrolniPregled || undefined,
@@ -34,8 +34,11 @@ export default function ExaminationForm({ initialData, onSave, saving, appointme
     };
   }
 
+  const sectionLabel = 'block text-[11px] font-bold text-gray-700 uppercase tracking-wider mb-1';
+  const taCls = 'w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none';
+
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       {/* Usluge iz termina */}
       {appointmentServices && appointmentServices.length > 0 && (
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
@@ -66,72 +69,95 @@ export default function ExaminationForm({ initialData, onSave, saving, appointme
         </div>
       )}
 
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Razlog dolaska</label>
-        <textarea
-          value={razlogDolaska}
-          onChange={(e) => setRazlogDolaska(e.target.value)}
-          rows={2}
-          placeholder="Zasto je pacijent dosao..."
-          className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none"
-        />
+      {/* ANAMNEZA I KLINICKI NALAZ */}
+      <div className="border border-border rounded-lg p-4 bg-white">
+        <h4 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-3 pb-2 border-b border-border">
+          Anamneza i klinički nalaz
+        </h4>
+        <div className="space-y-3">
+          <div>
+            <label className={sectionLabel}>Razlog dolaska / Anamneza</label>
+            <textarea
+              value={razlogDolaska}
+              onChange={(e) => setRazlogDolaska(e.target.value)}
+              rows={3}
+              placeholder="Zasto je pacijent dosao, heteroanamneza, tegobe..."
+              className={taCls}
+            />
+          </div>
+          <div>
+            <label className={sectionLabel}>Klinički nalaz</label>
+            <textarea
+              value={nalaz}
+              onChange={(e) => setNalaz(e.target.value)}
+              rows={5}
+              placeholder="Pri pregledu svijestan, orjentisan... opis po regijama..."
+              className={taCls}
+            />
+          </div>
+        </div>
       </div>
 
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Nalaz / Procedura</label>
+      {/* REZULTATI (LABORATORIJSKI I RTG) */}
+      <div className="border border-border rounded-lg p-4 bg-white">
+        <h4 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-3 pb-2 border-b border-border">
+          Rezultati (laboratorijski i RTG)
+        </h4>
         <textarea
-          value={nalaz}
-          onChange={(e) => setNalaz(e.target.value)}
+          value={rezultati}
+          onChange={(e) => setRezultati(e.target.value)}
           rows={4}
-          placeholder="Opis nalaza, sprovedene procedure, oprema..."
-          className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none"
+          placeholder="RTG, laboratorijski nalazi, ultrazvuk..."
+          className={taCls}
         />
       </div>
 
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Terapija</label>
+      {/* TERAPIJA */}
+      <div className="border border-border rounded-lg p-4 bg-white">
+        <h4 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-3 pb-2 border-b border-border">
+          Terapija
+        </h4>
         <textarea
           value={terapija}
           onChange={(e) => setTerapija(e.target.value)}
           rows={3}
           placeholder="Prepisana terapija, lijekovi, doziranje..."
-          className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none"
+          className={taCls}
         />
       </div>
 
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Preporuke</label>
-        <textarea
-          value={preporuke}
-          onChange={(e) => setPreporuke(e.target.value)}
-          rows={3}
-          placeholder="Preporuke za pacijenta, sta izbjegavati, njega..."
-          className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none"
-        />
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Kontrolni pregled</label>
-        <input
-          type="text"
-          value={kontrolniPregled}
-          onChange={(e) => setKontrolniPregled(e.target.value)}
-          placeholder="npr. za 2 nedjelje"
-          className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
-        />
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
-          Interna napomena <span className="text-gray-400 font-normal">(ne stampa se)</span>
-        </label>
-        <textarea
-          value={napomena}
-          onChange={(e) => setNapomena(e.target.value)}
-          rows={2}
-          placeholder="Interne biljeske..."
-          className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none bg-amber-50"
-        />
+      {/* Preporuke + kontrolni — manje vazno, kompaktnije */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label className={sectionLabel}>Preporuke</label>
+          <textarea
+            value={preporuke}
+            onChange={(e) => setPreporuke(e.target.value)}
+            rows={3}
+            placeholder="Preporuke za pacijenta, njega..."
+            className={taCls}
+          />
+        </div>
+        <div>
+          <label className={sectionLabel}>Kontrolni pregled</label>
+          <input
+            type="text"
+            value={kontrolniPregled}
+            onChange={(e) => setKontrolniPregled(e.target.value)}
+            placeholder="npr. za 2 nedjelje"
+            className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+          />
+          <label className={`${sectionLabel} mt-3`}>
+            Interna napomena <span className="text-gray-400 font-normal normal-case">(ne stampa se)</span>
+          </label>
+          <textarea
+            value={napomena}
+            onChange={(e) => setNapomena(e.target.value)}
+            rows={2}
+            placeholder="Interne biljeske..."
+            className={`${taCls} bg-amber-50`}
+          />
+        </div>
       </div>
 
       <div className="flex gap-3 pt-2">

@@ -35,9 +35,9 @@ function esc(str: string): string {
 
 export function openPrintReport({ examination, patient, doctor, establishment, services, fiscal }: PrintReportProps) {
   const datumStr = examination.datum ? fmtDate(examination.datum) : '';
-  const datumRodjenja = patient.datum_rodjenja ? fmtDate(patient.datum_rodjenja) : '';
+  const godinaRodjenja = patient.datum_rodjenja ? new Date(patient.datum_rodjenja).getFullYear().toString() : '';
   const doctorFullName = `${doctor.titula || 'Dr'} ${doctor.ime} ${doctor.prezime}`.trim();
-  const spec = doctor.specijalizacija ? `spec.${doctor.specijalizacija}` : '';
+  const spec = doctor.specijalizacija ? `spec. ${doctor.specijalizacija}` : '';
 
   const clinicName = establishment?.naziv || 'PZU Poliklinika "Ministry of Aesthetics - MOA"';
   const clinicAddress = establishment?.adresa || 'Ul Seika Zaida, The Capital Plaza';
@@ -46,163 +46,180 @@ export function openPrintReport({ examination, patient, doctor, establishment, s
   const clinicPhone = establishment?.telefon || '+382 67/941-941';
   const clinicEmail = establishment?.email || 'info@moa.clinic';
 
-  // Sadrzaj pregleda
-  const sections: string[] = [];
-  if (examination.razlog_dolaska) {
-    sections.push(`<p style="margin-bottom:12px;white-space:pre-wrap">${esc(examination.razlog_dolaska)}</p>`);
-  }
-  if (examination.nalaz) {
-    sections.push(`<p style="margin-bottom:12px;white-space:pre-wrap">${esc(examination.nalaz)}</p>`);
-  }
-  if (examination.terapija) {
-    sections.push(`<p style="margin-bottom:12px;white-space:pre-wrap">Th: ${esc(examination.terapija)}</p>`);
-  }
-  if (examination.preporuke) {
-    sections.push(`<p style="margin-bottom:12px;white-space:pre-wrap">${esc(examination.preporuke)}</p>`);
-  }
-  if (examination.kontrolni_pregled) {
-    sections.push(`<p style="margin-bottom:12px">Kontrolni pregled: ${esc(examination.kontrolni_pregled)}</p>`);
-  }
+  const mjestoStanovanja = [patient.adresa, patient.grad].filter(Boolean).join(', ');
 
-  // Tabela usluga
-  let servicesHtml = '';
-  if (services && services.length > 0) {
-    const total = services.reduce((s, svc) => s + svc.ukupno, 0);
-    servicesHtml = `
-      <div style="margin: 20px 0; border-top: 1px solid #ddd; padding-top: 15px;">
-        <p style="font-size:10px; font-weight:700; color:#1B6F6F; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:8px;">Izvrsene usluge</p>
-        <table style="width:100%; border-collapse:collapse; font-size:11px;">
-          <thead>
-            <tr style="border-bottom:1px solid #ddd;">
-              <th style="text-align:left; padding:6px 0; color:#555;">Usluga</th>
-              <th style="text-align:center; padding:6px 0; color:#555; width:50px;">Kol.</th>
-              <th style="text-align:right; padding:6px 0; color:#555; width:80px;">Cijena</th>
-              <th style="text-align:right; padding:6px 0; color:#555; width:80px;">Ukupno</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${services.map((svc) => `
-              <tr style="border-bottom:1px solid #eee;">
-                <td style="padding:5px 0;">${esc(svc.naziv)}</td>
-                <td style="text-align:center; padding:5px 0;">${svc.kolicina}</td>
-                <td style="text-align:right; padding:5px 0;">${svc.cijena.toFixed(2)}</td>
-                <td style="text-align:right; padding:5px 0; font-weight:600;">${svc.ukupno.toFixed(2)}</td>
-              </tr>
-            `).join('')}
-          </tbody>
-          <tfoot>
-            <tr style="border-top:2px solid #1B6F6F;">
-              <td colspan="3" style="padding:8px 0; font-weight:700; color:#1B6F6F;">UKUPNO</td>
-              <td style="text-align:right; padding:8px 0; font-weight:700; font-size:13px; color:#1B6F6F;">${total.toFixed(2)} EUR</td>
-            </tr>
-          </tfoot>
-        </table>
-      </div>`;
-  }
+  // KCCG-stil sekcije
+  const anamnezaHtml =
+    (examination.razlog_dolaska || examination.nalaz)
+      ? `
+        <div class="section">
+          <p class="section-title">ANAMNEZA I KLINIČKI NALAZ:</p>
+          ${examination.razlog_dolaska ? `<p class="section-body">${esc(examination.razlog_dolaska)}</p>` : ''}
+          ${examination.nalaz ? `<p class="section-body">${esc(examination.nalaz)}</p>` : ''}
+        </div>`
+      : '';
 
-  // Fiskalni podaci
-  let fiscalHtml = '';
-  if (fiscal?.fic) {
-    fiscalHtml = `
-      <div style="margin-top:20px; border:1px solid #ddd; border-radius:6px; padding:12px; background:#fafafa; font-size:10px;">
-        <div style="display:flex; justify-content:space-between; align-items:flex-start;">
-          <div>
-            <p style="font-weight:700; color:#1B6F6F; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px;">Fiskalni podaci</p>
-            ${fiscal.invoiceNumber ? `<p><span style="color:#666;">Broj racuna:</span> <strong>${esc(fiscal.invoiceNumber)}</strong></p>` : ''}
-            <p><span style="color:#666;">FIC:</span> <strong>${esc(fiscal.fic)}</strong></p>
-            ${fiscal.iic ? `<p><span style="color:#666;">IIC:</span> ${esc(fiscal.iic)}</p>` : ''}
-            ${fiscal.totalWithoutVAT != null ? `
-              <div style="margin-top:6px; padding-top:6px; border-top:1px solid #eee;">
-                <p><span style="color:#666;">Bez PDV:</span> ${fiscal.totalWithoutVAT.toFixed(2)} EUR</p>
-                <p><span style="color:#666;">PDV (21%):</span> ${(fiscal.totalVAT || 0).toFixed(2)} EUR</p>
-                <p style="font-weight:700;"><span style="color:#666;">Sa PDV:</span> ${(fiscal.totalPrice || 0).toFixed(2)} EUR</p>
-              </div>
-            ` : ''}
-          </div>
-          ${fiscal.qrCodeUrl ? `
-            <div style="text-align:center;">
-              <img src="https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent(fiscal.qrCodeUrl)}"
-                   style="width:90px;height:90px;" alt="QR" />
-              <p style="font-size:8px; color:#999; margin-top:2px;">Verifikacija</p>
-            </div>
-          ` : ''}
-        </div>
-      </div>`;
-  }
+  const rezultatiHtml = examination.rezultati
+    ? `
+      <div class="section">
+        <p class="section-title">REZULTATI (LABORATORIJSKI I RTG):</p>
+        <p class="section-body">${esc(examination.rezultati)}</p>
+      </div>`
+    : '';
+
+  const terapijaHtml = examination.terapija
+    ? `
+      <div class="section">
+        <p class="section-title">TERAPIJA:</p>
+        <p class="section-body">${esc(examination.terapija)}</p>
+      </div>`
+    : '';
+
+  const preporukeHtml = examination.preporuke
+    ? `
+      <div class="section">
+        <p class="section-title">PREPORUKE:</p>
+        <p class="section-body">${esc(examination.preporuke)}</p>
+      </div>`
+    : '';
+
+  const kontrolniHtml = examination.kontrolni_pregled
+    ? `<p class="footer-note">Kontrolni pregled: <strong>${esc(examination.kontrolni_pregled)}</strong></p>`
+    : '';
+
+  // Usluge i fiskalni podaci se namjerno ne stampaju na medicinskom izvjestaju
+  void services; void fiscal;
 
   const html = `<!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8">
-  <title>Nalaz</title>
+  <title>Izvjestaj ljekara specijaliste</title>
   <style>
     @page { size: A4; margin: 15mm; }
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
       font-family: 'Segoe UI', Arial, sans-serif;
       color: #1a1a1a;
+      font-size: 11px;
       -webkit-print-color-adjust: exact;
       print-color-adjust: exact;
     }
     .page { width: 100%; position: relative; }
-    .header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding-bottom: 15px;
-      border-bottom: 2px solid #2BA5A5;
-      margin-bottom: 25px;
-    }
-    .header img { width: 70px; height: 70px; object-fit: contain; }
-    .header-info { text-align: right; font-size: 10px; line-height: 1.6; color: #444; }
-    .header-info .name { font-size: 12px; font-weight: 700; color: #1B6F6F; margin-bottom: 2px; }
-    .patient-box {
-      background: #f7fafa; border-left: 3px solid #2BA5A5;
-      padding: 12px 16px; margin-bottom: 22px; font-size: 12px; line-height: 1.8;
-    }
-    .patient-box strong { color: #111; }
-    .content { font-size: 12px; line-height: 1.8; color: #222; }
+
+    /* MOA header — stil KCCG-a (logo lijevo, info desno kao 'JZU | vrijednost') */
+    .header { display: flex; align-items: flex-start; gap: 20px; margin-bottom: 18px; }
+    .header img { width: 70px; height: 70px; object-fit: contain; flex-shrink: 0; }
+    .header-table { flex: 1; border-collapse: collapse; font-size: 11px; }
+    .header-table td { padding: 4px 8px; vertical-align: top; }
+    .header-table td.label { color: #444; white-space: nowrap; width: 1%; }
+    .header-table td.value { border-bottom: 1px solid #333; font-weight: 600; }
+
+    /* Naslov */
+    .title { text-align: center; font-size: 15px; font-weight: 700; letter-spacing: 0.5px; margin: 18px 0 14px; }
+
+    /* Tabela pacijenta — kao KCCG (border grid) */
+    .info-table { width: 100%; border-collapse: collapse; margin-bottom: 18px; font-size: 11px; }
+    .info-table td { border: 1px solid #333; padding: 6px 8px; vertical-align: top; }
+    .info-table .cell-label { font-size: 10px; color: #333; }
+    .info-table .cell-value { font-weight: 600; font-size: 12px; margin-top: 2px; }
+
+    /* Sekcije sadrzaja */
+    .section { margin-bottom: 14px; }
+    .section-title { font-size: 12px; font-weight: 700; color: #000; margin-bottom: 4px; letter-spacing: 0.3px; }
+    .section-body { font-size: 11.5px; line-height: 1.55; color: #222; white-space: pre-wrap; }
+
+    .footer-note { font-size: 11px; margin-top: 16px; color: #333; }
+
     .signature { margin-top: 40px; text-align: right; }
-    .sig-line { width: 180px; border-top: 1px solid #bbb; margin: 8px 0 6px auto; }
-    .sig-name { font-size: 12px; font-weight: 600; color: #1B6F6F; }
-    .sig-spec { font-size: 10px; color: #666; }
+    .sig-line { width: 200px; border-top: 1px solid #333; margin: 8px 0 4px auto; }
+    .sig-name { font-size: 12px; font-weight: 700; color: #000; }
+    .sig-spec { font-size: 10px; color: #555; }
+
     table { display: table !important; }
     tbody { display: table-row-group !important; }
-    thead { display: table-header-group !important; }
-    tfoot { display: table-footer-group !important; }
     tr { display: table-row !important; }
     td, th { display: table-cell !important; }
   </style>
 </head>
 <body>
   <div class="page">
+    <!-- Header: MOA logo + info u KCCG stilu -->
     <div class="header">
       <img src="/logo.png" alt="MOA" />
-      <div class="header-info">
-        <div class="name">${esc(clinicName)}</div>
-        <div>${esc(clinicAddress)}</div>
-        <div>${esc(clinicCity)}</div>
-        <div>PIB: ${esc(clinicPib)}</div>
-        <div>${esc(clinicPhone)}</div>
-        <div>${esc(clinicEmail)}</div>
-        <div>www.moa.clinic</div>
-      </div>
+      <table class="header-table">
+        <tr>
+          <td class="label">Ustanova</td>
+          <td class="value">${esc(clinicName)}</td>
+        </tr>
+        <tr>
+          <td class="label">Adresa</td>
+          <td class="value">${esc(clinicAddress)}, ${esc(clinicCity)}</td>
+        </tr>
+        <tr>
+          <td class="label">Kontakt</td>
+          <td class="value">${esc(clinicPhone)} · ${esc(clinicEmail)} · PIB ${esc(clinicPib)}</td>
+        </tr>
+      </table>
     </div>
-    <div class="patient-box">
-      <div>Ime i prezime: <strong>${esc(patient.ime)} ${esc(patient.prezime)}</strong></div>
-      <div>Datum: <strong>${datumStr}</strong></div>
-      ${datumRodjenja ? `<div>Datum rodjenja: <strong>${datumRodjenja}</strong></div>` : ''}
-    </div>
-    <div class="content">
-      ${sections.join('\n      ')}
-    </div>
-    ${servicesHtml}
+
+    <!-- Naslov -->
+    <div class="title">IZVJEŠTAJ LJEKARA SPECIJALISTE</div>
+
+    <!-- Datum pregleda -->
+    <table class="info-table">
+      <tr>
+        <td style="width:50%">
+          <div class="cell-label">Datum pregleda</div>
+          <div class="cell-value">${datumStr || '—'}</div>
+        </td>
+        <td style="width:50%">
+          <div class="cell-label">Ljekar</div>
+          <div class="cell-value">${esc(doctorFullName)}${spec ? ` — ${esc(spec)}` : ''}</div>
+        </td>
+      </tr>
+    </table>
+
+    <!-- Podaci pacijenta (KCCG grid) -->
+    <table class="info-table">
+      <tr>
+        <td style="width:50%">
+          <div class="cell-label">Prezime i ime pacijenta</div>
+          <div class="cell-value">${esc(patient.prezime)} ${esc(patient.ime)}</div>
+        </td>
+        <td style="width:20%">
+          <div class="cell-label">Godina rođenja</div>
+          <div class="cell-value">${godinaRodjenja || '—'}</div>
+        </td>
+        <td style="width:30%">
+          <div class="cell-label">JMBG</div>
+          <div class="cell-value">${esc(patient.jmbg || '—')}</div>
+        </td>
+      </tr>
+      <tr>
+        <td colspan="2">
+          <div class="cell-label">Mjesto stanovanja — adresa</div>
+          <div class="cell-value">${esc(mjestoStanovanja || '—')}</div>
+        </td>
+        <td>
+          <div class="cell-label">Telefon</div>
+          <div class="cell-value">${esc(patient.telefon || '—')}</div>
+        </td>
+      </tr>
+    </table>
+
+    <!-- Sekcije nalaza -->
+    ${anamnezaHtml}
+    ${rezultatiHtml}
+    ${terapijaHtml}
+    ${preporukeHtml}
+    ${kontrolniHtml}
+
     <div class="signature">
       <div class="sig-line"></div>
       <div class="sig-name">${esc(doctorFullName)}</div>
       ${spec ? `<div class="sig-spec">${esc(spec)}</div>` : ''}
     </div>
-    ${fiscalHtml}
   </div>
 </body>
 </html>`;

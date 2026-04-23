@@ -62,8 +62,14 @@ export default function ExaminationHistory({ examinations, doctors }: Examinatio
                 )}
                 {exam.nalaz && (
                   <div>
-                    <p className="text-xs font-semibold text-gray-500 uppercase">Nalaz / Procedura</p>
+                    <p className="text-xs font-semibold text-gray-500 uppercase">Klinicki nalaz</p>
                     <p className="text-gray-700 whitespace-pre-wrap">{exam.nalaz}</p>
+                  </div>
+                )}
+                {exam.rezultati && (
+                  <div>
+                    <p className="text-xs font-semibold text-gray-500 uppercase">Rezultati (lab. i RTG)</p>
+                    <p className="text-gray-700 whitespace-pre-wrap">{exam.rezultati}</p>
                   </div>
                 )}
                 {exam.terapija && (

@@ -270,6 +270,7 @@ export interface Examination {
   datum: string;
   razlog_dolaska?: string;
   nalaz?: string;
+  rezultati?: string;
   terapija?: string;
   preporuke?: string;
   kontrolni_pregled?: string;

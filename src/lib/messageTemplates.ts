@@ -79,22 +79,34 @@ export async function loadTemplatesFromDb(): Promise<MessageTemplates | null> {
 export async function saveTemplatesToDb(templates: MessageTemplates): Promise<{ success: boolean; error?: string }> {
   setTemplatesLocal(templates);
 
+  // VAZNO: dohvati postojece `message_templates` prije update-a da ne pregazimo
+  // druge kljuceve (npr. `survey_sms` legacy) koje druge stranice pisu. Merge-ujemo
+  // samo sms/viber polja, ostalo ostaje netaknuto.
   const { data: existing } = await supabase
     .from('reminder_settings')
-    .select('id')
+    .select('id, message_templates')
     .limit(1)
     .maybeSingle();
+
+  const current = (existing?.message_templates ?? {}) as Record<string, unknown>;
+  const merged: Record<string, unknown> = {
+    ...current,
+    sms: { ...(current.sms as object || {}), ...templates.sms },
+    viber: { ...(current.viber as object || {}), ...templates.viber },
+    // Takodje sinhronizuj legacy survey_sms da Edge function fallback ostane valjan.
+    survey_sms: templates.sms.anketa,
+  };
 
   if (existing?.id) {
     const { error } = await supabase
       .from('reminder_settings')
-      .update({ message_templates: templates })
+      .update({ message_templates: merged })
       .eq('id', existing.id);
     if (error) return { success: false, error: error.message };
   } else {
     const { error } = await supabase
       .from('reminder_settings')
-      .insert({ message_templates: templates });
+      .insert({ message_templates: merged });
     if (error) return { success: false, error: error.message };
   }
   return { success: true };

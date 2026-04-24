@@ -53,6 +53,10 @@ export default function Settings() {
 
   // Sabloni poruka (SMS + Viber)
   const [templates, setTemplates] = useState<MessageTemplates>(DEFAULT_TEMPLATES);
+  // Snapshot pri ucitavanju — koristi se da znamo koje je polje user stvarno
+  // promijenio pa da ne pregazimo polja koja je druga stranica/korisnik u
+  // medjuvremenu izmijenio (npr. anketa template snimljen preko /ankete).
+  const [initialTemplates, setInitialTemplates] = useState<MessageTemplates>(DEFAULT_TEMPLATES);
   const [templatesSaved, setTemplatesSaved] = useState(false);
   const [activeTemplateKanal, setActiveTemplateKanal] = useState<MessageKanal>('sms');
 
@@ -75,7 +79,9 @@ export default function Settings() {
     setReminderTiming(rs.timing);
     setReminderVrijeme(rs.vrijeme);
 
-    setTemplates(getTemplatesLocal());
+    const localTmpl = getTemplatesLocal();
+    setTemplates(localTmpl);
+    setInitialTemplates(localTmpl);
 
     (async () => {
       const loaded = await loadSmsConfigFromDb();
@@ -98,7 +104,7 @@ export default function Settings() {
       if (db) { setReminderEnabled(db.enabled); setReminderTiming(db.timing); setReminderVrijeme(db.vrijeme); setReminderSettings(db); }
 
       const tmpl = await loadTemplatesFromDb();
-      if (tmpl) setTemplates(tmpl);
+      if (tmpl) { setTemplates(tmpl); setInitialTemplates(tmpl); }
     })();
   }, []);
 
@@ -125,8 +131,25 @@ export default function Settings() {
   }
 
   async function handleSaveTemplates() {
-    const result = await saveTemplatesToDb(templates);
+    // Povuci najsveziju verziju iz baze kao baseline, pa preko baseline-a
+    // primijeni samo polja koja je user zaista editovao u Settings formi. Tako
+    // ne pregazimo izmjene drugih stranica (npr. anketa template iz Survey-a).
+    const fresh = (await loadTemplatesFromDb()) || initialTemplates;
+    const merged: MessageTemplates = {
+      sms: { ...fresh.sms },
+      viber: { ...fresh.viber },
+    };
+    (['sms', 'viber'] as MessageKanal[]).forEach((kanal) => {
+      (['potvrda', 'podsjetnik', 'otkazivanje', 'potvrdjivanje', 'anketa'] as MessageTip[]).forEach((tip) => {
+        if (templates[kanal][tip] !== initialTemplates[kanal][tip]) {
+          merged[kanal][tip] = templates[kanal][tip];
+        }
+      });
+    });
+    const result = await saveTemplatesToDb(merged);
     if (!result.success) { alert('Greska pri snimanju sablona: ' + (result.error || 'nepoznato')); return; }
+    setTemplates(merged);
+    setInitialTemplates(merged);
     setTemplatesSaved(true);
     setTimeout(() => setTemplatesSaved(false), 3000);
   }

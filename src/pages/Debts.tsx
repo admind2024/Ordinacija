@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { format, parseISO } from 'date-fns';
 import { srLatn as sr } from 'date-fns/locale';
-import { Wallet, Search, Plus, ChevronRight, ChevronDown, Banknote, X, Check, Trash2, Calendar, Stethoscope, Receipt, FileText } from 'lucide-react';
+import { Wallet, Search, Plus, ChevronRight, ChevronDown, Banknote, X, Check, Trash2, Stethoscope, Receipt, FileText } from 'lucide-react';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import { supabase } from '../lib/supabase';
@@ -394,7 +394,9 @@ export default function Debts() {
                     <p className="text-[15px] font-semibold text-gray-900 truncate">
                       {debt.patient?.ime} {debt.patient?.prezime}
                     </p>
-                    <p className="text-xs text-gray-500 truncate mt-0.5">{debt.opis || 'Bez opisa'}</p>
+                    <p className="text-xs text-gray-500 truncate mt-0.5">
+                      {(debt.opis || 'Bez opisa').replace(/\s*—\s*placeno\s+[\d.,]+e?\s+od\s+[\d.,]+e?/gi, '').trim() || 'Bez opisa'}
+                    </p>
                   </div>
                   <div className="text-right shrink-0">
                     <p className={`text-lg font-bold tabular-nums ${debt.status === 'placen' ? 'text-green-600' : 'text-gray-900'}`}>
@@ -419,7 +421,25 @@ export default function Debts() {
                   const det = details[debt.id];
                   const placeno = debt.iznos - debt.preostalo;
 
-                  // Sastavi hronologiju — svaki event ima bogatiji opis
+                  // Legacy fallback: ako dug nema appointment_id (stari unos iz
+                  // Dashboard-a prije migracije), ali opis sadrzi obrazac
+                  // "— placeno Xe od Ye", izvuci inicijalnu uplatu iz teksta.
+                  let legacyInitial: number | null = null;
+                  if (!det?.initialPayment && debt.opis) {
+                    const m = debt.opis.match(/placeno\s+([\d.,]+)\s*e?\s+od\s+([\d.,]+)\s*e?/i);
+                    if (m) {
+                      const p = parseFloat(m[1].replace(',', '.'));
+                      if (!isNaN(p) && p > 0) legacyInitial = p;
+                    }
+                  }
+                  // Dodatni fallback: ako je debt.preostalo < debt.iznos a nema detalja o
+                  // inicijalnoj uplati ni uplate_duga, znamo da je postojala djelimicna uplata.
+                  const hasKnownPayments = (det?.initialPayment?.iznos || 0) > 0 || debtUplate.length > 0;
+                  if (!hasKnownPayments && legacyInitial === null && placeno > 0.01) {
+                    legacyInitial = placeno;
+                  }
+
+                  // Sastavi hronologiju
                   type TimelineEvent = {
                     datum: string;
                     tip: 'pregled' | 'nastao' | 'inicijalna' | 'rata' | 'zatvoren';
@@ -432,7 +452,7 @@ export default function Debts() {
                   };
                   const events: TimelineEvent[] = [];
 
-                  // 1) Pregled (ako postoji appointment)
+                  // 1) Pregled
                   if (det?.appointment) {
                     const uslugeText = det.services.length > 0
                       ? det.services.map((s) => `${s.naziv}${s.kolicina > 1 ? ` ×${s.kolicina}` : ''}`).join(', ')
@@ -447,22 +467,30 @@ export default function Debts() {
                   }
 
                   // 2) Dug nastao
+                  const inicijalIznos = det?.initialPayment?.iznos || legacyInitial || 0;
                   events.push({
                     datum: debt.datum_nastanka,
                     tip: 'nastao',
                     title: 'Dug nastao',
-                    subtitle: det?.initialPayment && det.initialPayment.iznos > 0
-                      ? `Placeno ${det.initialPayment.iznos.toFixed(2)} € od ${debt.iznos.toFixed(2)} € — preostalo ${(debt.iznos - det.initialPayment.iznos).toFixed(2)} €`
-                      : `Ukupan dug ${debt.iznos.toFixed(2)} €`,
+                    subtitle: inicijalIznos > 0
+                      ? `Placeno ${inicijalIznos.toFixed(2)} € od ${debt.iznos.toFixed(2)} €`
+                      : `Ukupan iznos ${debt.iznos.toFixed(2)} €`,
                   });
 
-                  // 3) Inicijalna uplata (kao poseban event da bude vidljivo u zelenom)
+                  // 3) Inicijalna uplata
                   if (det?.initialPayment && det.initialPayment.iznos > 0) {
                     events.push({
                       datum: det.initialPayment.datum.slice(0, 10),
                       tip: 'inicijalna',
                       iznos: det.initialPayment.iznos,
                       metoda: det.initialPayment.metoda,
+                      title: 'Uplata na terminu',
+                    });
+                  } else if (legacyInitial !== null) {
+                    events.push({
+                      datum: debt.datum_nastanka,
+                      tip: 'inicijalna',
+                      iznos: legacyInitial,
                       title: 'Uplata na terminu',
                     });
                   }
@@ -495,28 +523,29 @@ export default function Debts() {
 
                   return (
                     <div className="px-5 pb-5 bg-gray-50/40 border-t border-gray-100">
-                      {/* Progress bar */}
-                      <div className="mt-4 mb-5">
-                        <div className="flex items-center justify-between text-xs mb-1.5">
-                          <span className="text-green-700 font-medium tabular-nums">Placeno {placeno.toFixed(2)} EUR</span>
-                          <span className="text-gray-500 tabular-nums">od {debt.iznos.toFixed(2)} EUR</span>
-                          <span className="text-gray-700 font-semibold tabular-nums">Preostalo {debt.preostalo.toFixed(2)} EUR</span>
+                      {/* Progress bar — cistiji, bez srednjeg "od X" */}
+                      <div className="mt-4 mb-4">
+                        <div className="flex items-center justify-between text-xs mb-1.5 tabular-nums">
+                          <span className="text-green-700 font-medium">Placeno {placeno.toFixed(2)} €</span>
+                          <span className={debt.status === 'placen' ? 'text-green-700 font-semibold' : 'text-red-600 font-semibold'}>
+                            {debt.status === 'placen' ? 'Izmiren' : `Preostalo ${debt.preostalo.toFixed(2)} €`}
+                          </span>
                         </div>
-                        <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+                        <div className="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden">
                           <div
-                            className="bg-gradient-to-r from-green-500 to-emerald-500 h-2 transition-all"
+                            className="bg-gradient-to-r from-green-500 to-emerald-500 h-full transition-all"
                             style={{ width: `${paidPercent}%` }}
                           />
                         </div>
                       </div>
 
-                      {/* Hronologija */}
+                      {/* Hronologija — kompaktnija */}
                       <div className="bg-white rounded-lg border border-border">
-                        <div className="px-4 py-2.5 border-b border-border">
-                          <p className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Hronologija</p>
+                        <div className="px-4 py-2 border-b border-border">
+                          <p className="text-[11px] font-semibold text-gray-600 uppercase tracking-wider">Hronologija</p>
                         </div>
-                        <div className="px-4 py-4">
-                          <ol className="relative border-l-2 border-gray-200 ml-3 space-y-4">
+                        <div className="px-4 py-3">
+                          <ol className="relative border-l border-gray-200 ml-2 space-y-3">
                             {events.map((ev, i) => {
                               const isPayment = ev.tip === 'inicijalna' || ev.tip === 'rata';
                               const dotConf = ev.tip === 'pregled'
@@ -528,51 +557,50 @@ export default function Debts() {
                                     : { bg: 'bg-emerald-500', Icon: Banknote };
                               const DotIcon = dotConf.Icon;
                               return (
-                                <li key={i} className="ml-5">
-                                  <span className={`absolute -left-[11px] w-5 h-5 rounded-full ring-4 ring-white flex items-center justify-center ${dotConf.bg}`}>
-                                    <DotIcon size={10} className="text-white" />
+                                <li key={i} className="ml-4">
+                                  <span className={`absolute -left-[9px] w-[18px] h-[18px] rounded-full ring-4 ring-white flex items-center justify-center ${dotConf.bg}`}>
+                                    <DotIcon size={9} className="text-white" />
                                   </span>
                                   <div className="flex items-start justify-between gap-3 flex-wrap">
                                     <div className="min-w-0 flex-1">
-                                      <div className="flex items-center gap-2 text-xs text-gray-500 mb-0.5">
-                                        <Calendar size={11} className="text-gray-400" />
-                                        <span>{fmtD(ev.datum)}{ev.time ? ` u ${ev.time}` : ''}</span>
+                                      <div className="flex items-baseline gap-2">
+                                        <p className="text-sm font-semibold text-gray-900">{ev.title}</p>
+                                        <span className="text-[11px] text-gray-400 tabular-nums">{fmtD(ev.datum)}{ev.time ? ` • ${ev.time}` : ''}</span>
                                       </div>
-                                      <p className="text-sm font-semibold text-gray-900">{ev.title}</p>
                                       {ev.subtitle && (
                                         <p className="text-xs text-gray-600 mt-0.5">{ev.subtitle}</p>
                                       )}
                                       {(ev.metoda || ev.napomena) && (
                                         <div className="flex flex-wrap items-center gap-1.5 mt-1">
-                                          {ev.metoda && <span className="inline-block bg-gray-100 text-gray-600 text-xs rounded px-2 py-0.5">{ev.metoda}</span>}
+                                          {ev.metoda && <span className="inline-block bg-gray-100 text-gray-600 text-[10px] uppercase tracking-wider rounded px-1.5 py-0.5">{ev.metoda}</span>}
                                           {ev.napomena && <span className="text-xs text-gray-500 italic">{ev.napomena}</span>}
                                         </div>
                                       )}
                                     </div>
-                                    {isPayment && ev.iznos && (
+                                    {isPayment && ev.iznos ? (
                                       <span className="text-sm font-bold text-green-700 tabular-nums shrink-0">+{ev.iznos.toFixed(2)} €</span>
-                                    )}
+                                    ) : null}
                                   </div>
                                 </li>
                               );
                             })}
                           </ol>
 
-                          {/* Stavke usluga (ako ih ima) — ispod hronologije */}
+                          {/* Stavke usluga (ako ih ima) */}
                           {det && det.services.length > 0 && (
-                            <div className="mt-5 pt-4 border-t border-gray-100">
+                            <div className="mt-4 pt-3 border-t border-gray-100">
                               <div className="flex items-center gap-2 mb-2">
-                                <Receipt size={13} className="text-gray-500" />
-                                <p className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Stavke</p>
+                                <Receipt size={12} className="text-gray-400" />
+                                <p className="text-[11px] font-semibold text-gray-600 uppercase tracking-wider">Stavke</p>
                               </div>
-                              <div className="space-y-1">
+                              <div className="space-y-0.5">
                                 {det.services.map((s) => (
                                   <div key={s.id} className="flex justify-between text-sm">
                                     <span className="text-gray-700">{s.naziv}{s.kolicina > 1 ? ` × ${s.kolicina}` : ''}</span>
                                     <span className="text-gray-900 tabular-nums">{s.ukupno.toFixed(2)} €</span>
                                   </div>
                                 ))}
-                                <div className="flex justify-between text-sm font-bold pt-1.5 mt-1 border-t border-gray-100">
+                                <div className="flex justify-between text-sm font-bold pt-1 mt-1 border-t border-gray-100">
                                   <span className="text-gray-800">Ukupno</span>
                                   <span className="text-gray-900 tabular-nums">{debt.iznos.toFixed(2)} €</span>
                                 </div>
@@ -581,7 +609,7 @@ export default function Debts() {
                           )}
 
                           {debt.napomena && (
-                            <p className="text-xs text-gray-500 italic mt-4 pt-3 border-t border-gray-100">
+                            <p className="text-xs text-gray-500 italic mt-3 pt-2 border-t border-gray-100">
                               <span className="font-semibold text-gray-600 not-italic">Napomena: </span>{debt.napomena}
                             </p>
                           )}

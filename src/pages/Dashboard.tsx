@@ -605,8 +605,10 @@ export default function Dashboard() {
                         <div className="shrink-0 text-right">
                           {isPartial ? (
                             <>
-                              <span className="text-xs md:text-sm font-bold px-2 py-1 rounded text-orange-800 bg-orange-100">
-                                {paidAmt.toFixed(2)} € / {total.toFixed(2)} €
+                              <span className="inline-flex items-baseline gap-1 text-xs md:text-sm font-bold px-2 py-1 rounded bg-orange-50 border border-orange-200">
+                                <span className="text-green-700">{paidAmt.toFixed(2)} €</span>
+                                <span className="text-gray-400 font-normal">/</span>
+                                <span className="text-gray-600">{total.toFixed(2)} €</span>
                               </span>
                               <p className="text-[9px] text-orange-600 font-semibold mt-0.5 uppercase tracking-wider">
                                 Dug {remainingDebt.toFixed(2)} €

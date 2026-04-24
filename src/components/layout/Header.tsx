@@ -1,12 +1,14 @@
 import { useAuth } from '../../contexts/AuthContext';
-import { LogOut, User, Menu } from 'lucide-react';
+import { LogOut, User, Menu, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 
 interface HeaderProps {
   sectionName?: string;
   onOpenMenu?: () => void;
+  collapsed?: boolean;
+  onToggleCollapsed?: () => void;
 }
 
-export default function Header({ sectionName = 'MOA', onOpenMenu }: HeaderProps) {
+export default function Header({ sectionName = 'MOA', onOpenMenu, collapsed, onToggleCollapsed }: HeaderProps) {
   const { user, signOut } = useAuth();
 
   if (!user) return null;
@@ -21,7 +23,7 @@ export default function Header({ sectionName = 'MOA', onOpenMenu }: HeaderProps)
 
   return (
     <header className="sticky top-0 z-20 h-14 md:h-16 bg-surface border-b border-border flex items-center justify-between gap-2 px-2 xs:px-3 md:px-6 safe-top safe-left safe-right">
-      <div className="flex items-center gap-1.5 xs:gap-2 min-w-0 flex-1">
+      <div className="flex items-center gap-2 xs:gap-3 md:gap-4 min-w-0 flex-1">
         {/* Hamburger — samo na mobilnom */}
         <button
           onClick={onOpenMenu}
@@ -30,7 +32,18 @@ export default function Header({ sectionName = 'MOA', onOpenMenu }: HeaderProps)
         >
           <Menu size={22} />
         </button>
-        <h1 className="text-sm xs:text-base md:text-lg font-semibold text-gray-900 truncate">{sectionName}</h1>
+        {/* Collapse toggle — samo desktop */}
+        {onToggleCollapsed && (
+          <button
+            onClick={onToggleCollapsed}
+            className="hidden md:inline-flex items-center justify-center w-9 h-9 text-gray-500 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors shrink-0"
+            aria-label={collapsed ? 'Prosiri meni' : 'Suzi meni'}
+            title={collapsed ? 'Prosiri meni' : 'Suzi meni'}
+          >
+            {collapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
+          </button>
+        )}
+        <h1 className="text-sm xs:text-base md:text-lg font-semibold text-gray-900 truncate md:pl-1">{sectionName}</h1>
       </div>
 
       <div className="flex items-center gap-1 xs:gap-2 md:gap-4 shrink-0">

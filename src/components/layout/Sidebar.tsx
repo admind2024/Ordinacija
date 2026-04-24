@@ -13,8 +13,6 @@ import {
   LayoutDashboard,
   Package,
   Building2,
-  ChevronLeft,
-  ChevronRight,
   ClipboardList,
   ListOrdered,
   X,
@@ -44,7 +42,7 @@ interface SidebarProps {
   onMobileClose: () => void;
 }
 
-export default function Sidebar({ collapsed, setCollapsed, mobileOpen, onMobileClose }: SidebarProps) {
+export default function Sidebar({ collapsed, mobileOpen, onMobileClose }: SidebarProps) {
   const { user } = useAuth();
 
   const visibleNav = navigation.filter(
@@ -116,14 +114,6 @@ export default function Sidebar({ collapsed, setCollapsed, mobileOpen, onMobileC
           </ul>
         </nav>
 
-        {/* Collapse toggle — samo desktop */}
-        <button
-          onClick={() => setCollapsed(!collapsed)}
-          className="hidden md:flex items-center justify-center h-12 border-t border-white/10 text-gray-400 hover:text-white transition-colors shrink-0"
-          aria-label={collapsed ? 'Prosiri meni' : 'Suzi meni'}
-        >
-          {collapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
-        </button>
       </aside>
     </>
   );

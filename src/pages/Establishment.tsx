@@ -4,11 +4,17 @@ import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
 import PinGate from '../components/ui/PinGate';
-import { useCalendar } from '../contexts/CalendarContext';
 import { supabase } from '../lib/supabase';
 
+type RoomRow = {
+  id: string;
+  naziv: string;
+  tip: 'ordinacija' | 'oprema';
+  boja: string;
+  aktivan: boolean;
+};
+
 export default function Establishment() {
-  const { rooms } = useCalendar();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -24,6 +30,21 @@ export default function Establishment() {
     pdv_broj: '',
     logo_url: '',
   });
+
+  const [rooms, setRooms] = useState<RoomRow[]>([]);
+  const [roomDraft, setRoomDraft] = useState<Record<string, string>>({});
+  const [savingRoomId, setSavingRoomId] = useState<string | null>(null);
+  const [roomsSavedId, setRoomsSavedId] = useState<string | null>(null);
+
+  async function loadRooms() {
+    const { data } = await supabase
+      .from('rooms')
+      .select('id, naziv, tip, boja, aktivan')
+      .order('naziv');
+    const list = (data || []) as RoomRow[];
+    setRooms(list);
+    setRoomDraft(Object.fromEntries(list.map((r) => [r.id, r.naziv])));
+  }
 
   useEffect(() => {
     supabase.from('establishments').select('*').limit(1).single()
@@ -43,7 +64,21 @@ export default function Establishment() {
         }
         setLoading(false);
       });
+    loadRooms();
   }, []);
+
+  async function saveRoomName(id: string) {
+    const naziv = (roomDraft[id] || '').trim();
+    if (!naziv) return;
+    setSavingRoomId(id);
+    const { error } = await supabase.from('rooms').update({ naziv }).eq('id', id);
+    setSavingRoomId(null);
+    if (!error) {
+      setRooms((prev) => prev.map((r) => (r.id === id ? { ...r, naziv } : r)));
+      setRoomsSavedId(id);
+      setTimeout(() => setRoomsSavedId((cur) => (cur === id ? null : cur)), 2000);
+    }
+  }
 
   function update(field: string, value: string) {
     setForm((prev) => ({ ...prev, [field]: value }));
@@ -119,23 +154,43 @@ export default function Establishment() {
         {/* Ordinacije i oprema */}
         <Card>
           <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">Ordinacije i oprema</h3>
+          <p className="text-xs text-gray-500 mb-3">Klikni na naziv da ga promijeniš, pa Sacuvaj.</p>
           <div className="space-y-2">
-            {rooms.map((room) => (
-              <div key={room.id} className="flex items-center justify-between py-2 border-b border-border last:border-0">
-                <div className="flex items-center gap-3">
-                  <span className="w-3 h-3 rounded-full" style={{ backgroundColor: room.boja }} />
-                  <div>
-                    <p className="text-sm font-medium text-gray-900">{room.naziv}</p>
-                    <p className="text-xs text-gray-400 capitalize">{room.tip}</p>
-                  </div>
+            {rooms.map((room) => {
+              const draft = roomDraft[room.id] ?? room.naziv;
+              const dirty = draft.trim() !== room.naziv;
+              const busy = savingRoomId === room.id;
+              return (
+                <div key={room.id} className="flex items-center gap-2 py-2 border-b border-border last:border-0">
+                  <span className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: room.boja }} />
+                  <input
+                    type="text"
+                    value={draft}
+                    onChange={(e) => setRoomDraft((prev) => ({ ...prev, [room.id]: e.target.value }))}
+                    onKeyDown={(e) => { if (e.key === 'Enter' && dirty) saveRoomName(room.id); }}
+                    className="flex-1 min-w-0 text-sm font-medium text-gray-900 bg-transparent border border-transparent hover:border-border focus:border-primary-500 focus:outline-none rounded px-2 py-1"
+                  />
+                  <span className="text-xs text-gray-400 capitalize shrink-0">{room.tip}</span>
+                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium shrink-0 ${
+                    room.aktivan ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'
+                  }`}>
+                    {room.aktivan ? 'Aktivna' : 'Neaktivna'}
+                  </span>
+                  {dirty && (
+                    <Button onClick={() => saveRoomName(room.id)} disabled={busy} size="sm">
+                      {busy ? <Loader2 size={12} className="animate-spin" /> : <Save size={12} />}
+                      Sacuvaj
+                    </Button>
+                  )}
+                  {roomsSavedId === room.id && (
+                    <CheckCircle size={14} className="text-green-600 shrink-0" />
+                  )}
                 </div>
-                <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                  room.aktivan ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'
-                }`}>
-                  {room.aktivan ? 'Aktivna' : 'Neaktivna'}
-                </span>
-              </div>
-            ))}
+              );
+            })}
+            {rooms.length === 0 && (
+              <p className="text-sm text-gray-400 py-4 text-center">Nema unijetih ordinacija.</p>
+            )}
           </div>
         </Card>
       </div>

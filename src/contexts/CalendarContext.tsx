@@ -170,6 +170,42 @@ export function CalendarProvider({ children }: { children: ReactNode }) {
     loadTemplatesFromDb().catch(() => { /* fallback na localStorage/default */ });
   }, [fetchData]);
 
+  // Auto-refresh appointments svakih 60s da se status (npr. 'potvrdjen' iz
+  // javne /p/:token strane) azurira bez rucnog refresha. Pauzira kad je tab
+  // sakriven da ne trosimo resurse.
+  useEffect(() => {
+    let cancelled = false;
+
+    async function pollAppointments() {
+      if (document.hidden) return;
+      const { data } = await supabase
+        .from('appointments')
+        .select('*, appointment_services(*), patient:patients(ime, prezime, telefon)')
+        .order('pocetak', { ascending: true });
+      if (cancelled || !data) return;
+      const mapped = data.map((apt: any) => ({
+        ...apt,
+        services: (apt.appointment_services || []).map((s: any) => ({
+          ...s,
+          cijena: Number(s.cijena) || 0,
+          popust: Number(s.popust) || 0,
+          ukupno: Number(s.ukupno) || 0,
+        })),
+      })) as Appointment[];
+      setAppointments(mapped);
+    }
+
+    const intervalId = window.setInterval(pollAppointments, 60_000);
+    const onVisible = () => { if (!document.hidden) pollAppointments(); };
+    document.addEventListener('visibilitychange', onVisible);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(intervalId);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
+  }, []);
+
   const goToToday = useCallback(() => setSelectedDate(new Date()), []);
 
   const goForward = useCallback(() => {

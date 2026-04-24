@@ -303,6 +303,7 @@ export type DugovanjeStatus = 'aktivan' | 'placen' | 'otpisan';
 export interface Dugovanje {
   id: string;
   patient_id: string;
+  appointment_id?: string | null;
   iznos: number;
   preostalo: number;
   opis?: string;

@@ -98,10 +98,20 @@ export default function Dashboard() {
     // Ucitaj uplate + fiskalne detalje iz payments tabele
     supabase
       .from('payments')
-      .select('appointment_id, fiskalni_status, fiskalni_broj, fic, iic, qr_code_url')
+      .select('appointment_id, iznos, fiskalni_status, fiskalni_broj, fic, iic, qr_code_url')
       .then(({ data }) => {
         const ids = new Set((data || []).map((p: any) => p.appointment_id).filter(Boolean));
         setPaidAppointmentIds(ids);
+
+        // Sumiraj uplaceni iznos po appointment_id (za djelimicne uplate)
+        const amounts: Record<string, number> = {};
+        for (const p of data || []) {
+          const pp: any = p;
+          if (pp.appointment_id) {
+            amounts[pp.appointment_id] = (amounts[pp.appointment_id] || 0) + (Number(pp.iznos) || 0);
+          }
+        }
+        setPaidAmountByApt(amounts);
 
         // Fiskalna data po appointment_id za exam-ove koji su fiskalizovani
         const map: Record<string, FiscalResult> = {};
@@ -152,6 +162,8 @@ export default function Dashboard() {
   const [fiscalByAppointment, setFiscalByAppointment] = useState<Record<string, FiscalResult>>({});
   // Appointment IDs koji imaju uplate u payments tabeli (iz baze, ne memorije)
   const [paidAppointmentIds, setPaidAppointmentIds] = useState<Set<string>>(new Set());
+  // Sumiran placen iznos po appointment_id (za djelimicne uplate)
+  const [paidAmountByApt, setPaidAmountByApt] = useState<Record<string, number>>({});
 
   // Payment modal state
   const [payExam, setPayExam] = useState<ExamWithDetails | null>(null);
@@ -182,7 +194,11 @@ export default function Dashboard() {
     const pPopust = exam.patient?.popust || 0;
     setPayPopust(pPopust);
     const bruto = (exam.appointmentServices || []).reduce((s: number, svc: any) => s + (Number(svc.cijena) * (Number(svc.kolicina) || 1)), 0);
-    setPayAmount(Math.max(0, bruto * (1 - pPopust / 100)));
+    const zaNaplatu = Math.max(0, bruto * (1 - pPopust / 100));
+    // Ako je pregled djelimicno placen, predefinisi na ostatak duga
+    const vecPlaceno = exam.appointment_id ? (paidAmountByApt[exam.appointment_id] || 0) : 0;
+    const ostatak = Math.max(0, zaNaplatu - vecPlaceno);
+    setPayAmount(ostatak > 0 ? ostatak : zaNaplatu);
     setPayMethod('gotovina');
     setPayFiskalizuj(false);
     setPayNapomena('');
@@ -305,13 +321,22 @@ export default function Dashboard() {
       const serviceNames = payExam.appointmentServices?.map((s: any) => s.naziv).join(', ') || 'Usluge';
       await supabase.from('dugovanja').insert({
         patient_id: payExam.patient.id,
+        appointment_id: payExam.appointment_id || null,
         iznos: examTotal,
         preostalo: remaining,
-        opis: `${serviceNames} — placeno ${payAmount.toFixed(0)}e od ${examTotal.toFixed(0)}e`,
+        opis: serviceNames,
         datum_nastanka: new Date().toISOString().slice(0, 10),
         status: 'aktivan',
         napomena: payNapomena || null,
       });
+    }
+
+    // Osvjezi prikaz uplacenih iznosa da Dashboard odmah pokaze partial
+    if (payExam.appointment_id) {
+      setPaidAmountByApt((prev) => ({
+        ...prev,
+        [payExam.appointment_id!]: (prev[payExam.appointment_id!] || 0) + payAmount,
+      }));
     }
 
     setPaySaving(false);
@@ -536,9 +561,16 @@ export default function Dashboard() {
             </div>
             <div className="divide-y divide-border md:max-h-[500px] md:overflow-y-auto">
               {todayExams.map((exam) => {
-                const isPaid = !!fiscalData[exam.id]?.success || (exam.appointment_id ? paidAppointmentIds.has(exam.appointment_id) : false);
-                const hasAmount = (exam.appointmentTotal || 0) > 0;
-                const needsPayment = hasAmount && !isPaid;
+                const aptId = exam.appointment_id || '';
+                const paidAmt = aptId ? (paidAmountByApt[aptId] || 0) : 0;
+                const total = exam.appointmentTotal || 0;
+                const hasAmount = total > 0;
+                const hasAnyPayment = aptId ? paidAppointmentIds.has(aptId) : false;
+                const remainingDebt = Math.max(0, total - paidAmt);
+                const isFullyPaid = !!fiscalData[exam.id]?.success || (hasAnyPayment && remainingDebt < 0.01);
+                const isPartial = hasAnyPayment && remainingDebt >= 0.01;
+                const isPaid = isFullyPaid; // back-compat: zeleno samo ako je sve placeno
+                const needsPayment = hasAmount && !hasAnyPayment;
 
                 return (
                   <div
@@ -549,7 +581,11 @@ export default function Dashboard() {
                   >
                     <div className="flex items-start md:items-center gap-3">
                       {/* Status bar */}
-                      <div className={`w-1 h-10 rounded-full shrink-0 ${isPaid ? 'bg-green-500' : needsPayment ? 'bg-amber-400 animate-pulse' : 'bg-green-500'}`} />
+                      <div className={`w-1 h-10 rounded-full shrink-0 ${
+                        isFullyPaid ? 'bg-green-500' :
+                        isPartial ? 'bg-orange-400' :
+                        needsPayment ? 'bg-amber-400 animate-pulse' : 'bg-green-500'
+                      }`} />
 
                       {/* Info */}
                       <div className="flex-1 min-w-0">
@@ -567,15 +603,26 @@ export default function Dashboard() {
                       {/* Iznos — desktop inline desno; mobilno ostaje tu (kompaktnije) */}
                       {hasAmount && (
                         <div className="shrink-0 text-right">
-                          <span className={`text-xs md:text-sm font-bold px-2 py-1 rounded ${
-                            isPaid
-                              ? 'text-green-700 bg-green-50'
-                              : 'text-amber-800 bg-amber-100'
-                          }`}>
-                            {exam.appointmentTotal?.toFixed(2)} €
-                          </span>
-                          {!isPaid && (
-                            <p className="text-[9px] text-amber-600 font-semibold mt-0.5 uppercase tracking-wider">Nije naplaceno</p>
+                          {isPartial ? (
+                            <>
+                              <span className="text-xs md:text-sm font-bold px-2 py-1 rounded text-orange-800 bg-orange-100">
+                                {paidAmt.toFixed(2)} € / {total.toFixed(2)} €
+                              </span>
+                              <p className="text-[9px] text-orange-600 font-semibold mt-0.5 uppercase tracking-wider">
+                                Dug {remainingDebt.toFixed(2)} €
+                              </p>
+                            </>
+                          ) : (
+                            <>
+                              <span className={`text-xs md:text-sm font-bold px-2 py-1 rounded ${
+                                isFullyPaid ? 'text-green-700 bg-green-50' : 'text-amber-800 bg-amber-100'
+                              }`}>
+                                {total.toFixed(2)} €
+                              </span>
+                              {!isFullyPaid && (
+                                <p className="text-[9px] text-amber-600 font-semibold mt-0.5 uppercase tracking-wider">Nije naplaceno</p>
+                              )}
+                            </>
                           )}
                         </div>
                       )}

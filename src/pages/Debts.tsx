@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Wallet, Search, Plus, ChevronRight, ChevronDown, CreditCard, Banknote, X, Check, Trash2 } from 'lucide-react';
+import { format, parseISO } from 'date-fns';
+import { srLatn as sr } from 'date-fns/locale';
+import { Wallet, Search, Plus, ChevronRight, ChevronDown, Banknote, X, Check, Trash2, Calendar, Stethoscope, Receipt, FileText } from 'lucide-react';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import { supabase } from '../lib/supabase';
@@ -7,6 +9,12 @@ import type { Dugovanje, UplataDuga } from '../types';
 
 interface DebtWithPatient extends Omit<Dugovanje, 'patient'> {
   patient?: { ime: string; prezime: string; telefon: string };
+}
+
+interface DebtDetails {
+  services: { id: string; naziv: string; kolicina: number; cijena: number; ukupno: number }[];
+  appointment?: { pocetak: string; doctor_name?: string };
+  initialPayment?: { iznos: number; datum: string; metoda: string };
 }
 
 type FilterStatus = 'aktivan' | 'placen' | 'svi';
@@ -18,6 +26,7 @@ export default function Debts() {
   const [filterStatus, setFilterStatus] = useState<FilterStatus>('aktivan');
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [uplate, setUplate] = useState<Record<string, UplataDuga[]>>({});
+  const [details, setDetails] = useState<Record<string, DebtDetails>>({});
 
   // Nova uplata form
   const [showPayForm, setShowPayForm] = useState<string | null>(null);
@@ -58,12 +67,64 @@ export default function Debts() {
     setUplate((prev) => ({ ...prev, [debtId]: (data || []) as UplataDuga[] }));
   }
 
-  function toggleExpand(debtId: string) {
-    if (expandedId === debtId) {
+  async function loadDebtDetails(debt: DebtWithPatient) {
+    if (details[debt.id]) return;
+    const d: DebtDetails = { services: [] };
+
+    if (debt.appointment_id) {
+      // Usluge iz appointment_services
+      const { data: svcData } = await supabase
+        .from('appointment_services')
+        .select('*')
+        .eq('appointment_id', debt.appointment_id);
+      d.services = (svcData || []).map((s: any) => ({
+        id: s.id,
+        naziv: s.naziv,
+        kolicina: Number(s.kolicina) || 1,
+        cijena: Number(s.cijena) || 0,
+        ukupno: Number(s.ukupno) || 0,
+      }));
+
+      // Termin + doktor
+      const { data: aptData } = await supabase
+        .from('appointments')
+        .select('pocetak, doctor_id, doctors:doctors(ime, prezime, titula)')
+        .eq('id', debt.appointment_id)
+        .maybeSingle();
+      if (aptData) {
+        const doc: any = (aptData as any).doctors;
+        d.appointment = {
+          pocetak: (aptData as any).pocetak,
+          doctor_name: doc ? `${doc.titula || 'Dr'} ${doc.ime} ${doc.prezime}` : undefined,
+        };
+      }
+
+      // Inicijalna uplata iz payments
+      const { data: payData } = await supabase
+        .from('payments')
+        .select('iznos, datum, metoda')
+        .eq('appointment_id', debt.appointment_id)
+        .order('datum', { ascending: true })
+        .limit(1);
+      if (payData && payData[0]) {
+        d.initialPayment = {
+          iznos: Number((payData[0] as any).iznos) || 0,
+          datum: (payData[0] as any).datum,
+          metoda: (payData[0] as any).metoda || '',
+        };
+      }
+    }
+
+    setDetails((prev) => ({ ...prev, [debt.id]: d }));
+  }
+
+  function toggleExpand(debt: DebtWithPatient) {
+    if (expandedId === debt.id) {
       setExpandedId(null);
     } else {
-      setExpandedId(debtId);
-      loadUplate(debtId);
+      setExpandedId(debt.id);
+      loadUplate(debt.id);
+      loadDebtDetails(debt);
     }
     setShowPayForm(null);
   }
@@ -321,7 +382,7 @@ export default function Debts() {
               <div key={debt.id} className="bg-white rounded-xl border border-border overflow-hidden">
                 {/* Header row */}
                 <button
-                  onClick={() => toggleExpand(debt.id)}
+                  onClick={() => toggleExpand(debt)}
                   className="w-full text-left px-5 py-4 flex items-center gap-4 hover:bg-gray-50 transition-colors"
                 >
                   <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm shrink-0
@@ -352,122 +413,200 @@ export default function Debts() {
                 </button>
 
                 {/* Expanded detail */}
-                {isExpanded && (
-                  <div className="px-5 pb-5 border-t border-gray-100">
-                    {/* Progress bar */}
-                    <div className="mt-4 mb-4">
-                      <div className="flex items-center justify-between text-xs text-gray-500 mb-1">
-                        <span>Placeno {(debt.iznos - debt.preostalo).toFixed(0)} EUR</span>
-                        <span>Preostalo {debt.preostalo.toFixed(0)} EUR</span>
-                      </div>
-                      <div className="w-full bg-gray-100 rounded-full h-2">
-                        <div
-                          className="bg-green-500 h-2 rounded-full transition-all"
-                          style={{ width: `${paidPercent}%` }}
-                        />
-                      </div>
-                    </div>
+                {isExpanded && (() => {
+                  const det = details[debt.id];
+                  // Sastavi hronologiju: datum_nastanka + initial payment + uplate_duga
+                  type TimelineEvent = { datum: string; tip: 'nastao' | 'inicijalna' | 'rata' | 'zatvoren'; iznos?: number; metoda?: string; napomena?: string };
+                  const events: TimelineEvent[] = [];
+                  events.push({ datum: debt.datum_nastanka, tip: 'nastao' });
+                  if (det?.initialPayment && det.initialPayment.iznos > 0) {
+                    events.push({ datum: det.initialPayment.datum.slice(0, 10), tip: 'inicijalna', iznos: det.initialPayment.iznos, metoda: det.initialPayment.metoda });
+                  }
+                  debtUplate.forEach((u) => events.push({ datum: u.datum, tip: 'rata', iznos: u.iznos, metoda: u.nacin_placanja, napomena: u.napomena }));
+                  if (debt.status === 'placen') {
+                    events.push({ datum: debtUplate[0]?.datum || debt.datum_nastanka, tip: 'zatvoren' });
+                  }
+                  events.sort((a, b) => new Date(a.datum).getTime() - new Date(b.datum).getTime());
 
-                    {/* Info */}
-                    <div className="grid grid-cols-2 gap-3 mb-4">
-                      {debt.datum_nastanka && (
-                        <div>
-                          <p className="text-xs text-gray-400">Datum nastanka</p>
-                          <p className="text-sm text-gray-700">{debt.datum_nastanka}</p>
+                  const fmtD = (iso: string) => {
+                    try { return format(parseISO(iso), 'dd.MM.yyyy.', { locale: sr }); } catch { return iso; }
+                  };
+
+                  return (
+                    <div className="px-5 pb-5 bg-gray-50/40 border-t border-gray-100">
+                      {/* Progress bar */}
+                      <div className="mt-4 mb-5">
+                        <div className="flex items-center justify-between text-xs mb-1.5">
+                          <span className="text-green-700 font-medium">Placeno {(debt.iznos - debt.preostalo).toFixed(2)} EUR</span>
+                          <span className="text-gray-500">od {debt.iznos.toFixed(2)} EUR</span>
+                          <span className="text-red-600 font-semibold">Preostalo {debt.preostalo.toFixed(2)} EUR</span>
+                        </div>
+                        <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+                          <div
+                            className="bg-gradient-to-r from-green-500 to-emerald-500 h-2 transition-all"
+                            style={{ width: `${paidPercent}%` }}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Termin meta (ako postoji) */}
+                      {det?.appointment && (
+                        <div className="flex flex-wrap items-center gap-4 mb-4 text-xs text-gray-600">
+                          <span className="inline-flex items-center gap-1.5">
+                            <Calendar size={12} className="text-gray-400" />
+                            Termin {fmtD(det.appointment.pocetak)} u {format(parseISO(det.appointment.pocetak), 'HH:mm')}
+                          </span>
+                          {det.appointment.doctor_name && (
+                            <span className="inline-flex items-center gap-1.5">
+                              <Stethoscope size={12} className="text-gray-400" />
+                              {det.appointment.doctor_name}
+                            </span>
+                          )}
                         </div>
                       )}
-                      {debt.napomena && (
-                        <div className="col-span-2">
-                          <p className="text-xs text-gray-400">Napomena</p>
-                          <p className="text-sm text-gray-700">{debt.napomena}</p>
-                        </div>
-                      )}
-                    </div>
 
-                    {/* Uplata form */}
-                    {debt.status === 'aktivan' && (
-                      <div className="mb-4">
-                        {showPayForm === debt.id ? (
-                          <div className="bg-green-50 border border-green-200 rounded-lg p-3">
-                            <p className="text-xs font-semibold text-green-700 uppercase mb-2">Nova uplata</p>
-                            <div className="flex flex-wrap gap-2">
-                              <input
-                                type="number"
-                                value={payAmount}
-                                onChange={(e) => setPayAmount(e.target.value)}
-                                placeholder="Iznos (EUR)"
-                                className="flex-1 min-w-[100px] px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500 bg-white"
-                              />
-                              <select
-                                value={payMethod}
-                                onChange={(e) => setPayMethod(e.target.value)}
-                                className="px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500 bg-white"
-                              >
-                                <option value="kes">Kes</option>
-                                <option value="kartica">Kartica</option>
-                                <option value="transfer">Transfer</option>
-                              </select>
-                              <input
-                                type="text"
-                                value={payNote}
-                                onChange={(e) => setPayNote(e.target.value)}
-                                placeholder="Napomena..."
-                                className="flex-1 min-w-[120px] px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500 bg-white"
-                              />
-                            </div>
-                            <div className="flex gap-2 mt-2">
-                              <Button size="sm" onClick={() => handlePayment(debt.id)} disabled={!payAmount || saving}>
-                                <Check size={14} /> Potvrdi uplatu
-                              </Button>
-                              <button
-                                onClick={() => { setShowPayForm(null); setPayAmount(''); setPayNote(''); }}
-                                className="text-sm text-gray-500 hover:text-gray-700 px-3"
-                              >
-                                Odustani
-                              </button>
-                            </div>
+                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                        {/* LIJEVO — Usluge */}
+                        <div className="bg-white rounded-lg border border-border">
+                          <div className="px-3 py-2 border-b border-border flex items-center gap-2">
+                            <Receipt size={14} className="text-gray-500" />
+                            <p className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Za šta je dug</p>
                           </div>
-                        ) : (
-                          <Button size="sm" variant="secondary" onClick={() => setShowPayForm(debt.id)}>
-                            <Banknote size={14} /> Unesi uplatu / ratu
-                          </Button>
-                        )}
-                      </div>
-                    )}
-
-                    {/* Historija uplata */}
-                    {debtUplate.length > 0 && (
-                      <div>
-                        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Historija uplata</p>
-                        <div className="space-y-1.5">
-                          {debtUplate.map((u) => (
-                            <div key={u.id} className="flex items-center justify-between bg-green-50 rounded-lg px-3 py-2">
-                              <div className="flex items-center gap-2">
-                                <CreditCard size={14} className="text-green-600" />
-                                <span className="text-sm text-green-800">{u.datum}</span>
-                                {u.nacin_placanja && (
-                                  <span className="text-xs bg-green-100 text-green-700 px-1.5 py-0.5 rounded">{u.nacin_placanja}</span>
+                          <div className="p-3 space-y-1.5">
+                            {det && det.services.length > 0 ? (
+                              <>
+                                {det.services.map((s) => (
+                                  <div key={s.id} className="flex justify-between text-sm">
+                                    <span className="text-gray-700 truncate pr-2">
+                                      {s.naziv}{s.kolicina > 1 ? ` × ${s.kolicina}` : ''}
+                                    </span>
+                                    <span className="text-gray-900 font-medium tabular-nums shrink-0">{s.ukupno.toFixed(2)} €</span>
+                                  </div>
+                                ))}
+                                <div className="flex justify-between text-sm font-bold border-t border-gray-100 pt-1.5 mt-1.5">
+                                  <span className="text-gray-800">Ukupno</span>
+                                  <span className="text-gray-900 tabular-nums">{debt.iznos.toFixed(2)} €</span>
+                                </div>
+                              </>
+                            ) : (
+                              <div className="text-sm text-gray-500">
+                                {debt.opis ? (
+                                  <div className="flex items-start gap-2">
+                                    <FileText size={13} className="text-gray-400 shrink-0 mt-0.5" />
+                                    <span className="whitespace-pre-wrap">{debt.opis}</span>
+                                  </div>
+                                ) : (
+                                  <p className="text-gray-400 italic">Bez opisa</p>
                                 )}
-                                {u.napomena && <span className="text-xs text-gray-400">{u.napomena}</span>}
                               </div>
-                              <span className="text-sm font-bold text-green-700">+{u.iznos.toFixed(0)} EUR</span>
-                            </div>
-                          ))}
+                            )}
+                            {debt.napomena && (
+                              <p className="text-xs text-gray-500 italic pt-2 border-t border-gray-100 mt-2">{debt.napomena}</p>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* DESNO — Hronologija */}
+                        <div className="bg-white rounded-lg border border-border">
+                          <div className="px-3 py-2 border-b border-border">
+                            <p className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Hronologija</p>
+                          </div>
+                          <div className="p-3">
+                            <ol className="relative border-l-2 border-gray-200 ml-2 space-y-3">
+                              {events.map((ev, i) => {
+                                const isPayment = ev.tip === 'inicijalna' || ev.tip === 'rata';
+                                const dotColor = ev.tip === 'nastao' ? 'bg-red-500' : ev.tip === 'zatvoren' ? 'bg-green-600' : 'bg-emerald-500';
+                                const label = ev.tip === 'nastao' ? 'Dug nastao'
+                                  : ev.tip === 'inicijalna' ? 'Djelimična uplata (na terminu)'
+                                  : ev.tip === 'rata' ? 'Uplata rate'
+                                  : 'Dug zatvoren';
+                                return (
+                                  <li key={i} className="ml-4">
+                                    <span className={`absolute -left-[7px] w-3 h-3 rounded-full ring-2 ring-white ${dotColor}`} />
+                                    <div className="flex items-center justify-between flex-wrap gap-1">
+                                      <span className="text-xs text-gray-500">{fmtD(ev.datum)}</span>
+                                      {isPayment && ev.iznos && (
+                                        <span className="text-sm font-bold text-green-700">+{ev.iznos.toFixed(2)} €</span>
+                                      )}
+                                    </div>
+                                    <p className="text-sm text-gray-800">{label}</p>
+                                    {(ev.metoda || ev.napomena) && (
+                                      <p className="text-xs text-gray-500 mt-0.5">
+                                        {ev.metoda && <span className="inline-block bg-gray-100 text-gray-600 rounded px-1.5 py-0.5 mr-1">{ev.metoda}</span>}
+                                        {ev.napomena}
+                                      </p>
+                                    )}
+                                  </li>
+                                );
+                              })}
+                            </ol>
+                          </div>
                         </div>
                       </div>
-                    )}
 
-                    {/* Actions */}
-                    <div className="flex justify-end mt-3 pt-3 border-t border-gray-100">
-                      <button
-                        onClick={() => { if (confirm('Obrisati ovo dugovanje?')) handleDeleteDebt(debt.id); }}
-                        className="flex items-center gap-1 text-xs text-gray-400 hover:text-red-600 transition-colors"
-                      >
-                        <Trash2 size={12} /> Obrisi
-                      </button>
+                      {/* Uplata form */}
+                      {debt.status === 'aktivan' && (
+                        <div className="mt-4">
+                          {showPayForm === debt.id ? (
+                            <div className="bg-white border-2 border-green-300 rounded-lg p-3">
+                              <p className="text-xs font-semibold text-green-700 uppercase mb-2">Nova uplata rate</p>
+                              <div className="flex flex-wrap gap-2">
+                                <input
+                                  type="number"
+                                  value={payAmount}
+                                  onChange={(e) => setPayAmount(e.target.value)}
+                                  placeholder={`Ostatak ${debt.preostalo.toFixed(2)} EUR`}
+                                  className="flex-1 min-w-[140px] px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500 bg-white"
+                                />
+                                <select
+                                  value={payMethod}
+                                  onChange={(e) => setPayMethod(e.target.value)}
+                                  className="px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500 bg-white"
+                                >
+                                  <option value="kes">Kes</option>
+                                  <option value="kartica">Kartica</option>
+                                  <option value="transfer">Transfer</option>
+                                </select>
+                                <input
+                                  type="text"
+                                  value={payNote}
+                                  onChange={(e) => setPayNote(e.target.value)}
+                                  placeholder="Napomena..."
+                                  className="flex-1 min-w-[120px] px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500 bg-white"
+                                />
+                              </div>
+                              <div className="flex gap-2 mt-2">
+                                <Button size="sm" onClick={() => handlePayment(debt.id)} disabled={!payAmount || saving}>
+                                  <Check size={14} /> Potvrdi uplatu
+                                </Button>
+                                <button
+                                  onClick={() => { setShowPayForm(null); setPayAmount(''); setPayNote(''); }}
+                                  className="text-sm text-gray-500 hover:text-gray-700 px-3"
+                                >
+                                  Odustani
+                                </button>
+                              </div>
+                            </div>
+                          ) : (
+                            <Button size="sm" variant="secondary" onClick={() => { setShowPayForm(debt.id); setPayAmount(debt.preostalo.toFixed(2)); }}>
+                              <Banknote size={14} /> Unesi uplatu / ratu
+                            </Button>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Actions */}
+                      <div className="flex justify-end mt-3 pt-3 border-t border-gray-100">
+                        <button
+                          onClick={() => { if (confirm('Obrisati ovo dugovanje?')) handleDeleteDebt(debt.id); }}
+                          className="flex items-center gap-1 text-xs text-gray-400 hover:text-red-600 transition-colors"
+                        >
+                          <Trash2 size={12} /> Obrisi
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                )}
+                  );
+                })()}
               </div>
             );
           })}

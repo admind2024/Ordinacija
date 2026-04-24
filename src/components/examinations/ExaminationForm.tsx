@@ -1,17 +1,18 @@
 import { useState } from 'react';
-import { Save, CheckCircle, Loader2, ShoppingBag } from 'lucide-react';
+import { Save, CheckCircle, Loader2, ShoppingBag, Printer, X } from 'lucide-react';
 import Button from '../ui/Button';
 import type { Examination, AppointmentService } from '../../types';
 
 interface ExaminationFormProps {
   initialData?: Partial<Examination>;
-  onSave: (data: Partial<Examination>, finish: boolean) => Promise<void>;
+  onSave: (data: Partial<Examination>, finish: boolean, print?: boolean) => Promise<void>;
   saving?: boolean;
   appointmentServices?: AppointmentService[];
   appointmentNapomena?: string;
 }
 
 export default function ExaminationForm({ initialData, onSave, saving, appointmentServices, appointmentNapomena }: ExaminationFormProps) {
+  const [confirmFinish, setConfirmFinish] = useState(false);
   const [razlogDolaska, setRazlogDolaska] = useState(initialData?.razlog_dolaska || '');
   const [nalaz, setNalaz] = useState(initialData?.nalaz || '');
   const [rezultati, setRezultati] = useState(initialData?.rezultati || '');
@@ -160,20 +161,62 @@ export default function ExaminationForm({ initialData, onSave, saving, appointme
         </div>
       </div>
 
-      <div className="flex gap-3 pt-2">
+      <div className="flex flex-wrap gap-3 pt-2">
         <Button onClick={() => onSave(getData(), false)} disabled={saving}>
           {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
           Sacuvaj
         </Button>
         <Button
           variant="secondary"
-          onClick={() => onSave(getData(), true)}
+          onClick={() => setConfirmFinish(true)}
           disabled={saving}
         >
           <CheckCircle size={16} />
-          Sacuvaj i zavrsi
+          Zavrsi pregled
         </Button>
       </div>
+
+      {/* Confirm dialog — zavrsi + opcija stampe */}
+      {confirmFinish && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => !saving && setConfirmFinish(false)}>
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-md" onClick={(e) => e.stopPropagation()}>
+            <div className="px-5 py-4 border-b border-border flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <CheckCircle size={18} className="text-green-600" />
+                <h3 className="font-semibold text-gray-900">Zavrsi pregled</h3>
+              </div>
+              <button
+                onClick={() => !saving && setConfirmFinish(false)}
+                className="text-gray-400 hover:text-gray-600"
+                disabled={saving}
+              >
+                <X size={18} />
+              </button>
+            </div>
+            <div className="px-5 py-4">
+              <p className="text-sm text-gray-700">Zelite li da stampate nalaz?</p>
+              <p className="text-xs text-gray-400 mt-1">Pregled se u oba slucaja cuva i zatvara.</p>
+            </div>
+            <div className="px-5 py-3 border-t border-border flex flex-wrap gap-2 justify-end">
+              <Button
+                variant="secondary"
+                onClick={async () => { await onSave(getData(), true, false); setConfirmFinish(false); }}
+                disabled={saving}
+              >
+                {saving ? <Loader2 size={16} className="animate-spin" /> : null}
+                Ne, samo zatvori
+              </Button>
+              <Button
+                onClick={async () => { await onSave(getData(), true, true); setConfirmFinish(false); }}
+                disabled={saving}
+              >
+                {saving ? <Loader2 size={16} className="animate-spin" /> : <Printer size={16} />}
+                Da, stampaj i zatvori
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

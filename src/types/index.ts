@@ -276,6 +276,8 @@ export interface Examination {
   kontrolni_pregled?: string;
   napomena?: string;
   status: ExaminationStatus;
+  zapoceto_u?: string | null;
+  trajanje_min?: number | null;
   created_at: string;
   updated_at: string;
   // Relacije

@@ -227,20 +227,31 @@ function ExaminationsContent({ loggedDoctor }: { loggedDoctor: Doctor }) {
     }
   }, [appointments, loggedDoctor.id]);
 
-  async function handleSave(data: Partial<Examination>, finish: boolean) {
+  async function handleSave(data: Partial<Examination>, finish: boolean, print: boolean = false) {
     if (!selectedAppointment || !patient) return;
     setSaving(true);
 
-    const payload = {
+    const now = new Date();
+    // Pocetak pregleda: ako vec postoji, koristi postojeci, inace stamp sad.
+    const zapoceto = currentExam?.zapoceto_u || now.toISOString();
+    // Trajanje se racuna samo kad se pregled zavrsi.
+    const trajanje = finish
+      ? Math.max(1, Math.round((now.getTime() - new Date(zapoceto).getTime()) / 60000))
+      : (currentExam?.trajanje_min ?? null);
+
+    const payload: any = {
       ...data,
       patient_id: patient.id,
       doctor_id: selectedAppointment.doctor_id,
       appointment_id: selectedAppointment.id,
       datum: todayStr,
       status: finish ? 'zavrsen' : 'draft',
-      updated_at: new Date().toISOString(),
+      zapoceto_u: zapoceto,
+      trajanje_min: trajanje,
+      updated_at: now.toISOString(),
     };
 
+    let savedExam: Examination | null = null;
     if (currentExam) {
       const { data: updated } = await supabase
         .from('examinations')
@@ -249,9 +260,10 @@ function ExaminationsContent({ loggedDoctor }: { loggedDoctor: Doctor }) {
         .select()
         .single();
       if (updated) {
-        setCurrentExam(updated as Examination);
+        savedExam = updated as Examination;
+        setCurrentExam(savedExam);
         setPatientExams((prev) =>
-          prev.map((e) => (e.id === currentExam.id ? (updated as Examination) : e))
+          prev.map((e) => (e.id === currentExam.id ? savedExam! : e))
         );
       }
     } else {
@@ -261,9 +273,15 @@ function ExaminationsContent({ loggedDoctor }: { loggedDoctor: Doctor }) {
         .select()
         .single();
       if (inserted) {
-        setCurrentExam(inserted as Examination);
-        setPatientExams((prev) => [inserted as Examination, ...prev]);
+        savedExam = inserted as Examination;
+        setCurrentExam(savedExam);
+        setPatientExams((prev) => [savedExam!, ...prev]);
       }
+    }
+
+    // Ako je zatrazeno stampanje, odstampaj prije zatvaranja kartona
+    if (finish && print && savedExam) {
+      handlePrint(savedExam);
     }
 
     // Kad se pregled zavrsi, postavi appointment status na 'zavrsen'

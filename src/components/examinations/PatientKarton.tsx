@@ -33,7 +33,7 @@ interface PatientKartonProps {
   saving: boolean;
   onBack: () => void;
   onSelectAppointment: (apt: Appointment) => void;
-  onSaveExam: (data: Partial<Examination>, finish: boolean) => Promise<void>;
+  onSaveExam: (data: Partial<Examination>, finish: boolean, print?: boolean) => Promise<void>;
   onPrintExam: (exam: Examination) => void;
   onAddMaterial: (materialId: string, kolicina: number) => void;
   onRemoveMaterial: (usageId: string) => void;
@@ -368,7 +368,7 @@ function PregledView({
   aptServices: any[];
   aptTotal: number;
   saving: boolean;
-  onSaveExam: (data: Partial<Examination>, finish: boolean) => Promise<void>;
+  onSaveExam: (data: Partial<Examination>, finish: boolean, print?: boolean) => Promise<void>;
 }) {
   if (!selectedAppointment) {
     return <EmptyState icon={<Stethoscope size={40} />} label="Nema aktivnog termina. Izaberi termin iz Istorije posjeta." />;
@@ -485,7 +485,8 @@ function IstorijaView({
               const naslov = apt.services && apt.services.length > 0
                 ? apt.services.map((s) => s.naziv).join(', ')
                 : 'Termin';
-              const kratko = `${format(dt, 'HH:mm')} · ${doctorLabel}${total > 0 ? ` · ${total.toFixed(0)} €` : ''}`;
+              const trajanje = exam?.trajanje_min ? ` · ⏱ ${exam.trajanje_min} min` : '';
+              const kratko = `${format(dt, 'HH:mm')} · ${doctorLabel}${total > 0 ? ` · ${total.toFixed(0)} €` : ''}${trajanje}`;
 
               return (
                 <div key={apt.id} className="grid grid-cols-[48px_1fr] gap-3">

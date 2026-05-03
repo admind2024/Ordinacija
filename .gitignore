@@ -29,3 +29,10 @@ dist-ssr
 supabase/.temp/
 .vercel
 .claude/
+
+# Sync hook (managed by Claude Code) — keep in git
+!.claude/
+!.claude/settings.json
+!.claude/hooks/
+!.claude/hooks/*
+.claude/settings.local.json

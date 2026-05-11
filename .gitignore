@@ -36,3 +36,6 @@ supabase/.temp/
 !.claude/hooks/
 !.claude/hooks/*
 .claude/settings.local.json
+
+# Claude Code Cowork — privremeni git worktree-ovi za izolovane agent sesije
+.claude/worktrees/

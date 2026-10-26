@@ -316,6 +316,12 @@ export default function PatientKarton(props: PatientKartonProps) {
               aptTotal={aptTotal}
               saving={saving}
               onSaveExam={onSaveExam}
+              doctorId={loggedDoctor.id}
+              previousExam={
+                [...exams]
+                  .filter((e) => e.status === 'zavrsen' && e.id !== currentExam?.id)
+                  .sort((a, b) => (a.datum < b.datum ? 1 : -1))[0] || null
+              }
             />
           )}
 
@@ -375,8 +381,10 @@ function KpiCell({ icon, label, value, color }: { icon: React.ReactNode; label: 
 // Pregled view (form za aktivni termin)
 // ====================================================================
 function PregledView({
-  selectedAppointment, currentExam, aptServices, aptTotal, saving, onSaveExam,
+  selectedAppointment, currentExam, aptServices, aptTotal, saving, onSaveExam, doctorId, previousExam,
 }: {
+  doctorId: string;
+  previousExam: Examination | null;
   selectedAppointment: Appointment | null;
   currentExam: Examination | null;
   aptServices: any[];
@@ -448,6 +456,8 @@ function PregledView({
           saving={saving}
           appointmentServices={aptServices}
           appointmentNapomena={selectedAppointment.napomena ?? undefined}
+          doctorId={doctorId}
+          previousExam={previousExam}
         />
       </div>
     </div>

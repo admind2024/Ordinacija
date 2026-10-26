@@ -3,7 +3,7 @@ F01,raspored,Radno vrijeme doktora po danima u sedmici,must,yes,no,yes,/raspored
 F02,raspored,Radno vrijeme za određeni datum (izuzetak),must,yes,no,yes,
 F03,raspored,Pauze u radnom vremenu,should,yes,no,yes,
 F04,raspored,Odsustva sa razlogom i brojem dana,must,yes,no,yes,/raspored → Odsustva; vidi se u sedmičnom pregledu i pri zakazivanju
-F05,raspored,Smjene,could,yes,no,no,
+F05,raspored,Smjene,could,yes,no,partial,umjesto smjena po rasporedu: zaključenje smjene po osobi (Naplata → Zaključenje)
 F06,termini,Lista čekanja,must,yes,no,yes,/termini?tab=cekanje; prima i osobu bez kartona; Zakaži otvara popunjen termin
 F07,termini,Tabela zakazanih termina sa filterima i izvozom,must,yes,no,yes,/termini; filteri po periodu ljekaru ordinaciji statusu naplati; izvoz u Excel
 F08,termini,Interni događaji (sastanak/blokada ordinacije sa učesnicima),should,yes,no,yes,Kalendar → Događaj; blokira ordinaciju za zakazivanje; vidi se u dnevnom prikazu (čeka migraciju)
@@ -37,3 +37,4 @@ F35,cjenovnik,Uvoz / izvoz cjenovnika,could,yes,no,no,
 F36,cjenovnik,Online zakazivanje (widget),should,yes,no,no,veliko - poseban posao
 F37,ustanova,Osiguranja i pravna lica,could,yes,no,no,MOA ih u Hipokratiji nema unesene
 F38,ustanova,Pregled tek kad pacijent stigne (podešavanje),could,yes,no,no,
+F39,naplata,"Zaključenje smjene po osobi i zaključenje radnog dana (kasa, razlika, nenaplaćeni termini)",must,no,no,yes,MOA dodatak; Hipokratija ima samo rekapitulaciju za štampu

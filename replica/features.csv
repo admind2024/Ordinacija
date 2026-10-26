@@ -1,0 +1,39 @@
+id,oblast,funkcija,prioritet,hipokratija,moa_prije,clone,napomena
+F01,raspored,Radno vrijeme doktora po danima u sedmici,must,yes,no,no,DoctorSchedule je bio demo sa ugrađenim podacima
+F02,raspored,Radno vrijeme za određeni datum (izuzetak),must,yes,no,no,
+F03,raspored,Pauze u radnom vremenu,should,yes,no,no,
+F04,raspored,Odsustva sa razlogom i brojem dana,must,yes,no,no,
+F05,raspored,Smjene,could,yes,no,no,
+F06,termini,Lista čekanja,must,yes,no,no,
+F07,termini,Tabela zakazanih termina sa filterima i izvozom,must,yes,no,no,
+F08,termini,Interni događaji (sastanak/blokada ordinacije sa učesnicima),should,yes,no,no,
+F09,termini,Kalendar sa kolonom po ordinaciji/aparatu,should,yes,partial,no,MOA ima filter po ordinaciji ali ne kolone
+F10,tim,Oglasna tabla sa bilješkama za tim,must,yes,no,no,
+F11,naplata,Vaučeri (plaćeni/besplatni) sa brojem i rokom,must,yes,no,no,
+F12,naplata,Vaučer kao način plaćanja (umanjuje preostali iznos),must,yes,no,no,
+F13,naplata,Rekapitulacija po načinima plaćanja (presjek smjene) za štampu,must,yes,no,no,
+F14,naplata,Dodatni načini plaćanja (prenos na račun / administrativna zabrana),should,yes,partial,no,enum postoji u bazi ali UI nudi samo gotovinu i karticu
+F15,karton,Alergije,must,yes,no,no,
+F16,karton,Faktori rizika,should,yes,no,no,
+F17,karton,Dijagnoze (MKB šifra / lična ili porodična),must,yes,no,no,
+F18,karton,Dokumentacija (upload fajlova),must,yes,no,no,
+F19,karton,Poslate poruke pacijentu,should,yes,no,no,podaci već postoje u notifications
+F20,karton,Invaliditeti,could,yes,no,no,
+F21,karton,Recepti i uputi,could,yes,no,no,
+F22,karton,Rast i težina djeteta,won't,yes,no,no,pedijatrija - nije za MOA
+F23,pregled,Šabloni teksta po polju + sačuvaj kao šablon,must,yes,no,no,
+F24,pregled,Otvori prethodni izvještaj pacijenta,should,yes,no,no,
+F25,pregled,Protokol bolesnika (knjiga) sa izvozom,must,yes,no,no,
+F26,pregled,Nalazi Papa / VS bris,won't,yes,no,no,ginekologija - nije za MOA
+F27,materijali,Lager: stanje i prag upozorenja,must,yes,partial,no,kolone postoje ali se ne ažuriraju
+F28,materijali,Nabavka (pojedinačna i grupna sa fakturom),must,yes,no,no,
+F29,materijali,Istorija kretanja zaliha,must,yes,no,no,
+F30,materijali,Popis (sistemsko naspram popisanog),must,yes,no,no,
+F31,materijali,Utrošak automatski skida sa lagera,must,yes,no,no,
+F32,materijali,Norma utroška po usluzi,should,yes,no,no,
+F33,materijali,Šifra i brend materijala,could,yes,no,no,
+F34,cjenovnik,Šifra usluge i naziv na engleskom,could,yes,no,no,
+F35,cjenovnik,Uvoz / izvoz cjenovnika,could,yes,no,no,
+F36,cjenovnik,Online zakazivanje (widget),should,yes,no,no,veliko - poseban posao
+F37,ustanova,Osiguranja i pravna lica,could,yes,no,no,MOA ih u Hipokratiji nema unesene
+F38,ustanova,Pregled tek kad pacijent stigne (podešavanje),could,yes,no,no,

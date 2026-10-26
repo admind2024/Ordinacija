@@ -15,6 +15,11 @@ interface AppointmentModalProps {
   editAppointment?: Appointment | null;
   defaultDate?: Date;
   defaultTime?: string;
+  // Predpopunjavanje (npr. zakazivanje sa liste cekanja)
+  defaultPatientId?: string;
+  defaultDoctorId?: string;
+  defaultServiceId?: string;
+  onCreated?: (appointment: Appointment) => void;
 }
 
 const durations = [15, 20, 30, 45, 60, 90, 120];
@@ -25,6 +30,10 @@ export default function AppointmentModal({
   editAppointment,
   defaultDate,
   defaultTime,
+  defaultPatientId,
+  defaultDoctorId,
+  defaultServiceId,
+  onCreated,
 }: AppointmentModalProps) {
   const { createAppointment, updateAppointment, doctors, rooms, services, materials, appointments } = useCalendar();
   const { patients } = usePatients();
@@ -37,8 +46,8 @@ export default function AppointmentModal({
   }, []);
 
   const [patientSearch, setPatientSearch] = useState('');
-  const [selectedPatientId, setSelectedPatientId] = useState(editAppointment?.patient_id || '');
-  const [doctorId, setDoctorId] = useState(editAppointment?.doctor_id || doctors[0]?.id || '');
+  const [selectedPatientId, setSelectedPatientId] = useState(editAppointment?.patient_id || defaultPatientId || '');
+  const [doctorId, setDoctorId] = useState(editAppointment?.doctor_id || defaultDoctorId || doctors[0]?.id || '');
   const [roomId, setRoomId] = useState(editAppointment?.room_id || rooms[0]?.id || '');
   const [datum, setDatum] = useState(() => {
     if (editAppointment) {
@@ -62,11 +71,25 @@ export default function AppointmentModal({
       );
       return mins;
     }
-    return 30;
+    const svc = defaultServiceId ? services.find((s) => s.id === defaultServiceId) : undefined;
+    return svc?.trajanje || 30;
   });
-  const [selectedServices, setSelectedServices] = useState<AppointmentService[]>(
-    editAppointment?.services || []
-  );
+  const [selectedServices, setSelectedServices] = useState<AppointmentService[]>(() => {
+    if (editAppointment) return editAppointment.services || [];
+    const svc = defaultServiceId ? services.find((s) => s.id === defaultServiceId) : undefined;
+    if (!svc) return [];
+    const pop = patients.find((p) => p.id === defaultPatientId)?.popust || 0;
+    return [{
+      id: `as-${Date.now()}`,
+      appointment_id: '',
+      service_id: svc.id,
+      naziv: svc.naziv,
+      cijena: svc.cijena,
+      kolicina: 1,
+      popust: pop,
+      ukupno: svc.cijena * (1 - pop / 100),
+    }];
+  });
   const [napomena, setNapomena] = useState(editAppointment?.napomena ?? '');
   const [showPatientList, setShowPatientList] = useState(false);
   // Pretraga usluga
@@ -222,6 +245,7 @@ export default function AppointmentModal({
         services: selectedServices,
       };
       const created = await createAppointment(newAppointment);
+      if (created) onCreated?.(created);
 
       // Sacuvaj materijale
       if (created && selectedMaterials.length > 0) {

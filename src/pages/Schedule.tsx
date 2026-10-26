@@ -23,8 +23,8 @@ export default function Schedule() {
     try {
       setData(await loadRaspored());
       setError('');
-    } catch (e: any) {
-      setError('Raspored nije učitan: ' + (e?.message || 'nepoznata greška'));
+    } catch (e) {
+      setError('Raspored nije učitan: ' + (e instanceof Error ? e.message : 'nepoznata greška'));
     } finally {
       setLoading(false);
     }
@@ -91,7 +91,7 @@ export default function Schedule() {
               <Card>
                 <h2 className="text-base font-semibold text-gray-900 mb-1">Sedmični raspored</h2>
                 <p className="text-sm text-gray-500 mb-4">Važi svake sedmice dok se ne promijeni.</p>
-                <WeeklyTemplateEditor doctor={selected} schedules={data.schedules} onSaved={refresh} />
+                <WeeklyTemplateEditor key={selected.id} doctor={selected} schedules={data.schedules} onSaved={refresh} />
               </Card>
               <Card>
                 <h2 className="text-base font-semibold text-gray-900 mb-3">Izuzeci za datum</h2>

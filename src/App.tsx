@@ -23,6 +23,8 @@ import ServicesPage from './pages/Services';
 import SurveyPublic from './pages/SurveyPublic';
 import ConfirmAppointment from './pages/ConfirmAppointment';
 import Schedule from './pages/Schedule';
+import Appointments from './pages/Appointments';
+import NoticeBoard from './pages/NoticeBoard';
 
 function AppRoutes() {
   const { user } = useAuth();
@@ -73,6 +75,15 @@ function AppRoutes() {
             </ProtectedRoute>
           }
         />
+        <Route
+          path="/termini"
+          element={
+            <ProtectedRoute roles={['admin', 'menadzer', 'recepcija']}>
+              <Appointments />
+            </ProtectedRoute>
+          }
+        />
+        <Route path="/oglasna-tabla" element={<NoticeBoard />} />
         <Route path="/pregled" element={<Examinations />} />
         <Route path="/cjenovnik" element={<ServicesPage />} />
         <Route path="/materijali" element={<Materials />} />

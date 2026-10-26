@@ -4,11 +4,11 @@ F02,raspored,Radno vrijeme za određeni datum (izuzetak),must,yes,no,yes,
 F03,raspored,Pauze u radnom vremenu,should,yes,no,yes,
 F04,raspored,Odsustva sa razlogom i brojem dana,must,yes,no,yes,/raspored → Odsustva; vidi se u sedmičnom pregledu i pri zakazivanju
 F05,raspored,Smjene,could,yes,no,no,
-F06,termini,Lista čekanja,must,yes,no,no,
-F07,termini,Tabela zakazanih termina sa filterima i izvozom,must,yes,no,no,
+F06,termini,Lista čekanja,must,yes,no,yes,/termini?tab=cekanje; prima i osobu bez kartona; Zakaži otvara popunjen termin
+F07,termini,Tabela zakazanih termina sa filterima i izvozom,must,yes,no,yes,/termini; filteri po periodu ljekaru ordinaciji statusu naplati; izvoz u Excel
 F08,termini,Interni događaji (sastanak/blokada ordinacije sa učesnicima),should,yes,no,no,
 F09,termini,Kalendar sa kolonom po ordinaciji/aparatu,should,yes,partial,no,MOA ima filter po ordinaciji ali ne kolone
-F10,tim,Oglasna tabla sa bilješkama za tim,must,yes,no,no,
+F10,tim,Oglasna tabla sa bilješkama za tim,must,yes,no,yes,"/oglasna-tabla; zakačene bilješke, riješeno, dodjela, oznake"
 F11,naplata,Vaučeri (plaćeni/besplatni) sa brojem i rokom,must,yes,no,no,
 F12,naplata,Vaučer kao način plaćanja (umanjuje preostali iznos),must,yes,no,no,
 F13,naplata,Rekapitulacija po načinima plaćanja (presjek smjene) za štampu,must,yes,no,no,

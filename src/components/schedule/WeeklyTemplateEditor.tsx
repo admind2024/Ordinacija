@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Plus, Trash2, Save } from 'lucide-react';
 import Button from '../ui/Button';
 import { supabase } from '../../lib/supabase';
@@ -27,6 +27,7 @@ function izSablona(schedules: DoctorSchedule[], doctorId: string): DanRed[] {
   });
 }
 
+// Roditelj renderuje sa key={doctor.id}, pa se stanje puni iznova za svaku osobu.
 interface Props {
   doctor: Doctor;
   schedules: DoctorSchedule[];
@@ -38,12 +39,6 @@ export default function WeeklyTemplateEditor({ doctor, schedules, onSaved }: Pro
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [saved, setSaved] = useState(false);
-
-  useEffect(() => {
-    setDani(izSablona(schedules, doctor.id));
-    setSaved(false);
-    setError('');
-  }, [schedules, doctor.id]);
 
   function update(i: number, patch: Partial<DanRed>) {
     setDani((prev) => prev.map((d, idx) => (idx === i ? { ...d, ...patch } : d)));

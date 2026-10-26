@@ -31,12 +31,12 @@ export function hhmm(t?: string | null): string {
   return t ? t.slice(0, 5) : '';
 }
 
-export function normalizeSchedule(row: any): DoctorSchedule {
+export function normalizeSchedule(row: Record<string, unknown>): DoctorSchedule {
   return {
-    ...row,
-    pocetak: hhmm(row.pocetak),
-    kraj: hhmm(row.kraj),
-    pauze: Array.isArray(row.pauze) ? row.pauze : [],
+    ...(row as unknown as DoctorSchedule),
+    pocetak: hhmm(row.pocetak as string | null),
+    kraj: hhmm(row.kraj as string | null),
+    pauze: Array.isArray(row.pauze) ? (row.pauze as Pauza[]) : [],
   };
 }
 

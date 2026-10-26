@@ -16,12 +16,15 @@ import {
   ClipboardList,
   ListOrdered,
   CalendarClock,
+  CalendarRange,
+  StickyNote,
   X,
 } from 'lucide-react';
 
 export const navigation = [
   { name: 'Dashboard', path: '/', icon: LayoutDashboard, roles: ['admin', 'menadzer', 'recepcija', 'ljekar'] },
   { name: 'Kalendar', path: '/kalendar', icon: CalendarDays, roles: ['admin', 'menadzer', 'recepcija', 'ljekar'] },
+  { name: 'Termini', path: '/termini', icon: CalendarRange, roles: ['admin', 'menadzer', 'recepcija'] },
   { name: 'Pacijenti', path: '/pacijenti', icon: Users, roles: ['admin', 'menadzer', 'recepcija', 'ljekar'] },
   { name: 'Pregled', path: '/pregled', icon: ClipboardList, roles: ['admin', 'menadzer', 'ljekar'] },
   { name: 'Naplata', path: '/naplata', icon: CreditCard, roles: ['admin', 'menadzer', 'recepcija'] },
@@ -31,6 +34,7 @@ export const navigation = [
   { name: 'Osoblje', path: '/ljekari', icon: Stethoscope, roles: ['admin', 'menadzer'] },
   { name: 'Materijali', path: '/materijali', icon: Package, roles: ['admin', 'menadzer', 'ljekar'] },
   { name: 'Dugovanja', path: '/dugovanja', icon: Wallet, roles: ['admin', 'menadzer', 'recepcija'] },
+  { name: 'Oglasna tabla', path: '/oglasna-tabla', icon: StickyNote, roles: ['admin', 'menadzer', 'recepcija', 'ljekar', 'marketing'] },
   { name: 'Ankete', path: '/ankete', icon: ClipboardCheck, roles: ['admin', 'menadzer', 'recepcija'] },
   { name: 'Marketing', path: '/marketing', icon: Megaphone, roles: ['admin', 'menadzer', 'marketing'] },
   { name: 'Ustanova', path: '/ustanova', icon: Building2, roles: ['admin'] },

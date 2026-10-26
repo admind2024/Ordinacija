@@ -203,15 +203,36 @@ export interface MaterialUsage {
 }
 
 // Raspored rada ljekara
+// ponavljajuci = true: sedmicni sablon za dan_u_sedmici (1 = pon ... 7 = ned)
+// ponavljajuci = false: izuzetak za tacan datum
+export interface Pauza {
+  od: string; // HH:mm
+  do: string; // HH:mm
+}
+
 export interface DoctorSchedule {
   id: string;
   doctor_id: string;
-  datum: string;
-  pocetak: string;
-  kraj: string;
+  datum?: string | null;
+  dan_u_sedmici?: number | null;
+  pocetak?: string | null;
+  kraj?: string | null;
   tip: 'standardno' | 'fleksibilno' | 'neradni' | 'odsustvo';
   ponavljajuci: boolean;
+  pauze: Pauza[];
   napomena?: string;
+}
+
+export type RazlogOdsustva = 'godisnji' | 'bolovanje' | 'licni' | 'sluzbeni_put' | 'ostalo';
+
+export interface Odsustvo {
+  id: string;
+  doctor_id: string;
+  datum_od: string;
+  datum_do: string;
+  razlog: RazlogOdsustva;
+  napomena?: string;
+  created_at: string;
 }
 
 // Dogadjaj u kalendaru (blokiranje)

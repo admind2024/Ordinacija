@@ -1,8 +1,8 @@
 id,oblast,funkcija,prioritet,hipokratija,moa_prije,clone,napomena
-F01,raspored,Radno vrijeme doktora po danima u sedmici,must,yes,no,no,DoctorSchedule je bio demo sa ugrađenim podacima
-F02,raspored,Radno vrijeme za određeni datum (izuzetak),must,yes,no,no,
-F03,raspored,Pauze u radnom vremenu,should,yes,no,no,
-F04,raspored,Odsustva sa razlogom i brojem dana,must,yes,no,no,
+F01,raspored,Radno vrijeme doktora po danima u sedmici,must,yes,no,yes,/raspored → Radno vrijeme; zakazivanje upozorava van rasporeda
+F02,raspored,Radno vrijeme za određeni datum (izuzetak),must,yes,no,yes,
+F03,raspored,Pauze u radnom vremenu,should,yes,no,yes,
+F04,raspored,Odsustva sa razlogom i brojem dana,must,yes,no,yes,/raspored → Odsustva; vidi se u sedmičnom pregledu i pri zakazivanju
 F05,raspored,Smjene,could,yes,no,no,
 F06,termini,Lista čekanja,must,yes,no,no,
 F07,termini,Tabela zakazanih termina sa filterima i izvozom,must,yes,no,no,

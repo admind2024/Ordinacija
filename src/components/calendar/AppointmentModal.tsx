@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 import { format, addMinutes } from 'date-fns';
 import Modal from '../ui/Modal';
 import Button from '../ui/Button';
@@ -6,6 +6,7 @@ import Input from '../ui/Input';
 import { useCalendar } from '../../contexts/CalendarContext';
 import { usePatients } from '../../contexts/PatientsContext';
 import { supabase } from '../../lib/supabase';
+import { loadRaspored, provjeriDostupnost, type RasporedPodaci } from '../../lib/schedule';
 import type { Appointment, AppointmentService } from '../../types';
 
 interface AppointmentModalProps {
@@ -28,6 +29,12 @@ export default function AppointmentModal({
   const { createAppointment, updateAppointment, doctors, rooms, services, materials, appointments } = useCalendar();
   const { patients } = usePatients();
   const isEdit = !!editAppointment;
+
+  // Raspored rada (radno vrijeme + odsustva) za upozorenje pri zakazivanju
+  const [raspored, setRaspored] = useState<RasporedPodaci | null>(null);
+  useEffect(() => {
+    loadRaspored().then(setRaspored).catch(() => setRaspored(null));
+  }, []);
 
   const [patientSearch, setPatientSearch] = useState('');
   const [selectedPatientId, setSelectedPatientId] = useState(editAppointment?.patient_id || '');
@@ -175,6 +182,10 @@ export default function AppointmentModal({
       );
       return;
     }
+
+    // Radno vrijeme i odsustva: samo upozorenje, recepcija moze svjesno zakazati i van rasporeda.
+    const nedostupan = raspored ? provjeriDostupnost(doctorId, pocetak, kraj, raspored) : null;
+    if (nedostupan && !confirm(`${nedostupan}\n\nIpak zakazati termin?`)) return;
 
     if (isEdit && editAppointment) {
       updateAppointment(editAppointment.id, {

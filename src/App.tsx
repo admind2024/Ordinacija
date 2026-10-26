@@ -22,6 +22,7 @@ import Debts from './pages/Debts';
 import ServicesPage from './pages/Services';
 import SurveyPublic from './pages/SurveyPublic';
 import ConfirmAppointment from './pages/ConfirmAppointment';
+import Schedule from './pages/Schedule';
 
 function AppRoutes() {
   const { user } = useAuth();
@@ -61,6 +62,14 @@ function AppRoutes() {
           element={
             <ProtectedRoute roles={['admin', 'menadzer']}>
               <Doctors />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/raspored"
+          element={
+            <ProtectedRoute roles={['admin', 'menadzer', 'recepcija']}>
+              <Schedule />
             </ProtectedRoute>
           }
         />

@@ -11,6 +11,8 @@ import { APPOINTMENT_STATUS_LABELS, APPOINTMENT_STATUS_COLORS } from '../../type
 import { supabase } from '../../lib/supabase';
 import ExaminationForm from './ExaminationForm';
 import Button from '../ui/Button';
+import HealthAlert from '../patients/HealthAlert';
+import { loadZdravlje, type ZdravstveniPodaci } from '../../lib/karton';
 
 interface UsedMaterial {
   id: string;
@@ -121,6 +123,14 @@ export default function PatientKarton(props: PatientKartonProps) {
   }
 
   const activeNavLabel = NAV_ITEMS.find((n) => n.id === nav)?.label || '';
+
+  // Alergije i faktori rizika — ljekar ih mora vidjeti prije procedure
+  const [zdravlje, setZdravlje] = useState<ZdravstveniPodaci | null>(null);
+  useEffect(() => {
+    let alive = true;
+    loadZdravlje(patient.id).then((d) => { if (alive) setZdravlje(d); }).catch(() => {});
+    return () => { alive = false; };
+  }, [patient.id]);
 
   return (
     // Fixed full-screen overlay preko cijele aplikacije (uklj. lijevi meni)
@@ -291,6 +301,10 @@ export default function PatientKarton(props: PatientKartonProps) {
           <KpiCell icon={<ClipboardList size={14} className="text-primary-600" />} label="Dijagnoza" value={exams.filter((e) => e.nalaz).length} />
           <KpiCell icon={<Wallet size={14} className={dugTotal > 0 ? 'text-red-600' : 'text-gray-400'} />} label="Dug" value={`${dugTotal.toFixed(0)} €`} color={dugTotal > 0 ? 'text-red-700' : 'text-gray-900'} />
         </div>
+
+        {zdravlje && (zdravlje.alergije.length > 0 || zdravlje.rizici.some((r) => r.aktivan)) && (
+          <div className="px-6 pt-3 shrink-0"><HealthAlert data={zdravlje} /></div>
+        )}
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto">

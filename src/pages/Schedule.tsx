@@ -69,7 +69,15 @@ export default function Schedule() {
         <AbsenceList doctors={doctors} odsustva={data.odsustva} onSaved={refresh} />
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-[16rem_1fr] gap-6">
-          <nav aria-label="Osoblje" className="bg-white border border-border rounded-xl p-2 max-h-[70vh] overflow-y-auto">
+          {/* Na telefonu padajuci izbor, na vecem ekranu lista */}
+          <div className="lg:hidden">
+            <label htmlFor="raspored-osoba" className="block text-xs font-medium text-gray-500 mb-1">Osoba</label>
+            <select id="raspored-osoba" value={selectedId} onChange={(e) => setSelectedId(e.target.value)}
+              className="w-full px-3 py-2.5 border border-border rounded-lg text-sm bg-white">
+              {doctors.map((d) => <option key={d.id} value={d.id}>{d.titula ? `${d.titula} ` : ''}{d.ime} {d.prezime}</option>)}
+            </select>
+          </div>
+          <nav aria-label="Osoblje" className="hidden lg:block bg-white border border-border rounded-xl p-2 max-h-[70vh] overflow-y-auto">
             <ul className="space-y-0.5">
               {doctors.map((d) => (
                 <li key={d.id}>

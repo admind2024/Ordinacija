@@ -125,10 +125,10 @@ export default function WaitingList({ onCountChange }: { onCountChange?: (n: num
   return (
     <div>
       <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
-        <div className="inline-flex rounded-lg border border-border bg-white p-0.5" role="group" aria-label="Status">
+        <div className="flex gap-2" role="group" aria-label="Status">
           {([['ceka', 'Čekaju'], ['zakazan', 'Zakazani'], ['odustao', 'Odustali']] as [Filter, string][]).map(([k, l]) => (
             <button key={k} onClick={() => setFilter(k)} aria-pressed={filter === k}
-              className={`px-3 py-1.5 text-sm rounded-md ${filter === k ? 'bg-primary-600 text-white' : 'text-gray-600 hover:bg-gray-50'}`}>
+              className={`px-3 py-2 rounded-lg text-xs font-medium transition-colors ${filter === k ? 'bg-primary-100 text-primary-700' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}>
               {l} <span className="tabular-nums opacity-70">{counts[k]}</span>
             </button>
           ))}

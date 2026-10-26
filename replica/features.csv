@@ -13,11 +13,11 @@ F11,naplata,Vaučeri (plaćeni/besplatni) sa brojem i rokom,must,yes,no,yes,"/va
 F12,naplata,Vaučer kao način plaćanja (umanjuje preostali iznos),must,yes,no,yes,Vaučer u naplati (Dashboard i kalendar); skida se atomično u bazi
 F13,naplata,Rekapitulacija po načinima plaćanja (presjek smjene) za štampu,must,yes,no,yes,"Naplata → Presjek smjene; gotovina u kasi, po načinu, po osobi; štampa"
 F14,naplata,Dodatni načini plaćanja (prenos na račun / administrativna zabrana),should,yes,partial,yes,Prenos na račun u naplati; administrativna zabrana i osiguranje čekaju F37
-F15,karton,Alergije,must,yes,no,no,
-F16,karton,Faktori rizika,should,yes,no,no,
-F17,karton,Dijagnoze (MKB šifra / lična ili porodična),must,yes,no,no,
-F18,karton,Dokumentacija (upload fajlova),must,yes,no,no,
-F19,karton,Poslate poruke pacijentu,should,yes,no,no,podaci već postoje u notifications
+F15,karton,Alergije,must,yes,no,yes,karton → Zdravlje; težina reakcije; upozorenje na vrhu kartona i kod ljekara u pregledu
+F16,karton,Faktori rizika,should,yes,no,yes,"lista rizika za estetske procedure (trudnoća, antikoagulansi, keloidi, izotretinoin...)"
+F17,karton,Dijagnoze (MKB šifra / lična ili porodična),must,yes,no,yes,MKB-10 ručni unos + 33 česte šifre iz estetike/dermatologije; nema cijelog šifarnika
+F18,karton,Dokumentacija (upload fajlova),must,yes,no,yes,"privatni bucket, potpisani linkovi, prevlačenje fajlova, galerija prije/poslije"
+F19,karton,Poslate poruke pacijentu,should,yes,no,yes,"karton → Poruke (SMS/Viber, status isporuke)"
 F20,karton,Invaliditeti,could,yes,no,no,
 F21,karton,Recepti i uputi,could,yes,no,no,
 F22,karton,Rast i težina djeteta,won't,yes,no,no,pedijatrija - nije za MOA

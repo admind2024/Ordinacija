@@ -4,8 +4,13 @@ import { srLatn as sr } from 'date-fns/locale';
 import {
   ArrowLeft, Edit, Trash2, Phone, Mail, MapPin, Calendar,
   Tag, Clock, User, FileText, Wallet, CreditCard, Stethoscope,
-  Info, AlertCircle,
+  Info, AlertCircle, HeartPulse, FolderOpen, MessageSquare,
 } from 'lucide-react';
+import HealthAlert from './HealthAlert';
+import HealthPanel from './HealthPanel';
+import DocumentsPanel from './DocumentsPanel';
+import MessagesPanel from './MessagesPanel';
+import { loadZdravlje, type ZdravstveniPodaci } from '../../lib/karton';
 import Button from '../ui/Button';
 import Card from '../ui/Card';
 import type { Patient, Appointment } from '../../types';
@@ -22,7 +27,7 @@ interface PatientCardProps {
   onDelete: () => void;
 }
 
-type TabKey = 'info' | 'istorija' | 'finansije' | 'dugovanja' | 'napomene';
+type TabKey = 'info' | 'zdravlje' | 'istorija' | 'dokumenta' | 'poruke' | 'finansije' | 'dugovanja' | 'napomene';
 
 interface DebtRow {
   id: string;
@@ -47,6 +52,17 @@ export default function PatientCard({ patient, appointments, onBack, onEdit, onD
   const { doctors, rooms } = useCalendar();
   const { debtsByPatient, paidByPatient } = usePatients();
   const [tab, setTab] = useState<TabKey>('info');
+  // Alergije/rizici/dijagnoze — ucitavamo odmah zbog upozorenja na vrhu kartona
+  const [zdravlje, setZdravlje] = useState<ZdravstveniPodaci | null>(null);
+  const [zdravljeError, setZdravljeError] = useState('');
+  const [zdravljeVer, setZdravljeVer] = useState(0);
+  useEffect(() => {
+    let alive = true;
+    loadZdravlje(patient.id)
+      .then((d) => { if (alive) { setZdravlje(d); setZdravljeError(''); } })
+      .catch((e) => { if (alive) setZdravljeError('Zdravstveni podaci nisu učitani: ' + (e?.message || '')); });
+    return () => { alive = false; };
+  }, [patient.id, zdravljeVer]);
   const [debts, setDebts] = useState<DebtRow[]>([]);
   const [exams, setExams] = useState<ExamRow[]>([]);
 
@@ -164,6 +180,8 @@ export default function PatientCard({ patient, appointments, onBack, onEdit, onD
         </div>
       </div>
 
+      <HealthAlert data={zdravlje} />
+
       {/* KPI kartice */}
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
         <Card>
@@ -230,7 +248,10 @@ export default function PatientCard({ patient, appointments, onBack, onEdit, onD
         <div className="flex gap-1 bg-gray-100 rounded-lg p-0.5 w-max md:w-fit">
           {[
             { key: 'info' as const,       label: 'Osnovno',   icon: Info },
+            { key: 'zdravlje' as const,   label: 'Zdravlje',  icon: HeartPulse },
             { key: 'istorija' as const,   label: 'Istorija',  icon: Stethoscope },
+            { key: 'dokumenta' as const,  label: 'Dokumenta', icon: FolderOpen },
+            { key: 'poruke' as const,     label: 'Poruke',    icon: MessageSquare },
             { key: 'finansije' as const,  label: 'Finansije', icon: CreditCard },
             { key: 'dugovanja' as const,  label: 'Dugovanja', icon: Wallet },
             { key: 'napomene' as const,   label: 'Napomene',  icon: FileText },
@@ -466,6 +487,12 @@ export default function PatientCard({ patient, appointments, onBack, onEdit, onD
           )}
         </Card>
       )}
+
+      {tab === 'zdravlje' && (
+        <HealthPanel patientId={patient.id} data={zdravlje} error={zdravljeError} onChanged={() => setZdravljeVer((v) => v + 1)} />
+      )}
+      {tab === 'dokumenta' && <DocumentsPanel patientId={patient.id} />}
+      {tab === 'poruke' && <MessagesPanel patientId={patient.id} />}
 
       {/* Tab: Napomene */}
       {tab === 'napomene' && (

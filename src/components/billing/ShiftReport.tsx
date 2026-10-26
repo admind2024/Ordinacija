@@ -136,7 +136,7 @@ export default function ShiftReport() {
               {users.map((u) => <option key={u.id} value={u.id}>{u.ime} {u.prezime}</option>)}
             </select>
           </div>
-          <Button variant="secondary" onClick={() => setDoVr(lokalno(new Date()))}>Do sada</Button>
+          <Button variant="secondary" className="self-end" onClick={() => setDoVr(lokalno(new Date()))}>Do sada</Button>
         </div>
         <Button onClick={handlePrint} disabled={loading}><Printer size={14} /> Štampaj presjek</Button>
       </div>

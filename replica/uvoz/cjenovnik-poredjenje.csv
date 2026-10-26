@@ -1,0 +1,420 @@
+stanje,naziv,kategorija_hipokratija,cijena_hipokratija,trajanje_hipokratija,kategorija_moa,cijena_moa,trajanje_moa
+samo_hipokratija,Alma Harmony Clear Lift,Alma Harmony XL Pro,200.0,60,,,
+samo_hipokratija,Alma Harmony Clear skin,Alma Harmony XL Pro,200.0,45,,,
+samo_hipokratija,Alma Harmony Dye-VL,Alma Harmony XL Pro,150.0,30,,,
+samo_hipokratija,CLEAR LIFT/ CLEAR SKIN (LICE + VRAT + DEKOLTE),Alma Harmony XL Pro,400.0,90,,,
+samo_hipokratija,CLEAR LIFT/CLEAR SKIN (LICE + VRAT),Alma Harmony XL Pro,300.0,75,,,
+razlika,ERBIUM LASER,Alma Harmony XL Pro,200.0,60,Alma Harmony XL Pro,225,45
+samo_hipokratija,LASERSKO UKLANJANJE FIBROMA - 10+ PROMJENA,Alma Harmony XL Pro,150.0,60,,,
+samo_hipokratija,LASERSKO UKLANJANJE FIBROMA - DO 10 PROMJENA,Alma Harmony XL Pro,100.0,45,,,
+samo_hipokratija,LASERSKO UKLANJANJE FIBROMA - DO 5 PROMJENA,Alma Harmony XL Pro,80.0,30,,,
+razlika,LASERSKO UKLANJANJE KERATOZA,Alma Harmony XL Pro,50.0,45,Alma Harmony XL Pro,50,20
+razlika,Lasersko Uklanjanje Kapilara,Alma Harmony XL Pro,70.0,45,Alma Harmony XL Pro,150,45
+razlika,Lasersko Uklanjanje Kondiloma,Alma Harmony XL Pro,150.0,45,Alma Harmony XL Pro,150,30
+samo_hipokratija,Lasersko Uklanjanje Moluski Kod Djece - DO 10 PROMJENA,Alma Harmony XL Pro,100.0,45,,,
+samo_hipokratija,Lasersko Uklanjanje Moluski Kod Djece - DO 5 PROMJENA,Alma Harmony XL Pro,80.0,30,,,
+samo_hipokratija,Lasersko Uklanjanje Virusnih Bradavica - 10+ PROMJENA,Alma Harmony XL Pro,150.0,60,,,
+samo_hipokratija,Lasersko Uklanjanje Virusnih Bradavica - DO 10 PROMJENA,Alma Harmony XL Pro,100.0,45,,,
+samo_hipokratija,Lasersko Uklanjanje Virusnih Bradavica - DO 5 PROMJENA,Alma Harmony XL Pro,80.0,30,,,
+razlika,Lasersko uklanjanje tetovaža,Alma Harmony XL Pro,100.0,30,Alma Harmony XL Pro,200,60
+razlika,Lasersko uklanjanje trajne šminke,Alma Harmony XL Pro,100.0,30,Alma Harmony XL Pro,150,45
+samo_hipokratija,NIR (infra red terapija)- lice,Alma Harmony XL Pro,150.0,45,,,
+samo_hipokratija,NIR (infra red terapija)- lice i vrat,Alma Harmony XL Pro,250.0,75,,,
+samo_hipokratija,Uklanjanje žulja,Alma Harmony XL Pro,50.0,30,,,
+samo_hipokratija,7 TRETMANA POLA RUKU,Alma Soprano Titanium Special Edition,120.0,30,,,
+samo_hipokratija,Alma Soprano Titanijum-pojedinacan tretman  CIJELE NOGE/ZENE,Alma Soprano Titanium Special Edition,120.0,30,,,
+samo_hipokratija,Alma Soprano Titanium,Alma Soprano Titanium Special Edition,0.0,15,,,
+samo_hipokratija,Alma Soprano Titanium cijelo tijelo placen tretman,Alma Soprano Titanium Special Edition,0.0,75,,,
+samo_hipokratija,Alma Soprano Titanium intimna regija muskarci,Alma Soprano Titanium Special Edition,60.0,30,,,
+samo_hipokratija,Alma Soprano Titanium intimna regija muskarci 7 tretmana,Alma Soprano Titanium Special Edition,300.0,30,,,
+samo_hipokratija,Alma Soprano Titanium male regije,Alma Soprano Titanium Special Edition,0.0,30,,,
+samo_hipokratija,Alma Soprano Titanium velike regije,Alma Soprano Titanium Special Edition,0.0,45,,,
+samo_hipokratija,Druga rata epilacija,Alma Soprano Titanium Special Edition,390.0,30,,,
+samo_hipokratija,Epilacija lica jedan tretman,Alma Soprano Titanium Special Edition,50.0,30,,,
+samo_hipokratija,Epilacija pazuha 1 tretman,Alma Soprano Titanium Special Edition,30.0,15,,,
+samo_hipokratija,Intima sa gluteusom- POJEDINACNI TRETMAN ZENE,Alma Soprano Titanium Special Edition,60.0,20,,,
+samo_hipokratija,KONSULTACIJA ZA EPILACIJU,Alma Soprano Titanium Special Edition,0.0,15,,,
+samo_hipokratija,Muškarci  CIJELO TIJELO (1O TRETMANA),Alma Soprano Titanium Special Edition,1600.0,60,,,
+samo_hipokratija,Muškarci  CIJELO TIJELO (7 TRETMANA),Alma Soprano Titanium Special Edition,1450.0,60,,,
+samo_hipokratija,Muškarci  CIJELO TIJELO - ODRŽAVANJE,Alma Soprano Titanium Special Edition,330.0,60,,,
+samo_hipokratija,POJEDINACNI tretman CIJELE RUKE ZENE,Alma Soprano Titanium Special Edition,100.0,30,,,
+samo_hipokratija,Pojedinacni tretman intima ZENE,Alma Soprano Titanium Special Edition,50.0,30,,,
+samo_hipokratija,Pojedinacni tretman pazuh ZENE,Alma Soprano Titanium Special Edition,30.0,15,,,
+samo_hipokratija,ZENA CIJELO TIJELO/ 7 TRETMANA-PLACEN PAKER,Alma Soprano Titanium Special Edition,0.0,70,,,
+samo_hipokratija,nausice pojedinacno,Alma Soprano Titanium Special Edition,25.0,30,,,
+samo_hipokratija,pojedinacni tretman pola nogu,Alma Soprano Titanium Special Edition,60.0,20,,,
+samo_hipokratija,usi 7 tretmana,Alma Soprano Titanium Special Edition,150.0,30,,,
+samo_hipokratija,usi jedan tretman,Alma Soprano Titanium Special Edition,25.0,30,,,
+samo_hipokratija,ŽENE CIJELO TIJELO 7 TRETMANA/AKCIJA,Alma Soprano Titanium Special Edition,900.0,70,,,
+samo_hipokratija,Žene CIJELO TIJELO (1O TRETMANA),Alma Soprano Titanium Special Edition,1350.0,60,,,
+samo_hipokratija,Žene CIJELO TIJELO (7 TRETMANA)PUNA CIJENA,Alma Soprano Titanium Special Edition,1150.0,75,,,
+samo_hipokratija,Žene CIJELO TIJELO - ODRŽAVANJE,Alma Soprano Titanium Special Edition,200.0,60,,,
+samo_hipokratija,1ml filer dr Aida Catic,Botox,330.0,30,,,
+samo_hipokratija,Gostujući doktor Botox (dvije regije),Botox,250.0,30,,,
+samo_hipokratija,Gostujući doktor Botox (jedna regija),Botox,150.0,30,,,
+samo_hipokratija,Gostujući doktor Botox (tri regije),Botox,330.0,30,,,
+samo_hipokratija,Gostujući doktor Egzozomi,Botox,230.0,30,,,
+samo_hipokratija,Gostujući doktor Filler 1ml,Botox,300.0,30,,,
+samo_hipokratija,Gostujući doktor Hiperdidroza,Botox,300.0,30,,,
+samo_hipokratija,Gostujući doktor Jalupro Super Hydro,Botox,300.0,30,,,
+samo_hipokratija,Gostujući doktor Jalupro Young Eye,Botox,200.0,30,,,
+samo_hipokratija,Gostujući doktor Korekcija nosa,Botox,300.0,30,,,
+samo_hipokratija,Gostujući doktor Nefertiti,Botox,360.0,30,,,
+samo_hipokratija,Gostujući doktor PRP,Botox,250.0,30,,,
+samo_hipokratija,Gostujući doktor PRP Cellular,Botox,290.0,30,,,
+samo_hipokratija,Gostujući doktor Profhilo,Botox,300.0,30,,,
+samo_hipokratija,Gostujući doktor Toplienje fillera,Botox,130.0,30,,,
+samo_hipokratija,Lokalni doktor Botox (dvije regije),Botox,200.0,30,,,
+samo_hipokratija,Lokalni doktor Botox (jedna regija),Botox,100.0,30,,,
+samo_hipokratija,Lokalni doktor Botox (tri regije),Botox,250.0,30,,,
+samo_hipokratija,Lokalni doktor Egzozomi,Botox,200.0,45,,,
+samo_hipokratija,Lokalni doktor Filler 1ml,Botox,250.0,45,,,
+samo_hipokratija,Lokalni doktor Filler 5ml (akcija 4+1 gratis),Botox,1000.0,60,,,
+samo_hipokratija,Lokalni doktor Hiperdidroza,Botox,300.0,30,,,
+samo_hipokratija,Lokalni doktor Jalupro Super Hydro,Botox,250.0,45,,,
+samo_hipokratija,Lokalni doktor Jalupro Young Eye,Botox,160.0,45,,,
+samo_hipokratija,Lokalni doktor Korekcija nosa,Botox,300.0,45,,,
+samo_hipokratija,Lokalni doktor Lipoliza,Botox,200.0,45,,,
+samo_hipokratija,Lokalni doktor MOA GLAM (Botox 3 regije + 2ml fillera),Botox,600.0,60,,,
+samo_hipokratija,Lokalni doktor Nefertiti,Botox,330.0,45,,,
+samo_hipokratija,Lokalni doktor PRP,Botox,200.0,60,,,
+samo_hipokratija,Lokalni doktor PRP Cellular,Botox,250.0,60,,,
+samo_hipokratija,Lokalni doktor Profhilo,Botox,250.0,45,,,
+samo_hipokratija,Lokalni doktor Toplienje fillera,Botox,100.0,45,,,
+samo_hipokratija,btx x 3 dr Aida Catic,Botox,300.0,30,,,
+samo_hipokratija,DERMATOLOSKI PREGLED MLADEZA-8.MART,DERMATOLOGIJA,0.0,15,,,
+samo_hipokratija,Ekstrakcija mlječnog zuba,Dečija stomatologija,20.0,30,,,
+samo_hipokratija,Zalivanje fistura po zuba,Dečija stomatologija,20.0,20,,,
+samo_hipokratija,1 Regija (CELO / OBRAZI / PODBRADAK),EM FACE,200.0,45,,,
+samo_hipokratija,2 Regije (CELO + OBRAZI / SUBMENTUM + OBRAZI),EM FACE,300.0,45,,,
+samo_hipokratija,"3 Regije (CELO, OBRAZI, SUBMENTUM)",EM FACE,450.0,75,,,
+samo_hipokratija,Em face jedna regija,EM FACE,200.0,30,,,
+samo_hipokratija,PAKET 4 TRETMANA (2. REGIJE) + 2 EXION FACE GRATIS ,EM FACE,1200.0,60,,,
+samo_hipokratija,PAKET 4 TRETMANA (3 REGIJE) + 2 EXION FACE GRATIS,EM FACE,1600.0,60,,,
+samo_hipokratija,1 Regija EMS biceps,EM Sculpt NEO,250.0,60,,,
+samo_hipokratija,1 Regija EMS butine (prednja / zadnja regija),EM Sculpt NEO,300.0,60,,,
+samo_hipokratija,1 Regija EMS gluteus,EM Sculpt NEO,300.0,60,,,
+samo_hipokratija,1 Regija EMS listovi,EM Sculpt NEO,250.0,60,,,
+samo_hipokratija,1 Regija EMS paket 4 tretmana biceps + 2 preso terapije gratis,EM Sculpt NEO,900.0,60,,,
+samo_hipokratija,1 Regija EMS paket 4 tretmana butine + 2 preso terapije gratis,EM Sculpt NEO,1100.0,60,,,
+samo_hipokratija,1 Regija EMS paket 4 tretmana gluteus + 2 preso terapije gratis ,EM Sculpt NEO,1100.0,60,,,
+samo_hipokratija,1 Regija EMS paket 4 tretmana listovi + 2 preso terapije gratis,EM Sculpt NEO,900.0,60,,,
+samo_hipokratija,1 Regija EMS paket 4 tretmana stomak + 2 preso terapije gratis ,EM Sculpt NEO,1100.0,60,,,
+samo_hipokratija,1 Regija EMS paket 4 tretmana triceps + 2 preso terapije gratis,EM Sculpt NEO,900.0,60,,,
+samo_hipokratija,1 Regija EMS paket 4 tretmana unutrašnja strana butina + 2 preso terapije gratis,EM Sculpt NEO,900.0,60,,,
+samo_hipokratija,1 Regija EMS stomak (prednja regija / bočna regija),EM Sculpt NEO,300.0,60,,,
+samo_hipokratija,1 Regija EMS triceps,EM Sculpt NEO,250.0,60,,,
+samo_hipokratija,1 Regija EMS unutrašnja strana butina,EM Sculpt NEO,250.0,60,,,
+samo_hipokratija,2 Regija PAKET (2 MALE REGIJE) = 4 TRETMANA,EM Sculpt NEO,1750.0,60,,,
+samo_hipokratija,2 Regija PAKET (2 VELIKE REGIJE) = 4 TRETMANA,EM Sculpt NEO,1950.0,60,,,
+samo_hipokratija,2 Regija PAKET (4 REGIJE ~ 4 TRETMANA),EM Sculpt NEO,4500.0,60,,,
+samo_hipokratija,2 Regija PAKET (MALA + VELIKA REGIJA) = 4 TRETMANA,EM Sculpt NEO,1850.0,60,,,
+samo_hipokratija,EMSculpt NEO - PLACEN PAKET,EM Sculpt NEO,0.0,45,,,
+samo_hipokratija,KONSULTACIJE ZA EMSCULPT NEO,EM Sculpt NEO,0.0,20,,,
+razlika,Aplikacija lijeka,Endodoncija,20.0,30,Endodoncija,20,15
+samo_hipokratija,Definitvno Punjenie Po Kanalu Zuba,Endodoncija,30.0,40,,,
+razlika,Drenaža oboljelog zuba,Endodoncija,20.0,30,Endodoncija,20,15
+samo_hipokratija,Mortalna Amputacia,Endodoncija,30.0,30,,,
+samo_hipokratija,VITALNA AMPUTACIIA,Endodoncija,30.0,30,,,
+samo_hipokratija,Izbelivanje zuba sa folijama po vilici,Estetska stomatologija,150.0,30,,,
+samo_hipokratija,Ordinacijsko izbjelivanje zuba po vilici,Estetska stomatologija,150.0,60,,,
+samo_hipokratija,EXION BODY - POKLON VAUCER,Exion Body,0.0,60,,,
+samo_hipokratija,EXION BODY PLACEN PAKET,Exion Body,60.0,60,,,
+samo_hipokratija,Exion Body- velika pregija/4 tretmana,Exion Body,900.0,30,,,
+samo_hipokratija,Exion body-PLACEN PAKET 4 TRETMANA,Exion Body,0.0,30,,,
+samo_hipokratija,Exion malih regija paket 4 tretmana,Exion Body,600.0,60,,,
+samo_hipokratija,Exuion Body 1 tretman (velika regija),Exion Body,250.0,60,,,
+samo_hipokratija,KONSULTACIJE ZA EXION,Exion Body,0.0,15,,,
+samo_hipokratija,"MALA REGIJA (LISTOVI, KOLJENA, NADLAKTICE, SAKE)",Exion Body,150.0,40,,,
+samo_hipokratija,"VELIKA REGIA (STOMAK, BUTINE, GLUTEUS)",Exion Body,250.0,45,,,
+isto,DEKOLTE,Exion Face,100.0,30,Exion Face,100,30
+samo_hipokratija,EXION FACE,Exion Face,250.0,60,,,
+samo_hipokratija,EXION FACE - poklon vaucer,Exion Face,0.0,60,,,
+samo_hipokratija,EXION FACE PLACEN PAKET,Exion Face,0.0,60,,,
+samo_hipokratija,EXION VRATA,Exion Face,100.0,30,,,
+razlika,LICE (FULL FACE),Exion Face,250.0,90,Exion Face,250,60
+samo_hipokratija,OKOLOOENA REGIJA,Exion Face,60.0,30,,,
+samo_hipokratija,PAKET 4 TRETMANA + 2 TRETMANA (VRAT / DEKOLTE) GRATIS,Exion Face,900.0,60,,,
+samo_hipokratija,REGIJA OKO USANA I USNE,Exion Face,80.0,30,,,
+isto,VRAT,Exion Face,100.0,30,Exion Face,100,30
+samo_hipokratija,FRAKCIONI LICE,Exion Frakcioni,350.0,60,,,
+samo_hipokratija,Feakcioni abdomena,Exion Frakcioni,500.0,60,,,
+isto,LICE,Exion Frakcioni,350.0,60,Exion Frakcioni,350,60
+razlika,LICE + VRAT,Exion Frakcioni,420.0,90,Exion Frakcioni,420,75
+samo_hipokratija,LICE+ DEKOLTE,Exion Frakcioni,420.0,90,,,
+samo_hipokratija,LICE+ VRAT+ DEKOLTE,Exion Frakcioni,520.0,120,,,
+isto,PAKET 3 TRETMANA (LICE),Exion Frakcioni,900.0,60,Exion Frakcioni,900,60
+samo_hipokratija,VRAT+ DEKOLTE,Exion Frakcioni,300.0,60,,,
+samo_hipokratija,"VELIKA REGIJA + MALA REGIA )+(KOLJENA, BOKOVI, DIO ISPOD GLUTEOSA)",Exion Frakcioni - Tijelo,550.0,90,,,
+samo_hipokratija,"VELIKA REGIJA - (STOMAK, GLUTEUS, NADKOLJENICE, POTKOLJENICE, NADLAKTICE)",Exion Frakcioni - Tijelo,500.0,60,,,
+razlika,EKSCIZIJA NEVUSA,Hirurške intervencije,115.0,60,Opsta Hirurgija,115,30
+samo_hipokratija,EURBIOPSIJA KOZNIH PROMJENA,Hirurške intervencije,60.0,60,,,
+samo_hipokratija,EUREKSCIZIJA EPITELIOMA BASOCELLULARE | SQUAMOCELLULARE,Hirurške intervencije,80.0,60,,,
+samo_hipokratija,Ekscizija Tromboziranog Spoljasnjeg Hemoroida,Hirurške intervencije,150.0,60,,,
+samo_hipokratija,HIRURSKA INTERVENCIJA URASLOG NOKTA,Hirurške intervencije,135.0,60,,,
+samo_hipokratija,HIRURSKO LIJEČENJE KLAVUSA “kurjeg oka”,Hirurške intervencije,135.0,60,,,
+samo_hipokratija,Hirurski Debridman Rane,Hirurške intervencije,75.0,60,,,
+razlika,Hirurško previjanje rane,Hirurške intervencije,40.0,60,Opsta Hirurgija,50,20
+razlika,INCIZIJA APSCESA,Hirurške intervencije,75.0,60,Opsta Hirurgija,95,30
+samo_hipokratija,OBRADA I USIVANJE RANE - lice,Hirurške intervencije,110.0,60,,,
+samo_hipokratija,Obrada i previjanje dekubitusa,Hirurške intervencije,75.0,60,,,
+samo_hipokratija,Obrada i previjanje ulcus cruris,Hirurške intervencije,75.0,60,,,
+samo_hipokratija,Obrada i previjanje ulcus opekotina,Hirurške intervencije,80.0,60,,,
+razlika,Obrada i usivanje rane,Hirurške intervencije,75.0,60,Opsta Hirurgija,80,30
+samo_hipokratija,Plasiranje Ili Zamjena Urinarnog Katetera,Hirurške intervencije,50.0,60,,,
+razlika,Punkcija Ascita,Hirurške intervencije,140.0,60,Opsta Hirurgija,140,45
+samo_hipokratija,SKIDANJE HIR. KONACA,Hirurške intervencije,40.0,60,,,
+samo_hipokratija,UKLANJANJE (ablacija) NOKATNE PLOČE,Hirurške intervencije,110.0,60,,,
+razlika,UKLANJANJE ATEROMA,Hirurške intervencije,60.0,60,Opsta Hirurgija,70,30
+samo_hipokratija,UKLANJANJE BRADAVICA (do IO),Hirurške intervencije,80.0,60,,,
+samo_hipokratija,UKLANJANJE DERMATOFIBRROMA,Hirurške intervencije,60.0,60,,,
+samo_hipokratija,UKLANJANJE KONDILOMA (+10 kondiloma),Hirurške intervencije,115.0,60,,,
+samo_hipokratija,UKLANJANJE OZILJNOG TKIVA,Hirurške intervencije,250.0,60,,,
+samo_hipokratija,UKLANJENJE KONDILOMA (<1O kondiloma),Hirurške intervencije,90.0,60,,,
+razlika,Uklanjanje Krpelja,Hirurške intervencije,60.0,60,Opsta Hirurgija,60,15
+razlika,Uklanjanje Lipoma,Hirurške intervencije,60.0,60,Opsta Hirurgija,70,30
+samo_hipokratija,"Uklanjanje Prekanceroza (aktinicne keratoze, susp. pigmentne promjene, cornu cutaneum i ostalo)",Hirurške intervencije,50.0,60,,,
+samo_hipokratija,VAĐENJE STRANOG TIJELA,Hirurške intervencije,60.0,60,,,
+samo_hipokratija,NAD jedna doza,INFUZIJE,350.0,30,,,
+razlika,AMALGAMSKI ISPUN,Konzervativa,50.0,60,Konzervativa,50,30
+razlika,KOMPOZITNA FASETA,Konzervativa,70.0,60,Konzervativa,70,30
+samo_hipokratija,KOMPOZITNI ISPUN (2 POVRŠINE),Konzervativa,50.0,60,,,
+samo_hipokratija,KOMPOZITNI ISPUN (3 POVRŠINE),Konzervativa,60.0,60,,,
+samo_hipokratija,KOMPOZITNI ISPUN (I POVRŠINA),Konzervativa,40.0,40,,,
+razlika,Prekrivanje pulpe,Konzervativa,30.0,30,Konzervativa,30,20
+samo_hipokratija,KONSULTACIJE ZA MASAZU,Masaže,0.0,15,,,
+isto,LIMFNA DRENAŽA,Masaže,60.0,60,Masaze,60,60
+samo_hipokratija,RELAX (cijelo tijelo),Masaže,80.0,60,,,
+samo_hipokratija,"RELAX (vrat, ramena, leđa)",Masaže,60.0,45,,,
+samo_hipokratija,SPORTSKA (cijelo tijelo),Masaže,80.0,90,,,
+samo_hipokratija,"SPORTSKA (rat, ramena, leda)",Masaže,60.0,45,,,
+samo_hipokratija,"TERAPIJSKA (vrat, ramena, leda)",Masaže,60.0,45,,,
+isto,SPECIJALISTICKI PREGLED,Opsta Hirurgija,50.0,30,Opsta Hirurgija,50,30
+razlika,KONTROLNI PREGLED,Opšta stomatologija,10.0,20,Opsta stomatologija,10,10
+razlika,Prvi Pregled,Opšta stomatologija,20.0,20,Opsta stomatologija,20,15
+samo_hipokratija,UKAZIVANJE PRVE POMOCI,Opšta stomatologija,20.0,30,,,
+samo_hipokratija,EKSTRAKCIA STALNOG ZUBA,Oralna hirurgija,40.0,40,,,
+samo_hipokratija,INCIZIJA | DRENAZA APSCESA INTRAORALNIM PUTEM,Oralna hirurgija,40.0,40,,,
+samo_hipokratija,KOMPLIKOVANA EKSTRAKCIA od,Oralna hirurgija,60.0,60,,,
+samo_hipokratija,Ankgor,Ostale usluge,150.0,30,,,
+samo_hipokratija,BOTOKS PAZUHA,Ostale usluge,300.0,30,,,
+samo_hipokratija,DERMAPEN,Ostale usluge,250.0,30,,,
+samo_hipokratija,GLUTATION 1,Ostale usluge,65.0,45,,,
+samo_hipokratija,GLUTATION 2 ampule,Ostale usluge,90.0,60,,,
+samo_hipokratija,Hidratacija lola long lasting,Ostale usluge,250.0,30,,,
+samo_hipokratija,Hijaluronidaza podocnjaka,Ostale usluge,100.0,30,,,
+samo_hipokratija,Hijaluronidaza usana,Ostale usluge,100.0,30,,,
+samo_hipokratija,Hijaluronski filer 1ml,Ostale usluge,250.0,30,,,
+razlika,INTRAVENSKA INFUZIJA (vitaminska inf. Sa glutationom),Ostale usluge,65.0,60,Usluge,65,45
+samo_hipokratija,Jalupro HMW,Ostale usluge,250.0,30,,,
+samo_hipokratija,Korekcija podocnjaka sa filerom,Ostale usluge,250.0,30,,,
+samo_hipokratija,LJEKARASKI PREGLED dr MILICA MILENKOVIC,Ostale usluge,0.0,5,,,
+razlika,LJEKARSKI PREGLED,Ostale usluge,30.0,30,Usluge,50,30
+samo_hipokratija,Lip Flip,Ostale usluge,50.0,30,,,
+samo_hipokratija,MELANOPLUS,Ostale usluge,0.0,120,,,
+razlika,PAKET 7 PRESO TERAPIJA,Ostale usluge,190.0,60,Usluge,190,30
+samo_hipokratija,PRANJE KOSE TRANSPLATACIJA,Ostale usluge,0.0,120,,,
+razlika,PRESO TERAPIJA,Ostale usluge,30.0,60,Usluge,30,30
+samo_hipokratija,PRP sa dermapenom,Ostale usluge,200.0,30,,,
+samo_hipokratija,Polinukleotidi za lice,Ostale usluge,220.0,30,,,
+samo_hipokratija,Polinukleotidi za oci,Ostale usluge,180.0,30,,,
+isto,Profhilo,Ostale usluge,250.0,30,Botox / Fileri,250,30
+samo_hipokratija,SPEC. pregled prof. dr MILOSA NIKOLICA,Ostale usluge,130.0,15,,,
+samo_hipokratija,SPECALISTICKI PREGLED,Ostale usluge,50.0,30,,,
+samo_hipokratija,Subcizija i filer,Ostale usluge,400.0,30,,,
+samo_hipokratija,TRANSPLATACIJA,Ostale usluge,0.0,240,,,
+samo_hipokratija,VITAMINSKA INFUZIJA,Ostale usluge,50.0,30,,,
+samo_hipokratija,Viscoderm skinko e - lice,Ostale usluge,150.0,45,,,
+samo_hipokratija,Viskoderm skinko e lice i vrat,Ostale usluge,250.0,60,,,
+samo_hipokratija,Zatezanje koze,Ostale usluge,150.0,30,,,
+samo_hipokratija,kontrola dr KONOVALOV,Ostale usluge,120.0,30,,,
+samo_hipokratija,pregled dr KONOVALOV,Ostale usluge,170.0,60,,,
+samo_hipokratija,presensa firnes i viscoderm skinko e,Ostale usluge,150.0,30,,,
+samo_hipokratija,presensa firnes lice,Ostale usluge,150.0,30,,,
+samo_hipokratija,presensa firnes lice i vrat,Ostale usluge,250.0,60,,,
+samo_hipokratija,presenta biorevitalizacija lice,Ostale usluge,150.0,30,,,
+samo_hipokratija,presenta biorevitalizacija lice i vrat,Ostale usluge,250.0,60,,,
+samo_hipokratija,viskoderm skinko e i presenta firnes i presenta biorevitalizacija,Ostale usluge,300.0,75,,,
+samo_hipokratija,POKLON VAUCER,POKLON VAUCER,200.0,10,,,
+samo_hipokratija,Muškarci  CELE NOGE,Paketi po regijama,800.0,30,,,
+samo_hipokratija,Muškarci  CIJELE RUKE ,Paketi po regijama,400.0,30,,,
+samo_hipokratija,Muškarci  CIJELO LICE,Paketi po regijama,250.0,30,,,
+samo_hipokratija,Muškarci  GRUDI ,Paketi po regijama,350.0,30,,,
+samo_hipokratija,Muškarci  LEDJA ,Paketi po regijama,600.0,30,,,
+samo_hipokratija,Muškarci  PAZUH,Paketi po regijama,200.0,30,,,
+samo_hipokratija,Muškarci  RAMENA,Paketi po regijama,200.0,30,,,
+samo_hipokratija,Muškarci  STOMAK ,Paketi po regijama,350.0,30,,,
+samo_hipokratija,Žene CELE NOGE,Paketi po regijama,500.0,30,,,
+samo_hipokratija,Žene CIJELO LICE,Paketi po regijama,250.0,30,,,
+samo_hipokratija,Žene INTIMNA REGIA,Paketi po regijama,250.0,30,,,
+samo_hipokratija,Žene INTIMNA REGIJA SA GLUTEUSOM,Paketi po regijama,320.0,30,,,
+samo_hipokratija,Žene NAUSNICE ,Paketi po regijama,100.0,30,,,
+samo_hipokratija,Žene PAZUH,Paketi po regijama,150.0,30,,,
+samo_hipokratija,Žene POLA NOGU ,Paketi po regijama,250.0,30,,,
+samo_hipokratija,Žene PREPONE ,Paketi po regijama,150.0,30,,,
+samo_hipokratija,Žene RUKE,Paketi po regijama,250.0,30,,,
+razlika,Kiretaža paradontalnog džepa,Paradontopatija,20.0,20,Paradontopatija,20,15
+samo_hipokratija,UKLANJANJE MEKIH  TVRDIH NASLAGA SA PJESKARENJEM | POLIRANJEM,Paradontopatija,60.0,60,,,
+razlika,Muškarci CIJELA LEDJA,Pojedinačni tretmani,110.0,60,Pojedinacni tretmani - Epilacija,110,45
+razlika,Muškarci CIJELE NOGE,Pojedinačni tretmani,80.0,60,Pojedinacni tretmani - Epilacija,80,45
+samo_hipokratija,"Muškarci MALA REGIJA (brada, zulufi, podbradak, obrazi, linija stomaka)",Pojedinačni tretmani,35.0,30,,,
+samo_hipokratija,"Muškarci SREDNJA REGIJA (podlaktica, nadlaktica, prepone, gluteus, intimna regija, grudi, donji dio ledja, koljena)",Pojedinačni tretmani,45.0,45,,,
+samo_hipokratija,"Muškarci VELIKA REGIJA (grudi, stomak, cijelo lice, cijele ruke, potkoljenica, natkoljenica)",Pojedinačni tretmani,65.0,90,,,
+samo_hipokratija,ODRZAVANJE CIJELOG TIJELA MUSKARCI,Pojedinačni tretmani,300.0,75,,,
+samo_hipokratija,ODRZAVANJE CIJELOG TIJELA ZENE,Pojedinačni tretmani,200.0,75,,,
+samo_hipokratija,POJEDINACAN tretman intima sa gluteusom ZENE,Pojedinačni tretmani,60.0,30,,,
+samo_hipokratija,POJEDINACNI tretman cijela ledja MUSKARCI,Pojedinačni tretmani,140.0,45,,,
+samo_hipokratija,POJEDINACNI tretman cijele noge MUSKARAC,Pojedinačni tretmani,160.0,45,,,
+samo_hipokratija,POJEDINACNI tretman cijele ruke MUSKARCI,Pojedinačni tretmani,120.0,30,,,
+samo_hipokratija,POJEDINACNI tretman cijeli stomak MUSKARCI,Pojedinačni tretmani,50.0,20,,,
+samo_hipokratija,POJEDINACNI tretman cijeli stomak ZENE,Pojedinačni tretmani,40.0,30,,,
+samo_hipokratija,POJEDINACNI tretman gluteus MUSKARCI,Pojedinačni tretmani,50.0,30,,,
+samo_hipokratija,POJEDINACNI tretman intima MUSKARCI,Pojedinačni tretmani,60.0,30,,,
+samo_hipokratija,POJEDINACNI tretman intima sa gluteusom MUSKARCI,Pojedinačni tretmani,70.0,30,,,
+samo_hipokratija,POJEDINACNI tretman koljena MUSKARAC,Pojedinačni tretmani,40.0,30,,,
+samo_hipokratija,POJEDINACNI tretman linija stomaka MUSKARAC,Pojedinačni tretmani,30.0,20,,,
+samo_hipokratija,POJEDINACNI tretman linija stomaka Zene,Pojedinačni tretmani,25.0,30,,,
+samo_hipokratija,POJEDINACNI tretman pazuh MUSKARCI,Pojedinačni tretmani,35.0,20,,,
+samo_hipokratija,POJEDINACNI tretman pola ledja  MUSKARCI,Pojedinačni tretmani,70.0,30,,,
+samo_hipokratija,POJEDINACNI tretman pola nogu MUSKARAC,Pojedinačni tretmani,80.0,30,,,
+samo_hipokratija,POJEDINACNI tretman prepone MUSKARAC,Pojedinačni tretmani,40.0,20,,,
+samo_hipokratija,pojedinacni tretman pola nogu ZENE,Pojedinačni tretmani,60.0,30,,,
+samo_hipokratija,"Žene VELIKA REGIJA (grudi sa dekolteom, stomak, cijela ledja, cijelo lice, cijele ruke, potkoljenica, natkoljenica)",Pojedinačni tretmani,60.0,60,,,
+samo_hipokratija,Helio novogradnja sa fiberglass kočićem,Protetika,80.0,75,,,
+razlika,Ljuspice,Protetika,250.0,30,Protetika,250,60
+samo_hipokratija,Novogradnja sa metalnim kočićem,Protetika,70.0,120,,,
+samo_moa,1 Regija,,,,EM Face,200,20
+samo_moa,10 tretmana Muskarci,,,,Alma Soprano Titanium - Cijelo tijelo,1600,60
+samo_moa,10 tretmana Zene,,,,Alma Soprano Titanium - Cijelo tijelo,1350,60
+samo_moa,2 Regije,,,,EM Face,300,30
+samo_moa,2 Regije (2 male),,,,EM Sculpt NEO,1750,30
+samo_moa,2 Regije (2 velike),,,,EM Sculpt NEO,1950,30
+samo_moa,2 Regije (mala+velika),,,,EM Sculpt NEO,1850,30
+samo_moa,3 Regije,,,,EM Face,450,45
+samo_moa,4 Regije paket,,,,EM Sculpt NEO,4500,30
+samo_moa,7 tretmana Muskarci,,,,Alma Soprano Titanium - Cijelo tijelo,1450,60
+samo_moa,7 tretmana Zene,,,,Alma Soprano Titanium - Cijelo tijelo,1150,60
+samo_moa,Botox 1 regija gostujuci,,,,Botox / Fileri,150,20
+samo_moa,Botox 1 regija lokalni,,,,Botox / Fileri,100,20
+samo_moa,Botox 2 regije gostujuci,,,,Botox / Fileri,250,30
+samo_moa,Botox 2 regije lokalni,,,,Botox / Fileri,200,30
+samo_moa,Botox 3 regije gostujuci,,,,Botox / Fileri,330,30
+samo_moa,Botox 3 regije lokalni,,,,Botox / Fileri,250,30
+samo_moa,Cijele noge M,,,,Paketi po regijama - Epilacija,800,60
+samo_moa,Cijele noge Z,,,,Paketi po regijama - Epilacija,500,60
+samo_moa,Cijelo lice,,,,Paketi po regijama - Epilacija,250,30
+samo_moa,Clear Lift Laser,,,,Alma Harmony XL Pro,200,45
+samo_moa,Clear Lift/Clear Skin (Lice+Vrat),,,,Alma Harmony XL Pro,250,60
+samo_moa,Clear Lift/Clear Skin (Lice+Vrat+Dekolte),,,,Alma Harmony XL Pro,300,60
+samo_moa,Clear Skin Laser,,,,Alma Harmony XL Pro,200,45
+samo_moa,Definitivno punjenje kanala,,,,Endodoncija,30,30
+samo_moa,Dekubitus,,,,Opsta Hirurgija,90,30
+samo_moa,Dye VL terapija (Rozacea/crvenilo),,,,Alma Harmony XL Pro,150,45
+samo_moa,Egzozomi,,,,Botox / Fileri,200,30
+samo_moa,Ekscizija hemoroida,,,,Opsta Hirurgija,150,45
+samo_moa,Ekstrakcija mlijecnog zuba,,,,Decija stomatologija,20,10
+samo_moa,Ekstrakcija stalnog zuba,,,,Oralna hirurgija,40,20
+samo_moa,EMS biceps,,,,EM Sculpt NEO,250,30
+samo_moa,EMS butine,,,,EM Sculpt NEO,300,30
+samo_moa,EMS gluteus,,,,EM Sculpt NEO,300,30
+samo_moa,EMS listovi,,,,EM Sculpt NEO,250,30
+samo_moa,EMS stomak,,,,EM Sculpt NEO,300,30
+samo_moa,EMS triceps,,,,EM Sculpt NEO,250,30
+samo_moa,EMS unutrasnja strana butina,,,,EM Sculpt NEO,250,30
+samo_moa,Eurbiopsija,,,,Opsta Hirurgija,60,20
+samo_moa,Filler 1ml gostujuci,,,,Botox / Fileri,300,30
+samo_moa,Filler 1ml lokalni,,,,Botox / Fileri,250,30
+samo_moa,Filler 5ml (4+1),,,,Botox / Fileri,1000,45
+samo_moa,Grudi M,,,,Paketi po regijama - Epilacija,350,45
+samo_moa,Helio nadogradnja fiberglass,,,,Protetika,80,45
+samo_moa,Hiperdidroza,,,,Botox / Fileri,300,30
+samo_moa,Hirurski debridman,,,,Opsta Hirurgija,75,30
+samo_moa,Incizija drenaza apscesa,,,,Oralna hirurgija,40,20
+samo_moa,Intimna regija Z,,,,Paketi po regijama - Epilacija,250,30
+samo_moa,Intimna+Gluteus Z,,,,Paketi po regijama - Epilacija,320,30
+samo_moa,Izbjeljivanje folijama,,,,Estetska stomatologija,150,45
+samo_moa,Jalupro Super Hydro,,,,Botox / Fileri,250,30
+samo_moa,Jalupro Young Eye,,,,Botox / Fileri,160,20
+samo_moa,Klavus,,,,Opsta Hirurgija,135,30
+samo_moa,Komplikovana ekstrakcija,,,,Oralna hirurgija,60,30
+samo_moa,Kompozitni ispun 1 povrsina,,,,Konzervativa,40,30
+samo_moa,Kompozitni ispun 2 povrsine,,,,Konzervativa,50,30
+samo_moa,Kompozitni ispun 3 povrsine,,,,Konzervativa,60,30
+samo_moa,Kondilomi <10,,,,Opsta Hirurgija,90,30
+samo_moa,Kondilomi >10,,,,Opsta Hirurgija,115,30
+samo_moa,Korekcija nosa,,,,Botox / Fileri,300,30
+samo_moa,Ledja M,,,,Paketi po regijama - Epilacija,600,60
+samo_moa,Lice + Dekolte,,,,Exion Frakcioni,420,75
+samo_moa,Lice + Vrat + Dekolte,,,,Exion Frakcioni,520,90
+samo_moa,Lipoliza,,,,Botox / Fileri,200,30
+samo_moa,Mala regija,,,,Exion Body,150,45
+samo_moa,MOA GLAM,,,,Botox / Fileri,660,60
+samo_moa,Mortalna amputacija,,,,Endodoncija,30,30
+samo_moa,Muskarci mala regija,,,,Pojedinacni tretmani - Epilacija,35,15
+samo_moa,Muskarci srednja regija,,,,Pojedinacni tretmani - Epilacija,45,20
+samo_moa,Muskarci velika regija,,,,Pojedinacni tretmani - Epilacija,65,30
+samo_moa,Nadogradnja metalnim kocicem,,,,Protetika,70,45
+samo_moa,Nausnice Z,,,,Paketi po regijama - Epilacija,100,15
+samo_moa,Nefertiti,,,,Botox / Fileri,330,45
+samo_moa,NIR (Infra red terapija),,,,Alma Harmony XL Pro,130,45
+samo_moa,Obrada rane lice,,,,Opsta Hirurgija,110,30
+samo_moa,Odrzavanje Muskarci,,,,Alma Soprano Titanium - Cijelo tijelo,330,60
+samo_moa,Odrzavanje Zene,,,,Alma Soprano Titanium - Cijelo tijelo,200,60
+samo_moa,Okoloocna regija,,,,Exion Face,60,30
+samo_moa,Opekotine,,,,Opsta Hirurgija,95,30
+samo_moa,Ordinacijsko izbjeljivanje,,,,Estetska stomatologija,150,45
+samo_moa,Paket 2 regije 4+2 Exion,,,,EM Face,1200,30
+samo_moa,Paket 3 regije 4+2 Exion,,,,EM Face,1600,45
+samo_moa,Paket 4+2 gratis,,,,Exion Face,900,60
+samo_moa,Paket biceps 4+2,,,,EM Sculpt NEO,900,30
+samo_moa,Paket butine 4+2 preso,,,,EM Sculpt NEO,1100,30
+samo_moa,Paket gluteus 4+2,,,,EM Sculpt NEO,1100,30
+samo_moa,Paket listovi 4+2,,,,EM Sculpt NEO,900,30
+samo_moa,Paket stomak 4+2 preso,,,,EM Sculpt NEO,1100,30
+samo_moa,Paket triceps 4+2,,,,EM Sculpt NEO,900,30
+samo_moa,Paket unutr. strana 4+2,,,,EM Sculpt NEO,900,30
+samo_moa,Pazuh,,,,Paketi po regijama - Epilacija,150,20
+samo_moa,Pola nogu Z,,,,Paketi po regijama - Epilacija,250,45
+samo_moa,Prepone,,,,Paketi po regijama - Epilacija,150,20
+samo_moa,PRP,,,,Botox / Fileri,200,30
+samo_moa,PRP Cellular,,,,Botox / Fileri,250,30
+samo_moa,Prva pomoc,,,,Opsta stomatologija,20,15
+samo_moa,Ramena M,,,,Paketi po regijama - Epilacija,200,30
+samo_moa,Regija oko usana,,,,Exion Face,60,30
+samo_moa,Relax cijelo tijelo,,,,Masaze,70,60
+samo_moa,Relax vrat/ramena/ledja,,,,Masaze,70,45
+samo_moa,Ruke M,,,,Paketi po regijama - Epilacija,400,45
+samo_moa,Ruke Z,,,,Paketi po regijama - Epilacija,250,45
+samo_moa,Skidanje konaca,,,,Opsta Hirurgija,40,15
+samo_moa,Specijalisticki kontrolni pregled,,,,Usluge,30,20
+samo_moa,Specijalisticki kontrolni pregled (gostujuci doktor),,,,Usluge,50,20
+samo_moa,Specijalisticki pregled (gostujuci doktor),,,,Usluge,70,30
+samo_moa,Sportska masaza,,,,Masaze,65,60
+samo_moa,Stomak M,,,,Paketi po regijama - Epilacija,350,45
+samo_moa,Terapijska masaza,,,,Masaze,65,60
+samo_moa,Topljenje fillera,,,,Botox / Fileri,100,15
+samo_moa,Uklanjanje bradavica do 10,,,,Opsta Hirurgija,80,20
+samo_moa,Uklanjanje dermatofibroma,,,,Opsta Hirurgija,70,30
+samo_moa,Uklanjanje fibroma 10+,,,,Alma Harmony XL Pro,150,30
+samo_moa,Uklanjanje fibroma do 10,,,,Alma Harmony XL Pro,100,30
+samo_moa,Uklanjanje fibroma do 5,,,,Alma Harmony XL Pro,80,30
+samo_moa,Uklanjanje moluski kod djece do 10,,,,Alma Harmony XL Pro,100,20
+samo_moa,Uklanjanje moluski kod djece do 5,,,,Alma Harmony XL Pro,80,20
+samo_moa,Uklanjanje naslaga sa pjeskarenjem,,,,Paradontopatija,60,30
+samo_moa,Uklanjanje nokatne ploce,,,,Opsta Hirurgija,110,30
+samo_moa,Uklanjanje prekanceroza,,,,Opsta Hirurgija,60,20
+samo_moa,Uklanjanje virusnih bradavica 10+,,,,Alma Harmony XL Pro,150,30
+samo_moa,Uklanjanje virusnih bradavica do 10,,,,Alma Harmony XL Pro,100,30
+samo_moa,Uklanjanje virusnih bradavica do 5,,,,Alma Harmony XL Pro,80,30
+samo_moa,Ulcus cruris,,,,Opsta Hirurgija,80,30
+samo_moa,Urasli nokat,,,,Opsta Hirurgija,135,30
+samo_moa,Urinarni kateter,,,,Opsta Hirurgija,50,20
+samo_moa,Vadjenje stranog tijela,,,,Opsta Hirurgija,60,20
+samo_moa,Velika + Mala regija,,,,Exion Frakcioni - Tijelo,550,75
+samo_moa,Velika regija,,,,Exion Frakcioni - Tijelo,500,60
+samo_moa,Vitalna amputacija,,,,Endodoncija,30,30
+samo_moa,Vrat + Dekolte,,,,Exion Frakcioni,300,60
+samo_moa,Zalivanje fisura,,,,Decija stomatologija,20,10
+samo_moa,Zene mala regija,,,,Pojedinacni tretmani - Epilacija,25,15
+samo_moa,Zene srednja regija,,,,Pojedinacni tretmani - Epilacija,35,20
+samo_moa,Zene velika regija,,,,Pojedinacni tretmani - Epilacija,60,30

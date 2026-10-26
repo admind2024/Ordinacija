@@ -1,5 +1,9 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Plus, Edit, Trash2, Package, BarChart3, Search, Loader2, Save, Printer, Download } from 'lucide-react';
+import { Plus, Edit, Trash2, Package, BarChart3, Search, Loader2, Save, Printer, Download, Boxes, History, ClipboardCheck, FlaskConical } from 'lucide-react';
+import StockTab from '../components/materials/StockTab';
+import MovementsTab from '../components/materials/MovementsTab';
+import CountTab from '../components/materials/CountTab';
+import NormsTab from '../components/materials/NormsTab';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
@@ -10,7 +14,7 @@ import { supabase } from '../lib/supabase';
 import { exportToExcel, printToPdf, type ReportExport } from '../lib/exportReport';
 import type { Material } from '../types';
 
-type MatTab = 'katalog' | 'izvjestaj';
+type MatTab = 'lager' | 'katalog' | 'kretanja' | 'popis' | 'norme' | 'izvjestaj';
 
 interface UsageRow {
   id: string;
@@ -25,13 +29,18 @@ interface UsageRow {
 export default function Materials() {
   const { materials, createMaterial, updateMaterial, deleteMaterial, doctors } = useCalendar();
   const { patients } = usePatients();
-  const [tab, setTab] = useState<MatTab>('katalog');
+  const [tab, setTab] = useState<MatTab>('lager');
   const [search, setSearch] = useState('');
   const [formOpen, setFormOpen] = useState(false);
   const [editMat, setEditMat] = useState<Material | null>(null);
 
   const [naziv, setNaziv] = useState('');
   const [jedinica, setJedinica] = useState('1 ml');
+  const [sifra, setSifra] = useState('');
+  const [kategorija, setKategorija] = useState('');
+  const [brend, setBrend] = useState('');
+  const [prag, setPrag] = useState('');
+  const [nabavna, setNabavna] = useState('');
   const [saving, setSaving] = useState(false);
 
   const [usageData, setUsageData] = useState<UsageRow[]>([]);
@@ -53,6 +62,11 @@ export default function Materials() {
   function openForm(mat?: Material) {
     if (mat) { setEditMat(mat); setNaziv(mat.naziv); setJedinica(mat.jedinica_mjere); }
     else { setEditMat(null); setNaziv(''); setJedinica('1 ml'); }
+    setSifra(mat?.sifra || '');
+    setKategorija(mat?.kategorija || '');
+    setBrend(mat?.brend || '');
+    setPrag(mat?.min_kolicina ? String(mat.min_kolicina) : '');
+    setNabavna(mat?.nabavna_cijena ? String(mat.nabavna_cijena) : '');
     setFormOpen(true);
   }
 
@@ -60,8 +74,16 @@ export default function Materials() {
     e.preventDefault();
     if (!naziv) return;
     setSaving(true);
-    if (editMat) await updateMaterial(editMat.id, { naziv, jedinica_mjere: jedinica });
-    else await createMaterial({ naziv, jedinica_mjere: jedinica, trenutna_kolicina: 0, min_kolicina: 0, nabavna_cijena: 0 } as Omit<Material, 'id'>);
+    const extra = {
+      sifra: sifra.trim() || null,
+      kategorija: kategorija.trim() || undefined,
+      brend: brend.trim() || null,
+      min_kolicina: Number(prag.replace(',', '.')) || 0,
+      nabavna_cijena: Number(nabavna.replace(',', '.')) || 0,
+    };
+    // Stanje (trenutna_kolicina) se ne mijenja ovdje — ide kroz nabavku i popis.
+    if (editMat) await updateMaterial(editMat.id, { naziv, jedinica_mjere: jedinica, ...extra });
+    else await createMaterial({ naziv, jedinica_mjere: jedinica, trenutna_kolicina: 0, ...extra } as Omit<Material, 'id'>);
     setSaving(false);
     setFormOpen(false);
   }
@@ -189,20 +211,34 @@ export default function Materials() {
   return (
     <div>
       {tab === 'katalog' && (
-        <div className="flex items-center justify-end mb-6">
+        <div className="flex items-center justify-end mb-4">
           <Button onClick={() => openForm()}><Plus size={16} /> Dodaj materijal</Button>
         </div>
       )}
 
-      <div className="flex gap-1 bg-gray-100 rounded-lg p-0.5 w-fit mb-6">
-        {([{ key: 'katalog' as const, label: 'Katalog', icon: Package }, { key: 'izvjestaj' as const, label: 'Izvjestaj utroska', icon: BarChart3 }]).map((t) => (
+      <div className="-mx-3 md:mx-0 px-3 md:px-0 overflow-x-auto mb-6">
+      <div className="flex gap-1 bg-gray-100 rounded-lg p-0.5 w-max md:w-fit">
+        {([
+          { key: 'lager' as const, label: 'Lager', icon: Boxes },
+          { key: 'katalog' as const, label: 'Katalog', icon: Package },
+          { key: 'kretanja' as const, label: 'Kretanja', icon: History },
+          { key: 'popis' as const, label: 'Popis', icon: ClipboardCheck },
+          { key: 'norme' as const, label: 'Norme po usluzi', icon: FlaskConical },
+          { key: 'izvjestaj' as const, label: 'Izvjestaj utroska', icon: BarChart3 },
+        ]).map((t) => (
           <button key={t.key} onClick={() => setTab(t.key)}
-            className={`px-4 py-2 text-sm font-medium rounded-md transition-colors flex items-center gap-2
+            className={`px-4 py-2 text-sm font-medium rounded-md transition-colors flex items-center gap-2 whitespace-nowrap
               ${tab === t.key ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
             <t.icon size={16} /> {t.label}
           </button>
         ))}
       </div>
+      </div>
+
+      {tab === 'lager' && <StockTab />}
+      {tab === 'kretanja' && <MovementsTab materials={materials} />}
+      {tab === 'popis' && <CountTab />}
+      {tab === 'norme' && <NormsTab materials={materials} />}
 
       {tab === 'katalog' && (
         <div className="space-y-4">
@@ -219,7 +255,12 @@ export default function Materials() {
             <div className="divide-y divide-border max-h-[600px] overflow-y-auto">
               {filteredMaterials.map((mat) => (
                 <div key={mat.id} className="px-6 py-3 flex items-center justify-between hover:bg-gray-50">
-                  <span className="text-sm font-medium text-gray-900">{mat.naziv}</span>
+                  <span className="min-w-0">
+                    <span className="block text-sm font-medium text-gray-900">{mat.naziv}</span>
+                    {(mat.sifra || mat.kategorija || mat.brend) && (
+                      <span className="block text-xs text-gray-400">{[mat.sifra, mat.kategorija, mat.brend].filter(Boolean).join(' · ')}</span>
+                    )}
+                  </span>
                   <div className="flex items-center gap-3">
                     <span className="text-sm text-gray-500">{mat.jedinica_mjere}</span>
                     <button onClick={() => openForm(mat)} className="p-1.5 text-gray-400 hover:text-primary-600 rounded-lg"><Edit size={14} /></button>
@@ -330,6 +371,13 @@ export default function Materials() {
         <form onSubmit={handleSave} className="space-y-4">
           <Input label="Naziv *" value={naziv} onChange={(e) => setNaziv(e.target.value)} required />
           <Input label="Jedinica mjere" value={jedinica} onChange={(e) => setJedinica(e.target.value)} placeholder="1 ml" />
+          <div className="grid grid-cols-2 gap-3">
+            <Input label="Šifra" value={sifra} onChange={(e) => setSifra(e.target.value)} />
+            <Input label="Kategorija" value={kategorija} onChange={(e) => setKategorija(e.target.value)} placeholder="npr. Fileri" />
+            <Input label="Brend" value={brend} onChange={(e) => setBrend(e.target.value)} />
+            <Input label="Nabavna cijena (€)" inputMode="decimal" value={nabavna} onChange={(e) => setNabavna(e.target.value)} />
+          </div>
+          <Input label="Upozori kad stanje padne na" inputMode="decimal" value={prag} onChange={(e) => setPrag(e.target.value)} placeholder="npr. 5" />
           <div className="flex justify-end gap-2 pt-2">
             <Button variant="secondary" type="button" onClick={() => setFormOpen(false)}>Otkazi</Button>
             <Button type="submit" disabled={!naziv || saving}>

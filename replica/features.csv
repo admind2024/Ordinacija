@@ -25,13 +25,13 @@ F23,pregled,Šabloni teksta po polju + sačuvaj kao šablon,must,yes,no,no,
 F24,pregled,Otvori prethodni izvještaj pacijenta,should,yes,no,no,
 F25,pregled,Protokol bolesnika (knjiga) sa izvozom,must,yes,no,no,
 F26,pregled,Nalazi Papa / VS bris,won't,yes,no,no,ginekologija - nije za MOA
-F27,materijali,Lager: stanje i prag upozorenja,must,yes,partial,no,kolone postoje ali se ne ažuriraju
-F28,materijali,Nabavka (pojedinačna i grupna sa fakturom),must,yes,no,no,
-F29,materijali,Istorija kretanja zaliha,must,yes,no,no,
-F30,materijali,Popis (sistemsko naspram popisanog),must,yes,no,no,
-F31,materijali,Utrošak automatski skida sa lagera,must,yes,no,no,
-F32,materijali,Norma utroška po usluzi,should,yes,no,no,
-F33,materijali,Šifra i brend materijala,could,yes,no,no,
+F27,materijali,Lager: stanje i prag upozorenja,must,yes,partial,yes,Materijali → Lager; status Na stanju/Pri kraju/Nema/Minus; vrijednost zaliha
+F28,materijali,Nabavka (pojedinačna i grupna sa fakturom),must,yes,no,yes,"nabavka sa fakturom, dobavljačem i više stavki; ažurira nabavnu cijenu"
+F29,materijali,Istorija kretanja zaliha,must,yes,no,yes,Materijali → Kretanja; filteri i Excel
+F30,materijali,Popis (sistemsko naspram popisanog),must,yes,no,yes,Materijali → Popis; razlika se knjiži pri zaključenju (zakljuci_popis)
+F31,materijali,Utrošak automatski skida sa lagera,must,yes,no,yes,trigger na material_usage; brisanje utroška vraća stanje
+F32,materijali,Norma utroška po usluzi,should,yes,no,yes,Materijali → Norme po usluzi; zakazivanje automatski dodaje materijale
+F33,materijali,Šifra i brend materijala,could,yes,no,yes,
 F34,cjenovnik,Šifra usluge i naziv na engleskom,could,yes,no,no,
 F35,cjenovnik,Uvoz / izvoz cjenovnika,could,yes,no,no,
 F36,cjenovnik,Online zakazivanje (widget),should,yes,no,no,veliko - poseban posao

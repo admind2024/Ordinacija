@@ -210,6 +210,9 @@ export interface Material {
   min_kolicina: number;
   trenutna_kolicina: number;
   barkod?: string;
+  sifra?: string | null;
+  brend?: string | null;
+  aktivan?: boolean;
 }
 
 // Utrosak materijala

@@ -7,6 +7,7 @@ import { useCalendar } from '../../contexts/CalendarContext';
 import { usePatients } from '../../contexts/PatientsContext';
 import { supabase } from '../../lib/supabase';
 import { loadRaspored, provjeriDostupnost, type RasporedPodaci } from '../../lib/schedule';
+import { loadNorme, type Norma } from '../../lib/lager';
 import type { Appointment, AppointmentService } from '../../types';
 
 interface AppointmentModalProps {
@@ -43,6 +44,11 @@ export default function AppointmentModal({
   const [raspored, setRaspored] = useState<RasporedPodaci | null>(null);
   useEffect(() => {
     loadRaspored().then(setRaspored).catch(() => setRaspored(null));
+  }, []);
+  // Norme utroska po usluzi — materijali se predlazu cim se usluga doda
+  const [norme, setNorme] = useState<Norma[]>([]);
+  useEffect(() => {
+    loadNorme().then(setNorme).catch(() => setNorme([]));
   }, []);
 
   const [patientSearch, setPatientSearch] = useState('');
@@ -155,6 +161,20 @@ export default function AppointmentModal({
     setSelectedServices((prev) => [...prev, newSvc]);
     if (selectedServices.length === 0) {
       setTrajanje(svc.trajanje);
+    }
+    const zaUslugu = norme.filter((n) => n.service_id === serviceId);
+    if (zaUslugu.length) {
+      setSelectedMaterials((prev) => {
+        const next = prev.map((m) => ({ ...m }));
+        for (const n of zaUslugu) {
+          const mat = materials.find((m) => m.id === n.material_id);
+          if (!mat) continue;
+          const postoji = next.find((m) => m.material_id === n.material_id);
+          if (postoji) postoji.kolicina += n.kolicina;
+          else next.push({ material_id: mat.id, naziv: mat.naziv, kolicina: n.kolicina, jedinica: mat.jedinica_mjere });
+        }
+        return next;
+      });
     }
   }
 

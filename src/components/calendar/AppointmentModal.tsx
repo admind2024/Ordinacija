@@ -8,6 +8,7 @@ import { usePatients } from '../../contexts/PatientsContext';
 import { supabase } from '../../lib/supabase';
 import { loadRaspored, provjeriDostupnost, type RasporedPodaci } from '../../lib/schedule';
 import { loadNorme, type Norma } from '../../lib/lager';
+import { blokadaOrdinacije } from '../../lib/events';
 import type { Appointment, AppointmentService } from '../../types';
 
 interface AppointmentModalProps {
@@ -223,6 +224,14 @@ export default function AppointmentModal({
           (conflicts.length > 1 ? `\n(+ jos ${conflicts.length - 1} preklapanje)` : '') +
           `\n\nIzaberi drugu prostoriju ili drugo vrijeme.`,
       );
+      return;
+    }
+
+    // Interni dogadjaj (servis aparata, sastanak) koji blokira ordinaciju
+    const blokada = await blokadaOrdinacije(roomId, pocetak, kraj);
+    if (blokada) {
+      const roomName = rooms.find((r) => r.id === roomId)?.naziv || 'Ordinacija';
+      alert(`${roomName} je u tom periodu blokirana: ${blokada.naslov} (${format(new Date(blokada.pocetak), 'HH:mm')}–${format(new Date(blokada.kraj), 'HH:mm')}).`);
       return;
     }
 

@@ -9,10 +9,12 @@ import MonthView from '../components/calendar/MonthView';
 import AgendaView from '../components/calendar/AgendaView';
 import AppointmentModal from '../components/calendar/AppointmentModal';
 import AppointmentPopover from '../components/calendar/AppointmentPopover';
+import EventModal from '../components/calendar/EventModal';
+import type { Dogadjaj } from '../lib/events';
 import type { Appointment } from '../types';
 
 function CalendarContent() {
-  const { view, setView, setSelectedDate } = useCalendar();
+  const { view, setView, setSelectedDate, selectedDate } = useCalendar();
 
   // Na mobilnom: uvijek forsiraj agenda view i postavi selectedDate = danas
   // da pacijentu/adminu odmah pokazemo aktuelni dan (kao quick-reaction tool)
@@ -33,6 +35,8 @@ function CalendarContent() {
   const [, setPopoverPosition] = useState({ top: 100, left: 100 });
   const [defaultDate, setDefaultDate] = useState<Date | undefined>();
   const [defaultTime, setDefaultTime] = useState<string | undefined>();
+  const [eventModal, setEventModal] = useState<{ open: boolean; edit?: Dogadjaj | null }>({ open: false });
+  const [eventsVersion, setEventsVersion] = useState(0);
 
   const handleNewAppointment = useCallback(() => {
     setEditingAppointment(null);
@@ -72,6 +76,7 @@ function CalendarContent() {
     <div>
       <CalendarToolbar
         onNewAppointment={handleNewAppointment}
+        onNewEvent={() => setEventModal({ open: true, edit: null })}
         onToggleFilters={() => setFiltersOpen(!filtersOpen)}
         filtersOpen={filtersOpen}
       />
@@ -85,7 +90,12 @@ function CalendarContent() {
         <WeekView onAppointmentClick={handleAppointmentClick} onSlotClick={handleSlotClick} />
       )}
       {view === 'day' && (
-        <DayView onAppointmentClick={handleAppointmentClick} onSlotClick={handleSlotClick} />
+        <DayView
+          onAppointmentClick={handleAppointmentClick}
+          onSlotClick={handleSlotClick}
+          onEventClick={(ev) => setEventModal({ open: true, edit: ev })}
+          eventsVersion={eventsVersion}
+        />
       )}
       {view === 'month' && (
         <MonthView onAppointmentClick={handleAppointmentClick} onDayClick={handleDayClick} />
@@ -106,6 +116,16 @@ function CalendarContent() {
         defaultDate={defaultDate}
         defaultTime={defaultTime}
       />
+
+      {eventModal.open && (
+        <EventModal
+          isOpen
+          edit={eventModal.edit}
+          defaultDate={selectedDate}
+          onClose={() => setEventModal({ open: false })}
+          onSaved={() => setEventsVersion((v) => v + 1)}
+        />
+      )}
 
       {/* Popover za brzi pregled */}
       {popoverAppointment && (

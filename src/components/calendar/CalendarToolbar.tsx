@@ -1,6 +1,6 @@
 import { format } from 'date-fns';
 import { srLatn as sr } from 'date-fns/locale';
-import { ChevronLeft, ChevronRight, Plus, Filter } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, Filter, CalendarOff } from 'lucide-react';
 import { useCalendar, type CalendarView } from '../../contexts/CalendarContext';
 import Button from '../ui/Button';
 
@@ -13,11 +13,12 @@ const viewLabels: Record<CalendarView, string> = {
 
 interface CalendarToolbarProps {
   onNewAppointment: () => void;
+  onNewEvent?: () => void;
   onToggleFilters: () => void;
   filtersOpen: boolean;
 }
 
-export default function CalendarToolbar({ onNewAppointment, onToggleFilters, filtersOpen }: CalendarToolbarProps) {
+export default function CalendarToolbar({ onNewAppointment, onNewEvent, onToggleFilters, filtersOpen }: CalendarToolbarProps) {
   const { selectedDate, view, setView, goToToday, goForward, goBack } = useCalendar();
 
   function getDateLabel() {
@@ -72,6 +73,12 @@ export default function CalendarToolbar({ onNewAppointment, onToggleFilters, fil
 
         {/* Novi termin — vidljiv i na mobilnom i na desktopu */}
         <div className="flex items-center gap-2 shrink-0">
+          {onNewEvent && (
+            <Button size="sm" variant="secondary" onClick={onNewEvent} title="Sastanak, edukacija, servis aparata">
+              <CalendarOff size={16} />
+              <span className="hidden sm:inline">Događaj</span>
+            </Button>
+          )}
           <Button size="sm" onClick={onNewAppointment}>
             <Plus size={16} />
             <span className="hidden xs:inline">Novi termin</span>

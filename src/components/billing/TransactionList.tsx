@@ -3,6 +3,7 @@ import { format } from 'date-fns';
 import { FileText, CreditCard, Receipt, ReceiptText, Wallet, TrendingUp } from 'lucide-react';
 import Card from '../ui/Card';
 import { supabase } from '../../lib/supabase';
+import { METODA_LABELS } from '../../lib/payments';
 
 interface ExamWithServices {
   id: string;
@@ -33,12 +34,6 @@ interface DebtSummary {
   aktivnihDuznika: number;
 }
 
-const METODA_LABELS: Record<string, string> = {
-  gotovina: 'Gotovina',
-  kartica: 'Kartica',
-  racun: 'Racun',
-  transfer: 'Transfer',
-};
 
 export default function TransactionList() {
   const [exams, setExams] = useState<ExamWithServices[]>([]);
@@ -336,7 +331,7 @@ export default function TransactionList() {
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-gray-900 truncate">{p.patient_ime || 'Nepoznat pacijent'}</p>
                   <div className="flex items-center gap-1.5 flex-wrap">
-                    <span className="text-[11px] md:text-xs text-gray-500">{METODA_LABELS[p.metoda] || p.metoda.replace('_fiskalni', '')}</span>
+                    <span className="text-[11px] md:text-xs text-gray-500">{METODA_LABELS[p.metoda.replace('_fiskalni', '')] || p.metoda.replace('_fiskalni', '')}</span>
                     <span className={`text-[9px] md:text-[10px] px-1.5 py-0.5 rounded-full font-medium uppercase tracking-wider ${
                       p.fiskalizovano ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
                     }`}>

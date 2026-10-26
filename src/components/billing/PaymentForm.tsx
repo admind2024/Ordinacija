@@ -4,7 +4,10 @@ import Modal from '../ui/Modal';
 import Button from '../ui/Button';
 import { useBilling } from '../../contexts/BillingContext';
 import { supabase } from '../../lib/supabase';
-import type { Appointment, PaymentMethod } from '../../types';
+import type { Appointment, PaymentMethod, Vaucer } from '../../types';
+import { useAuth } from '../../contexts/AuthContext';
+import { iskoristiVaucer } from '../../lib/payments';
+import VoucherField from './VoucherField';
 import { usePatients } from '../../contexts/PatientsContext';
 
 interface PaymentFormProps {
@@ -15,6 +18,7 @@ interface PaymentFormProps {
 
 export default function PaymentForm({ isOpen, onClose, appointment }: PaymentFormProps) {
   const { patients } = usePatients();
+  const { user } = useAuth();
   const { addPayment, getAppointmentBalance } = useBilling();
   const balance = getAppointmentBalance(appointment);
   const patient = patients.find((p) => p.id === appointment.patient_id);
@@ -35,7 +39,8 @@ export default function PaymentForm({ isOpen, onClose, appointment }: PaymentFor
   const preostaloZaNaplatu = Math.max(0, zaNaplatu - balance.paid);
 
   const [iznos, setIznos] = useState(preostaloZaNaplatu > 0 ? preostaloZaNaplatu : 0);
-  const [nacinPlacanja, setNacinPlacanja] = useState<'gotovina' | 'kartica'>('gotovina');
+  const [nacinPlacanja, setNacinPlacanja] = useState<'gotovina' | 'kartica' | 'bon' | 'transfer'>('gotovina');
+  const [vaucer, setVaucer] = useState<Vaucer | null>(null);
   const [fiskalizuj, setFiskalizuj] = useState(false);
   const [napomena, setNapomena] = useState('');
   const [saving, setSaving] = useState(false);
@@ -63,19 +68,41 @@ export default function PaymentForm({ isOpen, onClose, appointment }: PaymentFor
   const remaining = preostaloZaNaplatu - iznos;
   const willCreateDebt = remaining > 0.01;
 
+  // Vaucer i prenos na racun se ne fiskalizuju na ovom mjestu.
+  const mozeFiskal = nacinPlacanja === 'gotovina' || nacinPlacanja === 'kartica';
+
   function getPaymentMethod(): PaymentMethod {
+    if (nacinPlacanja === 'bon' || nacinPlacanja === 'transfer') return nacinPlacanja;
     if (fiskalizuj) {
       return nacinPlacanja === 'kartica' ? 'kartica_fiskalni' : 'gotovina_fiskalni';
     }
-    return nacinPlacanja === 'kartica' ? 'kartica_fiskalni' : 'gotovina';
+    return nacinPlacanja;
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (iznos <= 0) return;
+    if (nacinPlacanja === 'bon') {
+      if (!vaucer) { alert('Provjerite broj vaučera prije naplate.'); return; }
+      if (iznos > vaucer.preostalo + 0.001) {
+        alert(`Na vaučeru je ostalo ${vaucer.preostalo.toFixed(2)} EUR. Ostatak naplatite drugim načinom.`);
+        return;
+      }
+    }
     setSaving(true);
 
     const metoda = getPaymentMethod();
+
+    // Vaucer skidamo prvi (atomicno u bazi) — ako je u medjuvremenu potrosen, naplata se ne evidentira.
+    if (nacinPlacanja === 'bon' && vaucer) {
+      try {
+        await iskoristiVaucer(vaucer.id, iznos, null, user?.id);
+      } catch (err) {
+        setSaving(false);
+        alert('Vaučer nije prihvaćen: ' + (err instanceof Error ? err.message : ''));
+        return;
+      }
+    }
 
     // Ako je popust pri naplati drugaciji od onog u appointment_services, sinhronizuj ga u DB
     // tako da buduci izvjestaji i istorija pacijenta prikazuju tacnu vrijednost.
@@ -93,15 +120,21 @@ export default function PaymentForm({ isOpen, onClose, appointment }: PaymentFor
       }
     }
 
-    addPayment({
+    const paymentId = await addPayment({
       id: `pay-${Date.now()}`,
       appointment_id: appointment.id,
       iznos,
       metoda,
       napomena: napomena || undefined,
       datum: new Date().toISOString(),
-      fiskalni_status: fiskalizuj ? 'pending' : undefined,
+      fiskalni_status: fiskalizuj && mozeFiskal ? 'pending' : undefined,
+      vaucer_id: nacinPlacanja === 'bon' ? vaucer?.id : undefined,
+      naplatio_user_id: user?.id,
     });
+    if (paymentId && nacinPlacanja === 'bon' && vaucer) {
+      await supabase.from('vaucer_promjene').update({ payment_id: paymentId })
+        .eq('vaucer_id', vaucer.id).is('payment_id', null).eq('tip', 'iskoristenje');
+    }
 
     // Ako je placeno manje od ukupnog — kreiraj/azuriraj dugovanje.
     // Ako pacijent vec ima AKTIVAN dug, merge-uje se na postojeci red
@@ -271,34 +304,39 @@ export default function PaymentForm({ isOpen, onClose, appointment }: PaymentFor
         {/* Nacin placanja */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">Nacin placanja *</label>
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={() => setNacinPlacanja('gotovina')}
-              className={`flex-1 px-4 py-3 rounded-xl text-sm font-medium border-2 transition-all
-                ${nacinPlacanja === 'gotovina'
-                  ? 'border-green-500 bg-green-50 text-green-700'
-                  : 'border-gray-200 bg-white text-gray-500 hover:border-gray-300'
-                }`}
-            >
-              Gotovina (Kes)
-            </button>
-            <button
-              type="button"
-              onClick={() => setNacinPlacanja('kartica')}
-              className={`flex-1 px-4 py-3 rounded-xl text-sm font-medium border-2 transition-all
-                ${nacinPlacanja === 'kartica'
-                  ? 'border-blue-500 bg-blue-50 text-blue-700'
-                  : 'border-gray-200 bg-white text-gray-500 hover:border-gray-300'
-                }`}
-            >
-              Kartica
-            </button>
+          <div className="grid grid-cols-2 gap-2">
+            {([
+              ['gotovina', 'Gotovina', 'border-green-500 bg-green-50 text-green-700'],
+              ['kartica', 'Kartica', 'border-blue-500 bg-blue-50 text-blue-700'],
+              ['bon', 'Vaučer', 'border-accent-500 bg-accent-50 text-accent-800'],
+              ['transfer', 'Prenos na račun', 'border-primary-500 bg-primary-50 text-primary-800'],
+            ] as const).map(([id, label, active]) => (
+              <button
+                key={id}
+                type="button"
+                aria-pressed={nacinPlacanja === id}
+                onClick={() => { setNacinPlacanja(id); if (id === 'bon' || id === 'transfer') setFiskalizuj(false); }}
+                className={`px-4 py-3 rounded-xl text-sm font-medium border-2 transition-all
+                  ${nacinPlacanja === id ? active : 'border-gray-200 bg-white text-gray-500 hover:border-gray-300'}`}
+              >
+                {label}
+              </button>
+            ))}
           </div>
         </div>
 
+        {nacinPlacanja === 'bon' && (
+          <VoucherField
+            value={vaucer}
+            onChange={(v) => {
+              setVaucer(v);
+              if (v && iznos > v.preostalo) setIznos(v.preostalo);
+            }}
+          />
+        )}
+
         {/* Fiskalizacija toggle */}
-        <div
+        {mozeFiskal && <div
           onClick={() => setFiskalizuj(!fiskalizuj)}
           className={`flex items-center justify-between px-4 py-3 rounded-xl border-2 cursor-pointer transition-all
             ${fiskalizuj
@@ -318,7 +356,7 @@ export default function PaymentForm({ isOpen, onClose, appointment }: PaymentFor
           <div className={`w-11 h-6 rounded-full transition-colors relative ${fiskalizuj ? 'bg-amber-500' : 'bg-gray-300'}`}>
             <div className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${fiskalizuj ? 'translate-x-5' : 'translate-x-0.5'}`} />
           </div>
-        </div>
+        </div>}
 
         {/* Upozorenje za dug */}
         {willCreateDebt && (

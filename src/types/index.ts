@@ -159,10 +159,12 @@ export interface AppointmentService {
 export type PaymentMethod =
   | 'gotovina'
   | 'gotovina_fiskalni'
+  | 'kartica'
   | 'kartica_fiskalni'
   | 'administrativna_zabrana'
   | 'osiguranje'
-  | 'bon'
+  | 'bon'        // vaucer
+  | 'transfer'   // prenos na racun
   | 'online';
 
 // Uplata
@@ -175,6 +177,25 @@ export interface Payment {
   fiskalni_broj?: string;
   fiskalni_status?: 'pending' | 'success' | 'failed' | 'offline';
   datum: string;
+  vaucer_id?: string;
+  naplatio_user_id?: string;
+}
+
+// Vaucer (placeni ili poklon)
+export interface Vaucer {
+  id: string;
+  broj: string;
+  tip: 'placeni' | 'poklon';
+  iznos: number;
+  preostalo: number;
+  patient_id?: string | null;
+  primalac?: string | null;
+  nacin_placanja?: PaymentMethod | null;
+  status: 'aktivan' | 'iskoristen' | 'storniran';
+  vazi_do?: string | null;
+  napomena?: string | null;
+  izdao_user_id?: string | null;
+  created_at: string;
 }
 
 // Materijal

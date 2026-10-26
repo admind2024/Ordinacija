@@ -9,10 +9,10 @@ F07,termini,Tabela zakazanih termina sa filterima i izvozom,must,yes,no,yes,/ter
 F08,termini,Interni događaji (sastanak/blokada ordinacije sa učesnicima),should,yes,no,no,
 F09,termini,Kalendar sa kolonom po ordinaciji/aparatu,should,yes,partial,no,MOA ima filter po ordinaciji ali ne kolone
 F10,tim,Oglasna tabla sa bilješkama za tim,must,yes,no,yes,"/oglasna-tabla; zakačene bilješke, riješeno, dodjela, oznake"
-F11,naplata,Vaučeri (plaćeni/besplatni) sa brojem i rokom,must,yes,no,no,
-F12,naplata,Vaučer kao način plaćanja (umanjuje preostali iznos),must,yes,no,no,
-F13,naplata,Rekapitulacija po načinima plaćanja (presjek smjene) za štampu,must,yes,no,no,
-F14,naplata,Dodatni načini plaćanja (prenos na račun / administrativna zabrana),should,yes,partial,no,enum postoji u bazi ali UI nudi samo gotovinu i karticu
+F11,naplata,Vaučeri (plaćeni/besplatni) sa brojem i rokom,must,yes,no,yes,"/vauceri; plaćeni i poklon, auto broj, rok, storno, štampa A5, obaveza prema klijentima"
+F12,naplata,Vaučer kao način plaćanja (umanjuje preostali iznos),must,yes,no,yes,Vaučer u naplati (Dashboard i kalendar); skida se atomično u bazi
+F13,naplata,Rekapitulacija po načinima plaćanja (presjek smjene) za štampu,must,yes,no,yes,"Naplata → Presjek smjene; gotovina u kasi, po načinu, po osobi; štampa"
+F14,naplata,Dodatni načini plaćanja (prenos na račun / administrativna zabrana),should,yes,partial,yes,Prenos na račun u naplati; administrativna zabrana i osiguranje čekaju F37
 F15,karton,Alergije,must,yes,no,no,
 F16,karton,Faktori rizika,should,yes,no,no,
 F17,karton,Dijagnoze (MKB šifra / lična ili porodična),must,yes,no,no,

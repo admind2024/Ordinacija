@@ -6,7 +6,7 @@ import { supabase } from '../lib/supabase';
 interface BillingContextType {
   payments: Payment[];
   appointments: Appointment[];
-  addPayment: (payment: Payment) => void;
+  addPayment: (payment: Payment) => Promise<string | null>; // vraca id iz baze
   getPaymentsForAppointment: (appointmentId: string) => Payment[];
   getAppointmentBalance: (appointment: Appointment) => { total: number; paid: number; remaining: number };
   getRecentPayments: (limit?: number) => (Payment & { appointment?: Appointment })[];
@@ -50,6 +50,8 @@ export function BillingProvider({ children }: { children: ReactNode }) {
       napomena: payment.napomena || null,
       datum: payment.datum,
       fiskalni_status: payment.fiskalni_status || null,
+      vaucer_id: payment.vaucer_id || null,
+      naplatio_user_id: payment.naplatio_user_id || null,
     }).select().single();
 
     if (error) {
@@ -59,6 +61,7 @@ export function BillingProvider({ children }: { children: ReactNode }) {
     // Dodaj u lokalni state (sa ID-jem iz baze ako je uspjelo)
     const saved = data ? { ...payment, id: data.id } : payment;
     setPayments((prev) => [...prev, saved]);
+    return data ? (data.id as string) : null;
   }, []);
 
   const getPaymentsForAppointment = useCallback(

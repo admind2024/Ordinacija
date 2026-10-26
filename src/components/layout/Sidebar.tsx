@@ -18,6 +18,7 @@ import {
   CalendarClock,
   CalendarRange,
   StickyNote,
+  Ticket,
   X,
 } from 'lucide-react';
 
@@ -33,6 +34,7 @@ export const navigation = [
   { name: 'Raspored', path: '/raspored', icon: CalendarClock, roles: ['admin', 'menadzer', 'recepcija'] },
   { name: 'Osoblje', path: '/ljekari', icon: Stethoscope, roles: ['admin', 'menadzer'] },
   { name: 'Materijali', path: '/materijali', icon: Package, roles: ['admin', 'menadzer', 'ljekar'] },
+  { name: 'Vaučeri', path: '/vauceri', icon: Ticket, roles: ['admin', 'menadzer', 'recepcija'] },
   { name: 'Dugovanja', path: '/dugovanja', icon: Wallet, roles: ['admin', 'menadzer', 'recepcija'] },
   { name: 'Oglasna tabla', path: '/oglasna-tabla', icon: StickyNote, roles: ['admin', 'menadzer', 'recepcija', 'ljekar', 'marketing'] },
   { name: 'Ankete', path: '/ankete', icon: ClipboardCheck, roles: ['admin', 'menadzer', 'recepcija'] },

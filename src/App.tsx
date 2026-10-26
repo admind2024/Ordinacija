@@ -25,6 +25,7 @@ import ConfirmAppointment from './pages/ConfirmAppointment';
 import Schedule from './pages/Schedule';
 import Appointments from './pages/Appointments';
 import NoticeBoard from './pages/NoticeBoard';
+import Vouchers from './pages/Vouchers';
 
 function AppRoutes() {
   const { user } = useAuth();
@@ -84,6 +85,14 @@ function AppRoutes() {
           }
         />
         <Route path="/oglasna-tabla" element={<NoticeBoard />} />
+        <Route
+          path="/vauceri"
+          element={
+            <ProtectedRoute roles={['admin', 'menadzer', 'recepcija']}>
+              <Vouchers />
+            </ProtectedRoute>
+          }
+        />
         <Route path="/pregled" element={<Examinations />} />
         <Route path="/cjenovnik" element={<ServicesPage />} />
         <Route path="/materijali" element={<Materials />} />

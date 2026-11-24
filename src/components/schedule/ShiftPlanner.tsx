@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useState } from 'react';
-import { addDays, addWeeks, format, isToday, startOfWeek } from 'date-fns';
+import { addDays, addWeeks, format, getISODay, isToday, startOfWeek } from 'date-fns';
 import { srLatn as sr } from 'date-fns/locale';
 import { ChevronLeft, ChevronRight, Copy, Eraser, Moon, Plus, Settings2, Trash2 } from 'lucide-react';
 import Button from '../ui/Button';
 import Modal from '../ui/Modal';
-import { danStatus, RAZLOZI_ODSUSTVA, type RasporedPodaci } from '../../lib/schedule';
+import { DANI, danStatus, RAZLOZI_ODSUSTVA, type RasporedPodaci } from '../../lib/schedule';
 import {
   BOJE_SMJENA, dodijeliSmjenu, kopirajProsluSedmicu, loadSmjene, sacuvajSmjene,
   type Dodjela, type Smjena,
@@ -17,14 +17,18 @@ interface Props {
   onSaved: () => Promise<void> | void;
 }
 
-type Alat = { vrsta: 'smjena'; id: string } | { vrsta: 'slobodan' } | { vrsta: 'obrisi' };
+type Opseg = 'dan' | 'radna' | 'sedmica';
 type RedSmjene = Omit<Smjena, 'id' | 'redoslijed'> & { id?: string };
 
-// Raspored smjena: izaberi smjenu gore, pa klikni polje (osoba × dan) da je dodijelis.
+const osobaIme = (d: Doctor) => `${d.titula ? `${d.titula} ` : ''}${d.ime} ${d.prezime}`;
+const danNaziv = (d: Date) => `${DANI[getISODay(d) - 1]}, ${format(d, 'd.M.yyyy.')}`;
+
+// Raspored smjena: klik na polje (osoba × dan) otvara izbor smjene za taj dan ili cijelu sedmicu.
 export default function ShiftPlanner({ doctors, data, onSaved }: Props) {
   const [weekStart, setWeekStart] = useState(() => startOfWeek(new Date(), { weekStartsOn: 1 }));
   const [smjene, setSmjene] = useState<Smjena[]>([]);
-  const [alat, setAlat] = useState<Alat | null>(null);
+  const [izbor, setIzbor] = useState<{ doc: Doctor; dan: Date } | null>(null);
+  const [opseg, setOpseg] = useState<Opseg>('dan');
   const [zauzeto, setZauzeto] = useState('');
   const [poruka, setPoruka] = useState('');
   const [greska, setGreska] = useState('');
@@ -33,12 +37,7 @@ export default function ShiftPlanner({ doctors, data, onSaved }: Props) {
 
   const ucitajSmjene = useCallback(async () => {
     try {
-      const s = await loadSmjene();
-      setSmjene(s);
-      setAlat((a) => {
-        if (a && (a.vrsta !== 'smjena' || s.some((x) => x.id === a.id))) return a;
-        return s.length ? { vrsta: 'smjena', id: s[0].id } : null;
-      });
+      setSmjene(await loadSmjene());
     } catch (e) {
       setGreska('Smjene nisu učitane: ' + (e instanceof Error ? e.message : 'nepoznata greška'));
     }
@@ -46,22 +45,27 @@ export default function ShiftPlanner({ doctors, data, onSaved }: Props) {
 
   useEffect(() => { ucitajSmjene(); }, [ucitajSmjene]);
 
-  async function klik(doctorId: string, iso: string) {
-    if (!alat || zauzeto) return;
-    let dodjela: Dodjela;
-    if (alat.vrsta === 'smjena') {
-      const s = smjene.find((x) => x.id === alat.id);
-      if (!s) return;
-      dodjela = { vrsta: 'smjena', smjena: s };
-    } else {
-      dodjela = alat;
-    }
-    setZauzeto(`${doctorId}|${iso}`);
+  function otvori(doc: Doctor, dan: Date) {
+    setOpseg('dan');
     setGreska('');
     setPoruka('');
+    setIzbor({ doc, dan });
+  }
+
+  // Upisuje izabranu smjenu za dan, radnu sedmicu (pon–pet) ili cijelu sedmicu. Dani odsustva se preskacu.
+  async function primijeni(dodjela: Dodjela) {
+    if (!izbor || zauzeto) return;
+    const { doc, dan } = izbor;
+    const ciljevi = (opseg === 'dan' ? [dan] : opseg === 'radna' ? days.slice(0, 5) : days)
+      .filter((d) => danStatus(doc.id, d, data).status !== 'odsustvo');
+    setZauzeto('upis');
+    setGreska('');
     try {
-      await dodijeliSmjenu(doctorId, iso, dodjela);
+      for (const d of ciljevi) {
+        await dodijeliSmjenu(doc.id, format(d, 'yyyy-MM-dd'), dodjela);
+      }
       await onSaved();
+      setIzbor(null);
     } catch (e) {
       setGreska('Nije sačuvano: ' + (e instanceof Error ? e.message : 'nepoznata greška'));
     } finally {
@@ -84,48 +88,39 @@ export default function ShiftPlanner({ doctors, data, onSaved }: Props) {
     }
   }
 
-  const alatCls = (aktivan: boolean) =>
-    `inline-flex items-center gap-2 px-3 py-2 rounded-lg border text-sm font-medium transition-colors ${
-      aktivan ? 'border-gray-900 bg-gray-900 text-white' : 'border-border bg-white text-gray-700 hover:bg-gray-50'
-    }`;
+  const izborRed = izbor
+    ? data.schedules.find((s) => s.doctor_id === izbor.doc.id && !s.ponavljajuci && s.datum === format(izbor.dan, 'yyyy-MM-dd'))
+    : undefined;
 
   return (
     <div>
-      {/* Alat: sta se upisuje klikom na polje */}
+      {/* Legenda smjena */}
       <div className="bg-white border border-border rounded-xl p-3 mb-4">
         <div className="flex items-center justify-between gap-3 mb-2">
-          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
-            1. Izaberi smjenu &nbsp;·&nbsp; 2. Klikni polje u tabeli
+          <p className="text-sm text-gray-600">
+            Klikni polje u tabeli da dodijeliš smjenu — za jedan dan ili cijelu sedmicu.
           </p>
           <button
             type="button"
             onClick={() => setUredi(true)}
-            className="inline-flex items-center gap-1.5 text-xs font-medium text-primary-700 hover:text-primary-800"
+            className="inline-flex items-center gap-1.5 text-xs font-medium text-primary-700 hover:text-primary-800 shrink-0"
           >
             <Settings2 size={14} /> Uredi smjene
           </button>
         </div>
         <div className="flex flex-wrap gap-2">
-          {smjene.map((s) => {
-            const aktivan = alat?.vrsta === 'smjena' && alat.id === s.id;
-            return (
-              <button key={s.id} type="button" aria-pressed={aktivan} onClick={() => setAlat({ vrsta: 'smjena', id: s.id })} className={alatCls(aktivan)}>
-                <span className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: s.boja }} />
-                {s.naziv}
-                <span className={`text-xs tabular-nums ${aktivan ? 'text-white/70' : 'text-gray-400'}`}>{s.pocetak}–{s.kraj}</span>
-              </button>
-            );
-          })}
-          <button type="button" aria-pressed={alat?.vrsta === 'slobodan'} onClick={() => setAlat({ vrsta: 'slobodan' })} className={alatCls(alat?.vrsta === 'slobodan')}>
-            <Moon size={14} /> Slobodan dan
-          </button>
-          <button type="button" aria-pressed={alat?.vrsta === 'obrisi'} onClick={() => setAlat({ vrsta: 'obrisi' })} className={alatCls(alat?.vrsta === 'obrisi')}>
-            <Eraser size={14} /> Obriši unos
-          </button>
+          {smjene.map((s) => (
+            <span key={s.id} className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm border"
+              style={{ backgroundColor: `${s.boja}22`, borderColor: `${s.boja}66` }}>
+              <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: s.boja }} />
+              <span className="font-medium text-gray-900">{s.naziv}</span>
+              <span className="text-xs tabular-nums text-gray-600">{s.pocetak}–{s.kraj}</span>
+            </span>
+          ))}
+          {smjene.length === 0 && (
+            <p className="text-sm text-gray-500">Još nema definisanih smjena. Klikni „Uredi smjene" da dodaš prvu.</p>
+          )}
         </div>
-        {smjene.length === 0 && (
-          <p className="mt-2 text-sm text-gray-500">Još nema definisanih smjena. Klikni „Uredi smjene" da dodaš prvu.</p>
-        )}
       </div>
 
       {/* Sedmica */}
@@ -151,7 +146,7 @@ export default function ShiftPlanner({ doctors, data, onSaved }: Props) {
         </div>
       </div>
 
-      {greska && <div role="alert" className="mb-3 px-4 py-2.5 rounded-lg bg-red-50 text-sm text-red-700">{greska}</div>}
+      {greska && !izbor && <div role="alert" className="mb-3 px-4 py-2.5 rounded-lg bg-red-50 text-sm text-red-700">{greska}</div>}
       {poruka && <div role="status" className="mb-3 px-4 py-2.5 rounded-lg bg-primary-50 text-sm text-primary-800">{poruka}</div>}
 
       <div className="overflow-x-auto border border-border rounded-xl bg-white">
@@ -171,14 +166,12 @@ export default function ShiftPlanner({ doctors, data, onSaved }: Props) {
               <tr key={doc.id}>
                 <th scope="row" className="text-left px-3 py-1.5 font-medium text-gray-800">
                   <span className="inline-block w-2 h-2 rounded-full mr-2 align-middle" style={{ backgroundColor: doc.boja }} />
-                  <span>{doc.titula ? `${doc.titula} ` : ''}{doc.ime} {doc.prezime}</span>
+                  <span>{osobaIme(doc)}</span>
                 </th>
                 {days.map((d) => {
                   const iso = format(d, 'yyyy-MM-dd');
                   const st = danStatus(doc.id, d, data);
                   const red = data.schedules.find((s) => s.doctor_id === doc.id && !s.ponavljajuci && s.datum === iso);
-                  const ucitava = zauzeto === `${doc.id}|${iso}`;
-                  const ime = `${doc.ime} ${doc.prezime}, ${format(d, 'EEEE d.M.', { locale: sr })}`;
 
                   if (st.status === 'odsustvo') {
                     return (
@@ -192,11 +185,11 @@ export default function ShiftPlanner({ doctors, data, onSaved }: Props) {
 
                   let sadrzaj: React.ReactNode;
                   let stil: React.CSSProperties | undefined;
-                  let cls = 'border border-dashed border-gray-200 text-gray-300 hover:border-gray-400 hover:text-gray-500';
+                  let cls = 'border border-dashed border-gray-200 text-gray-300 hover:border-primary-400 hover:text-primary-600 hover:bg-primary-50';
                   let opis = 'nema unosa';
 
                   if (red && (red.tip === 'neradni' || !red.pocetak || !red.kraj)) {
-                    cls = 'bg-gray-100 text-gray-500 border border-transparent';
+                    cls = 'bg-gray-100 text-gray-500 border border-transparent hover:border-gray-300';
                     sadrzaj = <span className="font-medium">Slobodan</span>;
                     opis = 'slobodan dan';
                   } else if (red) {
@@ -204,7 +197,7 @@ export default function ShiftPlanner({ doctors, data, onSaved }: Props) {
                       || smjene.find((x) => x.pocetak === red.pocetak && x.kraj === red.kraj);
                     const boja = s?.boja || '#6B7280';
                     stil = { backgroundColor: `${boja}22`, borderColor: `${boja}66` };
-                    cls = 'border text-gray-900';
+                    cls = 'border text-gray-900 hover:brightness-95';
                     sadrzaj = (
                       <>
                         <span className="font-semibold leading-tight truncate max-w-full">{s?.naziv || 'Posebno'}</span>
@@ -213,7 +206,7 @@ export default function ShiftPlanner({ doctors, data, onSaved }: Props) {
                     );
                     opis = `${s?.naziv || 'posebno radno vrijeme'} ${red.pocetak}–${red.kraj}`;
                   } else if (st.status === 'radi') {
-                    cls = 'border border-dashed border-gray-200 text-gray-500 hover:border-gray-400';
+                    cls = 'border border-dashed border-gray-200 text-gray-500 hover:border-primary-400 hover:bg-primary-50';
                     sadrzaj = (
                       <>
                         <span className="tabular-nums leading-tight">{st.pocetak}–{st.kraj}</span>
@@ -232,11 +225,10 @@ export default function ShiftPlanner({ doctors, data, onSaved }: Props) {
                     <td key={iso} className="px-1 py-1">
                       <button
                         type="button"
-                        onClick={() => klik(doc.id, iso)}
-                        disabled={!alat || !!zauzeto}
-                        aria-label={`${ime}: ${opis}`}
+                        onClick={() => otvori(doc, d)}
+                        aria-label={`${doc.ime} ${doc.prezime}, ${danNaziv(d)}: ${opis}. Promijeni`}
                         style={stil}
-                        className={`w-full h-11 rounded-lg px-1 flex flex-col items-center justify-center text-[11px] transition-colors ${cls} ${ucitava ? 'opacity-50' : ''} ${!alat ? 'cursor-not-allowed' : 'cursor-pointer'}`}
+                        className={`w-full h-11 rounded-lg px-1 flex flex-col items-center justify-center text-[11px] transition-colors cursor-pointer ${cls}`}
                       >
                         {sadrzaj}
                       </button>
@@ -252,6 +244,78 @@ export default function ShiftPlanner({ doctors, data, onSaved }: Props) {
         Polje sa oznakom „šablon" dolazi iz taba Radno vrijeme. Smjena upisana ovdje važi samo za taj dan i ima prednost.
         Zakazivanje termina upozorava ako je termin van dodijeljene smjene.
       </p>
+
+      {/* Izbor smjene za kliknuto polje */}
+      {izbor && (
+        <Modal isOpen onClose={() => { if (!zauzeto) setIzbor(null); }} title="Dodijeli smjenu" size="sm">
+          <div className="space-y-4">
+            <div>
+              <p className="text-base font-semibold text-gray-900">{osobaIme(izbor.doc)}</p>
+              <p className="text-sm text-gray-500">{danNaziv(izbor.dan)}</p>
+            </div>
+
+            <div>
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Važi za</p>
+              <div className="grid grid-cols-3 gap-1 bg-gray-100 rounded-lg p-0.5">
+                {([['dan', 'Samo ovaj dan'], ['radna', 'Pon–pet'], ['sedmica', 'Cijelu sedmicu']] as [Opseg, string][]).map(([id, naziv]) => (
+                  <button
+                    key={id}
+                    type="button"
+                    aria-pressed={opseg === id}
+                    onClick={() => setOpseg(id)}
+                    className={`px-2 py-2 text-xs font-medium rounded-md transition-colors ${
+                      opseg === id ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+                    }`}
+                  >
+                    {naziv}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              {smjene.map((s) => (
+                <button
+                  key={s.id}
+                  type="button"
+                  disabled={!!zauzeto}
+                  onClick={() => primijeni({ vrsta: 'smjena', smjena: s })}
+                  className="w-full flex items-center gap-3 px-4 py-3 rounded-xl border text-left transition-colors hover:brightness-95 disabled:opacity-50"
+                  style={{ backgroundColor: `${s.boja}22`, borderColor: `${s.boja}66` }}
+                >
+                  <span className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: s.boja }} />
+                  <span className="text-sm font-semibold text-gray-900 flex-1">{s.naziv}</span>
+                  <span className="text-sm tabular-nums text-gray-700">{s.pocetak}–{s.kraj}</span>
+                </button>
+              ))}
+              {smjene.length === 0 && (
+                <p className="text-sm text-gray-500">Nema definisanih smjena. Zatvori ovaj prozor i klikni „Uredi smjene".</p>
+              )}
+              <button
+                type="button"
+                disabled={!!zauzeto}
+                onClick={() => primijeni({ vrsta: 'slobodan' })}
+                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl border border-border bg-gray-50 text-left text-sm font-semibold text-gray-700 hover:bg-gray-100 disabled:opacity-50"
+              >
+                <Moon size={15} className="shrink-0" /> Slobodan dan
+              </button>
+              {(izborRed || opseg !== 'dan') && (
+                <button
+                  type="button"
+                  disabled={!!zauzeto}
+                  onClick={() => primijeni({ vrsta: 'obrisi' })}
+                  className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl border border-red-200 bg-white text-left text-sm font-medium text-red-600 hover:bg-red-50 disabled:opacity-50"
+                >
+                  <Eraser size={15} className="shrink-0" /> Obriši unos
+                </button>
+              )}
+            </div>
+
+            {zauzeto === 'upis' && <p className="text-sm text-gray-500">Čuvam…</p>}
+            {greska && <div role="alert" className="px-3 py-2 rounded-lg bg-red-50 text-sm text-red-700">{greska}</div>}
+          </div>
+        </Modal>
+      )}
 
       {uredi && (
         <UrediSmjene

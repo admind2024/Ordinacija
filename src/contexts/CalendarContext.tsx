@@ -116,7 +116,12 @@ export function CalendarProvider({ children }: { children: ReactNode }) {
       supabase.from('materials').select('*').eq('aktivan', true).order('naziv'),
     ]);
 
-    const fetchedDoctors = (doctorsRes.data || []) as Doctor[];
+    // Stalan redoslijed (baza ga ne garantuje): prvo ljekari, pa ostalo osoblje, abecedno po imenu.
+    const fetchedDoctors = ((doctorsRes.data || []) as Doctor[]).slice().sort((a, b) => {
+      const dr = Number(b.titula === 'Dr') - Number(a.titula === 'Dr');
+      if (dr !== 0) return dr;
+      return `${a.ime} ${a.prezime}`.localeCompare(`${b.ime} ${b.prezime}`, undefined, { sensitivity: 'base' });
+    });
     const fetchedRooms = (roomsRes.data || []) as Room[];
 
     setDoctors(fetchedDoctors);

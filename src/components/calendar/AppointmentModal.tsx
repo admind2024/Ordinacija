@@ -1,5 +1,6 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
 import { format, addMinutes } from 'date-fns';
+import { X } from 'lucide-react';
 import Modal from '../ui/Modal';
 import Button from '../ui/Button';
 import Input from '../ui/Input';
@@ -134,11 +135,18 @@ export default function AppointmentModal({
   const selectedPatient = patients.find((p) => p.id === selectedPatientId);
 
   const filteredServiceResults = useMemo(() => {
-    const q = serviceSearch.toLowerCase().trim();
+    // Pretraga bez obzira na kvacice i redoslijed rijeci; lista prikazuje SVE usluge (skroluje se).
+    const norm = (t: string) =>
+      t.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/g, 'd');
+    const rijeci = norm(serviceSearch).split(/\s+/).filter(Boolean);
     const already = new Set(selectedServices.map((s) => s.service_id));
     return services
-      .filter((s) => !already.has(s.id) && (!q || s.naziv.toLowerCase().includes(q)))
-      .slice(0, 20);
+      .filter((s) => {
+        if (already.has(s.id)) return false;
+        const naziv = norm(s.naziv);
+        return rijeci.every((r) => naziv.includes(r));
+      })
+      .sort((a, b) => a.naziv.localeCompare(b.naziv, undefined, { sensitivity: 'base', numeric: true }));
   }, [serviceSearch, services, selectedServices]);
 
   const ukupnaCijena = selectedServices.reduce((sum, s) => sum + s.ukupno, 0);
@@ -478,9 +486,11 @@ export default function AppointmentModal({
                     <button
                       type="button"
                       onClick={() => removeService(svc.service_id)}
-                      className="text-gray-400 hover:text-danger text-xs"
+                      title="Ukloni uslugu"
+                      aria-label={`Ukloni uslugu ${svc.naziv}`}
+                      className="inline-flex items-center gap-1 px-2 py-1 rounded-md border border-red-200 bg-white text-red-600 text-xs font-medium hover:bg-red-50"
                     >
-                      Ukloni
+                      <X size={13} /> Ukloni
                     </button>
                   </div>
                 </div>
@@ -527,9 +537,11 @@ export default function AppointmentModal({
                     <button
                       type="button"
                       onClick={() => removeMaterial(mat.material_id)}
-                      className="text-gray-400 hover:text-danger text-xs"
+                      title="Ukloni materijal"
+                      aria-label={`Ukloni materijal ${mat.naziv}`}
+                      className="inline-flex items-center gap-1 px-2 py-1 rounded-md border border-red-200 bg-white text-red-600 text-xs font-medium hover:bg-red-50"
                     >
-                      Ukloni
+                      <X size={13} /> Ukloni
                     </button>
                   </div>
                 </div>

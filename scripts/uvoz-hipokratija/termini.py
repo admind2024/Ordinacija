@@ -183,7 +183,7 @@ def main():
         dijelovi = puno.strip().split()
         ime, prezime = dijelovi[0], ' '.join(dijelovi[1:]) or '-'
         nid = str(uuid.uuid4())
-        sql.append(f"INSERT INTO patients(id, ime, prezime, telefon, napomena, tagovi, gdpr_saglasnost, popust, pocetno_stanje, saldo) VALUES ({q(nid)}, {q(ime)}, {q(prezime)}, '', 'Uvezeno iz Hipokratije (bez telefona u izvozu)', ARRAY['hipokratija'], false, 0, 0, 0);")
+        sql.append(f"INSERT INTO patients(id, ime, prezime, telefon, napomena, tagovi, gdpr_saglasnost, popust, pocetno_stanje, saldo) VALUES ({q(nid)}, {q(ime)}, {q(prezime)}, '', 'Uvezeno (bez telefona u izvozu)', ARRAY['uvoz'], false, 0, 0, 0);")
         zabiljezi('patients', nid)
         novi_pac[nn] = nid
         return nid
@@ -206,7 +206,7 @@ def main():
         # Nazivi ordinacija i sami sadrze zareze (npr. "EXION FACE , BODY ,RF"), pa se ne razdvajaju
         rid = ordinacija(r['Ordinacije']) if r.get('Ordinacije') else None
         aid = str(uuid.uuid4())
-        napomena = 'Uvezeno iz Hipokratije' + (' · prvi dolazak' if str(r.get('Prvi dolazak')).lower() == 'da' else '')
+        napomena = 'Uvezeno' + (' · prvi dolazak' if str(r.get('Prvi dolazak')).lower() == 'da' else '')
         sql.append(
             f"INSERT INTO appointments(id, patient_id, doctor_id, room_id, pocetak, kraj, status, napomena) VALUES "
             f"({q(aid)}, {q(pid)}, {q(did)}, {q(rid)}, ({q(pocetak)}::timestamp AT TIME ZONE '{TZ}'), "

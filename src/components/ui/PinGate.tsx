@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { Lock } from 'lucide-react';
 
-const SUPER_ADMIN_PIN = '1519';
+const SUPER_ADMIN_PIN = '2026';
 const PIN_LENGTH = 4;
 
 interface PinGateProps {

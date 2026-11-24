@@ -381,95 +381,101 @@ function AgendaPanel({ apt, services }: { apt: Appointment; services: any[] }) {
 
   const idOf = (s: any, i: number) => String(s.id || i);
   const jeUradjeno = (id: string) => zavrsen || !!uradjeno[id];
+  const n = services.length;
   const broj = services.filter((s, i) => jeUradjeno(idOf(s, i))).length;
-  const pct = services.length ? Math.round((broj / services.length) * 100) : 0;
+  // Sljedeci korak = prva usluga koja jos nije uradjena
+  const sljedeciIdx = services.findIndex((s, i) => !jeUradjeno(idOf(s, i)));
   const trajanjeMin = apt.kraj
     ? Math.round((parseISO(apt.kraj).getTime() - parseISO(apt.pocetak).getTime()) / 60000)
     : 0;
-  const n = services.length;
-  const rijec = n === 1 ? 'usluga' : n >= 2 && n <= 4 ? 'usluge' : 'usluga';
 
   return (
-    <div className="rounded-2xl overflow-hidden border border-border shadow-sm bg-white">
-      {/* Zaglavlje u boji menija */}
-      <div className="bg-sidebar text-white px-5 py-4">
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex items-center gap-3 min-w-0">
-            <div className="w-11 h-11 rounded-xl bg-white/15 flex items-center justify-center shrink-0">
-              <ClipboardList size={22} />
-            </div>
-            <div className="min-w-0">
-              <p className="text-[10px] uppercase tracking-[0.14em] text-white/60 font-semibold">Na dnevnom redu</p>
-              <h3 className="text-lg font-semibold leading-tight">
-                {n > 0 ? `${n} ${rijec}` : 'Bez upisanih usluga'}
-              </h3>
-              <p className="text-xs text-white/70 mt-0.5 truncate">
-                {format(parseISO(apt.pocetak), 'EEEE, dd.MM.yyyy.', { locale: sr })}
-                {' · '}
-                {format(parseISO(apt.pocetak), 'HH:mm')}
-                {apt.kraj && `–${format(parseISO(apt.kraj), 'HH:mm')}`}
-                {trajanjeMin > 0 && ` · ${trajanjeMin} min`}
-              </p>
-            </div>
-          </div>
+    <div className="bg-white border border-border rounded-2xl overflow-hidden">
+      {/* Zaglavlje */}
+      <div className="flex items-start justify-between gap-3 px-5 pt-4 pb-3">
+        <div className="min-w-0">
+          <h3 className="text-base font-semibold text-gray-900 leading-tight">Na dnevnom redu</h3>
+          <p className="text-xs text-gray-500 mt-0.5 truncate">
+            {format(parseISO(apt.pocetak), 'EEEE, dd.MM.yyyy.', { locale: sr })}
+            {' · '}
+            {format(parseISO(apt.pocetak), 'HH:mm')}
+            {apt.kraj && `–${format(parseISO(apt.kraj), 'HH:mm')}`}
+            {trajanjeMin > 0 && ` · ${trajanjeMin} min`}
+          </p>
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          {n > 0 && (
+            <span className="text-[11px] px-2.5 py-1 rounded-lg font-semibold bg-accent-100 text-accent-800">
+              {broj} od {n}
+            </span>
+          )}
           <span
-            className="text-[10px] px-2.5 py-1 rounded-full font-bold uppercase tracking-wider shrink-0 bg-white"
-            style={{ color: APPOINTMENT_STATUS_COLORS[apt.status] || '#555' }}
+            className="text-[10px] px-2.5 py-1 rounded-full font-bold uppercase tracking-wider"
+            style={{
+              backgroundColor: (APPOINTMENT_STATUS_COLORS[apt.status] || '#888') + '20',
+              color: APPOINTMENT_STATUS_COLORS[apt.status] || '#888',
+            }}
           >
             {APPOINTMENT_STATUS_LABELS[apt.status]}
           </span>
         </div>
-
-        {n > 0 && (
-          <div className="mt-4">
-            <div className="flex items-center justify-between text-[11px] text-white/75 mb-1.5">
-              <span>Urađeno {broj} od {n}</span>
-              <span className="font-semibold">{pct}%</span>
-            </div>
-            <div className="h-2 rounded-full bg-white/15 overflow-hidden">
-              <div className="h-full rounded-full bg-emerald-400 transition-all duration-300" style={{ width: `${pct}%` }} />
-            </div>
-          </div>
-        )}
       </div>
 
-      {/* Usluge — klik stiklira */}
-      {n > 0 && (
-        <ul className="divide-y divide-gray-100">
+      {/* Koraci — klik oznacava uradjeno */}
+      {n > 0 ? (
+        <ol className="px-2 pb-2">
           {services.map((s, i) => {
             const id = idOf(s, i);
             const done = jeUradjeno(id);
+            const sljedeci = !done && i === sljedeciIdx;
             return (
-              <li key={id}>
+              <li key={id} className="relative">
+                {i < n - 1 && (
+                  <span aria-hidden="true" className="absolute left-[25px] top-[42px] bottom-[-8px] w-0.5 rounded-full bg-gray-200" />
+                )}
                 <button
                   type="button"
                   onClick={() => toggle(id)}
                   disabled={zavrsen}
                   aria-pressed={done}
-                  className={`w-full flex items-center gap-3.5 px-5 py-3.5 text-left transition-colors ${zavrsen ? 'cursor-default' : 'hover:bg-gray-50'}`}
+                  className={`relative w-full flex items-start gap-3.5 px-3 py-2.5 rounded-xl text-left transition-colors ${
+                    zavrsen ? 'cursor-default' : 'hover:bg-gray-50'
+                  }`}
                 >
                   <span
-                    className={`w-6 h-6 rounded-md border-2 flex items-center justify-center shrink-0 transition-colors ${
-                      done ? 'bg-emerald-500 border-emerald-500 text-white' : 'border-gray-300 bg-white'
+                    className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 text-xs font-bold transition-colors ${
+                      done
+                        ? 'bg-primary-500 text-white'
+                        : sljedeci
+                          ? 'bg-accent-100 text-accent-800 ring-2 ring-accent-300'
+                          : 'bg-gray-100 text-gray-500'
                     }`}
                   >
-                    {done && <Check size={14} strokeWidth={3} />}
+                    {done ? <Check size={15} strokeWidth={3} /> : i + 1}
                   </span>
-                  <span className={`text-[15px] font-medium flex-1 min-w-0 ${done ? 'text-gray-400 line-through' : 'text-gray-900'}`}>
-                    {s.naziv}{s.kolicina > 1 ? ` × ${s.kolicina}` : ''}
-                  </span>
-                  <span
-                    className={`text-[10px] px-2.5 py-1 rounded-full font-bold uppercase tracking-wider shrink-0 ${
-                      done ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
-                    }`}
-                  >
-                    {done ? 'Urađeno' : 'Na čekanju'}
+                  <span className="min-w-0 flex-1 pt-0.5">
+                    <span
+                      className={`block text-[15px] leading-snug ${
+                        done ? 'text-gray-400 line-through' : sljedeci ? 'font-semibold text-gray-900' : 'text-gray-800'
+                      }`}
+                    >
+                      {s.naziv}{s.kolicina > 1 ? ` × ${s.kolicina}` : ''}
+                    </span>
+                    <span
+                      className={`block text-[11px] mt-0.5 font-medium ${
+                        done ? 'text-primary-700' : sljedeci ? 'text-accent-700' : 'text-gray-400'
+                      }`}
+                    >
+                      {done ? 'Urađeno' : sljedeci ? 'Sljedeće' : 'Na čekanju'}
+                    </span>
                   </span>
                 </button>
               </li>
             );
           })}
-        </ul>
+        </ol>
+      ) : (
+        <p className="px-5 pb-4 text-xs text-gray-400">Za ovaj termin nije upisana usluga.</p>
       )}
 
       {apt.napomena && (

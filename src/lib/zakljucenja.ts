@@ -1,6 +1,6 @@
 // Zakljucenje smjene i radnog dana: zbir naplate po nacinu placanja i ocekivana gotovina u kasi.
 import { format, startOfDay, endOfDay } from 'date-fns';
-import { supabase } from './supabase';
+import { supabase, jedinicaZaUpiteId } from './supabase';
 
 const GOTOVINA = new Set(['gotovina', 'gotovina_fiskalni']);
 
@@ -128,10 +128,13 @@ export async function zakljucenjeDana(datum: Date): Promise<ZakljucenjeDana | nu
 
 // Zavrseni termini tog dana za koje nije evidentirana nijedna uplata.
 export async function nenaplaceniTermini(datum: Date): Promise<{ id: string; pocetak: string; pacijent: string }[]> {
-  const { data: apts } = await supabase.from('appointments')
+  // Termini se ne filtriraju centralno (istorija pacijenta treba sve jedinice), pa ovdje rucno.
+  let upit = supabase.from('appointments')
     .select('id, pocetak, appointment_services(ukupno), patient:patients(ime, prezime)')
     .eq('status', 'zavrsen')
     .gte('pocetak', startOfDay(datum).toISOString()).lte('pocetak', endOfDay(datum).toISOString());
+  if (jedinicaZaUpiteId()) upit = upit.eq('establishment_id', jedinicaZaUpiteId());
+  const { data: apts } = await upit;
   const list = (apts || []).filter((a) => ((a.appointment_services as { ukupno: number }[]) || []).reduce((s, x) => s + num(x.ukupno), 0) > 0);
   if (!list.length) return [];
   const { data: pays } = await supabase.from('payments').select('appointment_id').in('appointment_id', list.map((a) => a.id));

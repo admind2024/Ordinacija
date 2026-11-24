@@ -109,6 +109,7 @@ export default function PatientCard({ patient, appointments, onBack, onEdit, onD
         .from('examinations')
         .select('id, datum, doctor_id, dijagnoza, terapija, appointment_id')
         .eq('patient_id', patient.id)
+        .not('establishment_id', 'is', null) // istorija: sve jedinice
         .order('datum', { ascending: false })
         .then(({ data }) => setExams((data || []) as ExamRow[]));
     }

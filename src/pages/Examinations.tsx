@@ -219,6 +219,7 @@ function ExaminationsContent({ loggedDoctor }: { loggedDoctor: Doctor }) {
       .from('examinations')
       .select('*')
       .eq('patient_id', patientId)
+      .not('establishment_id', 'is', null) // istorija: sve jedinice
       .order('datum', { ascending: false });
     setPatientExams((exams || []) as Examination[]);
 

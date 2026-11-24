@@ -1,7 +1,7 @@
-import { createContext, useContext, useState, useCallback, useEffect, useMemo, type ReactNode } from 'react';
+import { createContext, useContext, useState, useCallback, useEffect, useMemo, useRef, Fragment, type ReactNode } from 'react';
 import { addDays, addWeeks, addMonths, isWithinInterval, parseISO } from 'date-fns';
 import type { Appointment, AppointmentStatus, Doctor, Room, Service, ServiceCategory, Material, Establishment } from '../types';
-import { supabase } from '../lib/supabase';
+import { supabase, postaviJedinicuZaUpite } from '../lib/supabase';
 import { useAuth } from './AuthContext';
 import { isSmsConfigured, sendSms, stripDiacritics } from '../lib/smsService';
 import { getMessage, loadTemplatesFromDb } from '../lib/messageTemplates';
@@ -109,7 +109,8 @@ export function CalendarProvider({ children }: { children: ReactNode }) {
   const [sviLjekari, setDoctors] = useState<Doctor[]>([]);
   const [sveOrdinacije, setRooms] = useState<Room[]>([]);
   const [sveUsluge, setServices] = useState<Service[]>([]);
-  const [materials, setMaterials] = useState<Material[]>([]);
+  const [sviMaterijali, setMaterials] = useState<Material[]>([]);
+  const [prvoUcitano, setPrvoUcitano] = useState(false);
   const [establishments, setEstablishments] = useState<Establishment[]>([]);
   const [sveKategorije, setServiceCategories] = useState<ServiceCategory[]>([]);
   const [smsLog, setSmsLog] = useState<SmsLogEntry[]>([]);
@@ -132,6 +133,9 @@ export function CalendarProvider({ children }: { children: ReactNode }) {
   const aktivnaJedinicaId = korisnikJedinicaId
     || (establishments.some((e) => e.id === izabranaJedinicaId) ? izabranaJedinicaId : maticnaJedinicaId);
   const aktivnaJedinica = establishments.find((e) => e.id === aktivnaJedinicaId) || null;
+  // Svi upiti ka tabelama po jedinici (naplata, dugovanja, lager...) dobijaju ovu jedinicu.
+  // Postavlja se u toku rendera, prije nego sto se ekrani ispod montiraju i posalju upite.
+  postaviJedinicuZaUpite(aktivnaJedinicaId);
 
   const setAktivnaJedinica = useCallback((id: string) => {
     setIzabranaJedinicaId(id);
@@ -148,6 +152,7 @@ export function CalendarProvider({ children }: { children: ReactNode }) {
   const rooms = useMemo(() => sveOrdinacije.filter(uAktivnoj), [sveOrdinacije, uAktivnoj]);
   const services = useMemo(() => sveUsluge.filter(uAktivnoj), [sveUsluge, uAktivnoj]);
   const serviceCategories = useMemo(() => sveKategorije.filter(uAktivnoj), [sveKategorije, uAktivnoj]);
+  const materials = useMemo(() => sviMaterijali.filter(uAktivnoj), [sviMaterijali, uAktivnoj]);
 
   // Kad se promijeni jedinica (ili njeno osoblje/ordinacije), filter kalendara pokriva sve iz te jedinice.
   useEffect(() => {
@@ -228,10 +233,18 @@ export function CalendarProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    fetchData();
+    fetchData().finally(() => setPrvoUcitano(true));
     // Osvjezi SMS sablone iz DB-a da SMS potvrde koriste aktuelne template-e
     loadTemplatesFromDb().catch(() => { /* fallback na localStorage/default */ });
   }, [fetchData]);
+
+  // Promjena jedinice: ponovo ucitaj podatke (lager se cita po jedinici).
+  const prethodnaJedinica = useRef('');
+  useEffect(() => {
+    if (!aktivnaJedinicaId) return;
+    if (prethodnaJedinica.current && prethodnaJedinica.current !== aktivnaJedinicaId) fetchData();
+    prethodnaJedinica.current = aktivnaJedinicaId;
+  }, [aktivnaJedinicaId, fetchData]);
 
   // Auto-refresh appointments svakih 60s da se status (npr. 'potvrdjen' iz
   // javne /p/:token strane) azurira bez rucnog refresha. Pauzira kad je tab
@@ -618,7 +631,7 @@ export function CalendarProvider({ children }: { children: ReactNode }) {
 
   // ===== Material CRUD =====
   const createMaterial = useCallback(async (material: Omit<Material, 'id'>) => {
-    const { data, error } = await supabase.from('materials').insert(material).select().single();
+    const { data, error } = await supabase.from('materials').insert({ ...material, establishment_id: aktivnaJedinicaId || undefined }).select().single();
     if (error) { console.error('Greska pri kreiranju materijala:', error); return null; }
     setMaterials((prev) => [...prev, data as Material]);
     return data as Material;
@@ -685,7 +698,13 @@ export function CalendarProvider({ children }: { children: ReactNode }) {
         refreshData: fetchData,
       }}
     >
-      {children}
+      {/* Ekrani se montiraju tek kad je jedinica poznata i ponovo se ucitavaju kad se promijeni,
+          da svaki njihov upit ide sa pravom jedinicom. */}
+      {prvoUcitano ? (
+        <Fragment key={aktivnaJedinicaId || 'bez-jedinice'}>{children}</Fragment>
+      ) : (
+        <div className="min-h-screen flex items-center justify-center text-sm text-gray-400" aria-busy="true">Učitavanje…</div>
+      )}
     </CalendarContext.Provider>
   );
 }

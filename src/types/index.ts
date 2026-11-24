@@ -207,6 +207,7 @@ export interface Vaucer {
 // Materijal
 export interface Material {
   id: string;
+  establishment_id?: string | null; // poslovna jedinica kojoj pripada
   naziv: string;
   opis?: string;
   kategorija?: string;

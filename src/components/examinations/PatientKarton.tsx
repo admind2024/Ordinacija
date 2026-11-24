@@ -4,7 +4,7 @@ import { srLatn as sr } from 'date-fns/locale';
 import {
   ArrowLeft, Phone, Mail, MapPin, Calendar, Clock, FileText,
   AlertCircle, Printer, Plus, Trash2, Pill, ClipboardList, History,
-  Package, Stethoscope,
+  Package, Stethoscope, Check,
 } from 'lucide-react';
 import type { Patient, Appointment, Doctor, Examination, Material } from '../../types';
 import { APPOINTMENT_STATUS_LABELS, APPOINTMENT_STATUS_COLORS } from '../../types';
@@ -360,6 +360,131 @@ function KpiCell({ icon, label, value, color }: { icon: React.ReactNode; label: 
 }
 
 // ====================================================================
+// Na dnevnom redu — sta je zakazano za termin. Ljekar stiklira uradjeno; bez cijena.
+// Stikliranje se pamti na ovom uredjaju (localStorage), ne mijenja termin ni naplatu.
+// ====================================================================
+function AgendaPanel({ apt, services }: { apt: Appointment; services: any[] }) {
+  const zavrsen = apt.status === 'zavrsen';
+  const kljuc = `moa_agenda_${apt.id}`;
+  const [uradjeno, setUradjeno] = useState<Record<string, boolean>>(() => {
+    try { return JSON.parse(localStorage.getItem(kljuc) || '{}'); } catch { return {}; }
+  });
+
+  function toggle(id: string) {
+    if (zavrsen) return;
+    setUradjeno((prev) => {
+      const next = { ...prev, [id]: !prev[id] };
+      try { localStorage.setItem(kljuc, JSON.stringify(next)); } catch { /* bez pamcenja */ }
+      return next;
+    });
+  }
+
+  const idOf = (s: any, i: number) => String(s.id || i);
+  const jeUradjeno = (id: string) => zavrsen || !!uradjeno[id];
+  const broj = services.filter((s, i) => jeUradjeno(idOf(s, i))).length;
+  const pct = services.length ? Math.round((broj / services.length) * 100) : 0;
+  const trajanjeMin = apt.kraj
+    ? Math.round((parseISO(apt.kraj).getTime() - parseISO(apt.pocetak).getTime()) / 60000)
+    : 0;
+  const n = services.length;
+  const rijec = n === 1 ? 'usluga' : n >= 2 && n <= 4 ? 'usluge' : 'usluga';
+
+  return (
+    <div className="rounded-2xl overflow-hidden border border-border shadow-sm bg-white">
+      {/* Zaglavlje u boji menija */}
+      <div className="bg-sidebar text-white px-5 py-4">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-11 h-11 rounded-xl bg-white/15 flex items-center justify-center shrink-0">
+              <ClipboardList size={22} />
+            </div>
+            <div className="min-w-0">
+              <p className="text-[10px] uppercase tracking-[0.14em] text-white/60 font-semibold">Na dnevnom redu</p>
+              <h3 className="text-lg font-semibold leading-tight">
+                {n > 0 ? `${n} ${rijec}` : 'Bez upisanih usluga'}
+              </h3>
+              <p className="text-xs text-white/70 mt-0.5 truncate">
+                {format(parseISO(apt.pocetak), 'EEEE, dd.MM.yyyy.', { locale: sr })}
+                {' · '}
+                {format(parseISO(apt.pocetak), 'HH:mm')}
+                {apt.kraj && `–${format(parseISO(apt.kraj), 'HH:mm')}`}
+                {trajanjeMin > 0 && ` · ${trajanjeMin} min`}
+              </p>
+            </div>
+          </div>
+          <span
+            className="text-[10px] px-2.5 py-1 rounded-full font-bold uppercase tracking-wider shrink-0 bg-white"
+            style={{ color: APPOINTMENT_STATUS_COLORS[apt.status] || '#555' }}
+          >
+            {APPOINTMENT_STATUS_LABELS[apt.status]}
+          </span>
+        </div>
+
+        {n > 0 && (
+          <div className="mt-4">
+            <div className="flex items-center justify-between text-[11px] text-white/75 mb-1.5">
+              <span>Urađeno {broj} od {n}</span>
+              <span className="font-semibold">{pct}%</span>
+            </div>
+            <div className="h-2 rounded-full bg-white/15 overflow-hidden">
+              <div className="h-full rounded-full bg-emerald-400 transition-all duration-300" style={{ width: `${pct}%` }} />
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Usluge — klik stiklira */}
+      {n > 0 && (
+        <ul className="divide-y divide-gray-100">
+          {services.map((s, i) => {
+            const id = idOf(s, i);
+            const done = jeUradjeno(id);
+            return (
+              <li key={id}>
+                <button
+                  type="button"
+                  onClick={() => toggle(id)}
+                  disabled={zavrsen}
+                  aria-pressed={done}
+                  className={`w-full flex items-center gap-3.5 px-5 py-3.5 text-left transition-colors ${zavrsen ? 'cursor-default' : 'hover:bg-gray-50'}`}
+                >
+                  <span
+                    className={`w-6 h-6 rounded-md border-2 flex items-center justify-center shrink-0 transition-colors ${
+                      done ? 'bg-emerald-500 border-emerald-500 text-white' : 'border-gray-300 bg-white'
+                    }`}
+                  >
+                    {done && <Check size={14} strokeWidth={3} />}
+                  </span>
+                  <span className={`text-[15px] font-medium flex-1 min-w-0 ${done ? 'text-gray-400 line-through' : 'text-gray-900'}`}>
+                    {s.naziv}{s.kolicina > 1 ? ` × ${s.kolicina}` : ''}
+                  </span>
+                  <span
+                    className={`text-[10px] px-2.5 py-1 rounded-full font-bold uppercase tracking-wider shrink-0 ${
+                      done ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
+                    }`}
+                  >
+                    {done ? 'Urađeno' : 'Na čekanju'}
+                  </span>
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+
+      {apt.napomena && (
+        <div className="px-5 py-3 border-t border-amber-100 bg-amber-50 flex items-start gap-2.5">
+          <AlertCircle size={15} className="text-amber-600 shrink-0 mt-0.5" />
+          <p className="text-sm text-amber-900">
+            <strong>Napomena uz termin:</strong> {apt.napomena}
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ====================================================================
 // Pregled view (form za aktivni termin)
 // ====================================================================
 function PregledView({
@@ -377,70 +502,9 @@ function PregledView({
     return <EmptyState icon={<Stethoscope size={40} />} label="Nema aktivnog termina. Izaberi termin iz Istorije posjeta." />;
   }
 
-  const trajanjeMin = selectedAppointment.kraj
-    ? Math.round((parseISO(selectedAppointment.kraj).getTime() - parseISO(selectedAppointment.pocetak).getTime()) / 60000)
-    : 0;
-
   return (
     <div className="px-6 py-5 space-y-5">
-      {/* Na dnevnom redu — sta je zakazano za ovaj termin (ljekar ne vidi cijene) */}
-      <div className="bg-white border border-border rounded-xl overflow-hidden">
-        <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-gray-100 bg-gray-50/60">
-          <div className="flex items-center gap-2.5 min-w-0">
-            <div className="w-8 h-8 rounded-lg bg-primary-50 text-primary-600 flex items-center justify-center shrink-0">
-              <ClipboardList size={16} />
-            </div>
-            <div className="min-w-0">
-              <h3 className="text-sm font-semibold text-gray-900 leading-tight">Na dnevnom redu</h3>
-              <p className="text-[11px] text-gray-500 truncate">
-                {format(parseISO(selectedAppointment.pocetak), 'EEEE, dd.MM.yyyy.', { locale: sr })}
-                {' · '}
-                {format(parseISO(selectedAppointment.pocetak), 'HH:mm')}
-                {selectedAppointment.kraj && `–${format(parseISO(selectedAppointment.kraj), 'HH:mm')}`}
-                {trajanjeMin > 0 && ` · ${trajanjeMin} min`}
-              </p>
-            </div>
-          </div>
-          <span
-            className="text-[10px] px-2 py-0.5 rounded-full font-semibold uppercase tracking-wider shrink-0"
-            style={{
-              backgroundColor: (APPOINTMENT_STATUS_COLORS[selectedAppointment.status] || '#888') + '20',
-              color: APPOINTMENT_STATUS_COLORS[selectedAppointment.status] || '#888',
-            }}
-          >
-            {APPOINTMENT_STATUS_LABELS[selectedAppointment.status]}
-          </span>
-        </div>
-
-        {aptServices.length > 0 ? (
-          <ul className="divide-y divide-gray-100">
-            {aptServices.map((s, i) => (
-              <li key={s.id || i} className="flex items-center gap-3 px-4 py-2.5">
-                <span className="w-6 h-6 rounded-full bg-primary-50 text-primary-700 text-[11px] font-bold flex items-center justify-center shrink-0">
-                  {i + 1}
-                </span>
-                <span className="text-sm font-medium text-gray-900 flex-1 min-w-0">{s.naziv}</span>
-                {s.kolicina > 1 && (
-                  <span className="text-[11px] px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 font-semibold shrink-0">
-                    × {s.kolicina}
-                  </span>
-                )}
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p className="px-4 py-3 text-xs text-gray-400">Za ovaj termin nije upisana usluga.</p>
-        )}
-
-        {selectedAppointment.napomena && (
-          <div className="px-4 py-2.5 border-t border-amber-100 bg-amber-50 flex items-start gap-2">
-            <AlertCircle size={14} className="text-amber-600 shrink-0 mt-0.5" />
-            <p className="text-xs text-amber-900">
-              <strong>Napomena uz termin:</strong> {selectedAppointment.napomena}
-            </p>
-          </div>
-        )}
-      </div>
+      <AgendaPanel apt={selectedAppointment} services={aptServices} />
 
       {/* Form */}
       <div className="bg-white border border-border rounded-xl p-4">

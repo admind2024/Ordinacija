@@ -1,32 +1,32 @@
-# Prenos podataka iz Hipokratije u MOA
+# Prenos podataka iz starog programa u MOA
 
-Stanje 26.10.2026. uveče. Ništa iz Hipokratije još nije upisano u MOA bazu.
+Stanje 26.10.2026. uveče. Ništa iz starog programa još nije upisano u MOA bazu.
 
 ## Šta je urađeno
 
-- Izvezen cjenovnik iz Hipokratije (Ustanova → Kategorije i vrsta pregleda → Izvezi → Excel).
+- Izvezen cjenovnik iz starog programa (Ustanova → Kategorije i vrsta pregleda → Izvezi → Excel).
   Poređenje sa MOA cjenovnikom je u `cjenovnik-poredjenje.csv`:
 
   | Stanje | Broj |
   |---|---|
   | ista usluga, ista cijena i trajanje | 7 |
   | ista usluga, druga cijena ili trajanje | 31 |
-  | postoji samo u Hipokratiji | 246 |
+  | postoji samo u starom programu | 246 |
   | postoji samo u MOA | 135 |
 
-  MOA cjenovnik je dakle zastario ili drugačije imenovan. Hipokratija ima 284 usluge u 26 kategorija, bez šifara.
+  MOA cjenovnik je dakle zastario ili drugačije imenovan. Stari program ima 284 usluge u 26 kategorija, bez šifara.
 
 ## Zašto nije prenijeto sve
 
-1. **Direktno čitanje iz Hipokratije (njihov API) je blokirano** kao zaobilaženje pristupa sajtu. To se ne radi.
+1. **Direktno čitanje iz starog programa (njihov API) je blokirano** kao zaobilaženje pristupa sajtu. To se ne radi.
 2. **Izvoz preko njihovih dugmadi „Izvezi“ radi**, ali preuzimanje fajla sa podacima pacijenata
    čeka tvoju potvrdu u aplikaciji (drugi izvoz, Zakazani termini, ostao je nedovršen u Preuzimanjima).
-3. **Lista pacijenata u Hipokratiji nema dugme za izvoz.** Kartoni, nalazi i dokumenta takođe ne.
+3. **Lista pacijenata u starom programu nema dugme za izvoz.** Kartoni, nalazi i dokumenta takođe ne.
 4. Upis medicinskih podataka u produkcijsku bazu ne treba raditi bez tebe — prvo pregled, pa spajanje.
 
 ## Predlog (redom)
 
-1. **Zatraži od Hipokratije kompletan izvoz baze** za MOA (pacijenti, termini, kartoni,
+1. **Zatraži od proizvođača starog programa kompletan izvoz baze** za MOA (pacijenti, termini, kartoni,
    specijalistički izvještaji, nalazi, dokumenta, naplata). Podaci su vlasništvo klinike i
    imate pravo na njih (prenosivost podataka, GDPR čl. 20). Ovo je jedini put do kartona i dokumenata.
 2. Dok to ne stigne, uz tebe za računarom izvozimo ono što ima dugme „Izvezi“:
@@ -35,36 +35,36 @@ Stanje 26.10.2026. uveče. Ništa iz Hipokratije još nije upisano u MOA bazu.
    - Protokol bolesnika
    - Vaučeri
    - Utrošci materijala
-3. Svaki fajl prvo ide u posebnu uvoznu šemu `hipokratija_uvoz` (nije dostupna aplikaciji),
+3. Svaki fajl prvo ide u posebnu uvoznu šemu `uvoz_evidencija` (nije dostupna aplikaciji),
    pa pravim izvještaj: koliko pacijenata je novo, koliko se poklapa sa postojećim po telefonu/JMBG.
 4. Tek posle tvog pregleda spajamo u prave tabele (pacijenti, termini, cjenovnik).
-   Cjenovnik: predlog je da Hipokratijin cjenovnik postane glavni, a 135 MOA usluga koje
+   Cjenovnik: predlog je da cjenovnik starog programa postane glavni, a 135 MOA usluga koje
    ne postoje tamo označimo kao neaktivne (ne brišemo — stari termini ih koriste).
 
-## Uvoz 28.10.2026. (batch `hipokratija-20261028-082853`)
+## Uvoz 28.10.2026. (batch `uvoz-20261028-082853`)
 
 Prije uvoza su **isključeni automatski podsjetnici** u MOA (`reminder_settings.enabled = false`),
-da pacijenti ne dobijaju duple poruke dok Hipokratija radi. Uključiti pri prelasku na MOA.
+da pacijenti ne dobijaju duple poruke dok stari program radi. Uključiti pri prelasku na MOA.
 
 Iz dva izvoza termina (26.10–26.11.2026. + jedan termin iz 2025.) uneseno je:
 
 | Šta | Broj |
 |---|---|
-| Termini (status „zakazan", napomena „Uvezeno iz Hipokratije") | 154, sa 159 stavki usluga |
-| Novi pacijenti (oznaka `hipokratija`, bez telefona — izvoz ga ne sadrži) | 102 |
+| Termini (status „zakazan", napomena „Uvezeno") | 154, sa 159 stavki usluga |
+| Novi pacijenti (oznaka `uvoz`, bez telefona — izvoz ga ne sadrži) | 102 |
 | Termini vezani za postojeće MOA pacijente | 29 pacijenata |
-| Usluge iz Hipokratijinog cjenovnika | 245 (+ 9 kategorija); postojeće MOA usluge nijesu mijenjane |
+| Usluge iz cjenovnika starog programa | 245 (+ 9 kategorija); postojeće MOA usluge nijesu mijenjane |
 | Ordinacije / aparati | 8 |
 | Osoblje | 3 (Nikolina Lojpur, Sonju Đorđević, Sanda Transplatacija) |
 
 Za ručnu provjeru:
 - 1 pacijent čije ime u MOA postoji dvaput — termin je vezan za novog pacijenta.
-- U Hipokratiji postoje dva identična termina (isti pacijent, ljekar i usluga, 27.10. 13:00,
-  Opšta ordinacija 1 i 2). Uvezen je jedan; drugi je vjerovatno greška u Hipokratiji.
+- U starom programu postoje dva identična termina (isti pacijent, ljekar i usluga, 27.10. 13:00,
+  Opšta ordinacija 1 i 2). Uvezen je jedan; drugi je vjerovatno greška u starom programu.
 - Iznosi se poklapaju sa izvozom (razlika 30 € je baš taj preskočeni duplikat).
 
-Poništavanje: `scripts/uvoz-hipokratija/ponisti.sql` sa `batch = hipokratija-20261028-082853`.
+Poništavanje: `scripts/uvoz-termina/ponisti.sql` sa `batch = uvoz-20261028-082853`.
 
 Još nije izvezeno: istorija ~3.700 termina (27.10.2025–25.10.2026, 4 izvoza po 3 mjeseca),
 plaćanja, vaučeri, utrošci, protokol, izvještaji. Isti alat (`termini.py`) preskače već uvezene termine
-ako se snimku doda lista ključeva iz `hipokratija_uvoz.termini`.
+ako se snimku doda lista ključeva iz `uvoz_evidencija.termini`.

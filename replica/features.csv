@@ -1,4 +1,4 @@
-id,oblast,funkcija,prioritet,hipokratija,moa_prije,clone,napomena
+id,oblast,funkcija,prioritet,stari_program,moa_prije,clone,napomena
 F01,raspored,Radno vrijeme doktora po danima u sedmici,must,yes,no,yes,/raspored → Radno vrijeme; zakazivanje upozorava van rasporeda
 F02,raspored,Radno vrijeme za određeni datum (izuzetak),must,yes,no,yes,
 F03,raspored,Pauze u radnom vremenu,should,yes,no,yes,
@@ -35,6 +35,6 @@ F33,materijali,Šifra i brend materijala,could,yes,no,yes,
 F34,cjenovnik,Šifra usluge i naziv na engleskom,could,yes,no,no,
 F35,cjenovnik,Uvoz / izvoz cjenovnika,could,yes,no,no,
 F36,cjenovnik,Online zakazivanje (widget),should,yes,no,no,veliko - poseban posao
-F37,ustanova,Osiguranja i pravna lica,could,yes,no,no,MOA ih u Hipokratiji nema unesene
+F37,ustanova,Osiguranja i pravna lica,could,yes,no,no,MOA ih u starom programu nema unesene
 F38,ustanova,Pregled tek kad pacijent stigne (podešavanje),could,yes,no,no,
-F39,naplata,"Zaključenje smjene po osobi i zaključenje radnog dana (kasa, razlika, nenaplaćeni termini)",must,no,no,yes,MOA dodatak; Hipokratija ima samo rekapitulaciju za štampu
+F39,naplata,"Zaključenje smjene po osobi i zaključenje radnog dana (kasa, razlika, nenaplaćeni termini)",must,no,no,yes,MOA dodatak; stari program ima samo rekapitulaciju za štampu

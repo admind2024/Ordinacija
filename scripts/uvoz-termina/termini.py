@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
-"""Uvoz termina iz Hipokratijinog Excel izvoza (Termini → Izvezi) u MOA bazu.
+"""Uvoz termina iz Excel izvoza starog programa (Termini → Izvezi) u MOA bazu.
 
 Generise jedan SQL fajl (jedna transakcija) koji:
-  - pravi seme hipokratija_uvoz (nije izlozena aplikaciji) za evidenciju uvoza,
+  - pravi seme uvoz_evidencija (nije izlozena aplikaciji) za evidenciju uvoza,
   - dodaje kategorije, usluge, ordinacije i osoblje koje u MOA ne postoje,
   - dodaje pacijente koji ne postoje (poredjenje po imenu i prezimenu),
   - unosi termine i njihove usluge, preskacuci termine koji su vec uvezeni.
 
-Svaki uneseni red se upisuje u hipokratija_uvoz.uneseno, pa se uvoz moze ponistiti
+Svaki uneseni red se upisuje u uvoz_evidencija.uneseno, pa se uvoz moze ponistiti
 (vidi ponisti.sql). Podaci pacijenata se ne stampaju — samo brojevi.
 
 Upotreba:
@@ -61,7 +61,7 @@ def main():
     ap.add_argument('--katalog', required=True)
     ap.add_argument('--moa', required=True)
     ap.add_argument('--out', required=True)
-    ap.add_argument('--batch', default=datetime.now().strftime('hipokratija-%Y%m%d-%H%M%S'))
+    ap.add_argument('--batch', default=datetime.now().strftime('uvoz-%Y%m%d-%H%M%S'))
     ap.add_argument('fajlovi', nargs='+')
     a = ap.parse_args()
 
@@ -70,14 +70,14 @@ def main():
     termini = [r for f in a.fajlovi for r in read_xlsx(f)]
 
     sql = ['BEGIN;', f"-- batch {a.batch}",
-           'CREATE SCHEMA IF NOT EXISTS hipokratija_uvoz;',
-           'CREATE TABLE IF NOT EXISTS hipokratija_uvoz.uneseno (batch TEXT NOT NULL, tabela TEXT NOT NULL, red_id UUID NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT now());',
-           'CREATE TABLE IF NOT EXISTS hipokratija_uvoz.termini (kljuc TEXT PRIMARY KEY, batch TEXT NOT NULL, appointment_id UUID, red JSONB NOT NULL);',
-           'REVOKE ALL ON SCHEMA hipokratija_uvoz FROM anon, authenticated;']
+           'CREATE SCHEMA IF NOT EXISTS uvoz_evidencija;',
+           'CREATE TABLE IF NOT EXISTS uvoz_evidencija.uneseno (batch TEXT NOT NULL, tabela TEXT NOT NULL, red_id UUID NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT now());',
+           'CREATE TABLE IF NOT EXISTS uvoz_evidencija.termini (kljuc TEXT PRIMARY KEY, batch TEXT NOT NULL, appointment_id UUID, red JSONB NOT NULL);',
+           'REVOKE ALL ON SCHEMA uvoz_evidencija FROM anon, authenticated;']
     stat = collections.Counter()
 
     def zabiljezi(tabela, rid):
-        sql.append(f"INSERT INTO hipokratija_uvoz.uneseno(batch, tabela, red_id) VALUES ({q(a.batch)}, {q(tabela)}, {q(rid)});")
+        sql.append(f"INSERT INTO uvoz_evidencija.uneseno(batch, tabela, red_id) VALUES ({q(a.batch)}, {q(tabela)}, {q(rid)});")
 
     # --- kategorije i usluge -------------------------------------------------
     kat_id = {norm(c['naziv']): c['id'] for c in moa['categories']}
@@ -213,7 +213,7 @@ def main():
             f"({q(kraj)}::timestamp AT TIME ZONE '{TZ}'), 'zakazan', {q(napomena)});")
         zabiljezi('appointments', aid)
         red_json = json.dumps({k: (str(v) if v is not None else None) for k, v in r.items()}, ensure_ascii=False)
-        sql.append(f"INSERT INTO hipokratija_uvoz.termini(kljuc, batch, appointment_id, red) VALUES ({q(kljuc)}, {q(a.batch)}, {q(aid)}, {q(red_json)}::jsonb);")
+        sql.append(f"INSERT INTO uvoz_evidencija.termini(kljuc, batch, appointment_id, red) VALUES ({q(kljuc)}, {q(a.batch)}, {q(aid)}, {q(red_json)}::jsonb);")
 
         # Cijena iz izvoza je za cijeli termin — rasporedi je po uslugama srazmjerno cjenovniku
         cena, popust = float(r.get('Cena') or 0), float(r.get('Popust') or 0)

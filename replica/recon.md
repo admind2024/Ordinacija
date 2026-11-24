@@ -1,11 +1,11 @@
-# Recon: Hipokratija Zakazivač → MOA
+# Recon: stari program → MOA
 
-Pregledano 26.10.2026. kroz MOA nalog u Hipokratiji (uloga tehničar), samo čitanjem:
+Pregledano 26.10.2026. kroz MOA nalog u starom programu (uloga tehničar), samo čitanjem:
 forme su otvarane i zatvarane bez čuvanja. Podaci pacijenata nisu prepisivani.
-Cilj nije kopija nego paritet: svaka funkcija koju Hipokratija ima, a MOA nema,
+Cilj nije kopija nego paritet: svaka funkcija koju stari program ima, a MOA nema,
 pravi se ovdje iznova, našim kodom i našim tekstom.
 
-## Mapa ekrana Hipokratije
+## Mapa ekrana starog programa
 
 | ID | Ekran | Šta radi |
 |----|-------|----------|
@@ -31,7 +31,7 @@ pravi se ovdje iznova, našim kodom i našim tekstom.
 | H20 | Termin (forma) | Više usluga u jednoj posjeti sa posebnim vremenom, osiguranje/pravno lice, način plaćanja, popusti |
 | H21 | Događaj (forma) | Interni događaj: naslov, ordinacija, početak/kraj, boja, opis, učesnici |
 
-Načini plaćanja u Hipokratiji: gotovina fiskal, kartica fiskal, gotovina,
+Načini plaćanja u starom programu: gotovina fiskal, kartica fiskal, gotovina,
 administrativna zabrana, vaučer, prenos na račun, osiguranje.
 Statusi termina: na čekanju, zakazan, stigao, otkazan, završen, nije se pojavio.
 
@@ -40,6 +40,6 @@ Statusi termina: na čekanju, zakazan, stigao, otkazan, završen, nije se pojavi
 Kalendar (4 prikaza, filteri), pacijenti sa kartonom, pregled sa štampom nalaza,
 cjenovnik, naplata sa EFI fiskalizacijom, dugovanja sa ratama, SMS/Viber
 podsjetnici i potvrda dolaska, marketing kampanje, ankete, izvještaji, dashboard.
-MOA ima i stvari kojih Hipokratija nema: marketing, ankete, dugovanja.
+MOA ima i stvari kojih stari program nema: marketing, ankete, dugovanja.
 
 Detaljno poređenje je u `features.csv`.

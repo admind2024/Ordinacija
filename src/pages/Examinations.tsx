@@ -6,6 +6,7 @@ import DoctorLogin from '../components/ui/DoctorLogin';
 import PatientKarton from '../components/examinations/PatientKarton';
 import { openPrintReport } from '../components/examinations/PrintReport';
 import { useCalendar } from '../contexts/CalendarContext';
+import { usePatients } from '../contexts/PatientsContext';
 import { supabase } from '../lib/supabase';
 import type { Appointment, Doctor, Examination, Patient, Establishment } from '../types';
 
@@ -25,7 +26,12 @@ interface DoctorPatient {
   lastAppointment: string;
   todayAppointment?: Appointment;
   appointmentCount: number;
+  bezTerminaKodLjekara?: boolean; // pronadjen pretragom, nema termin kod prijavljenog ljekara
 }
+
+// Poredjenje bez kvacica i velikih slova
+const norm = (t: string) =>
+  t.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd').trim();
 
 interface TodayTermin {
   appointment: Appointment;
@@ -50,6 +56,7 @@ export default function Examinations() {
 
 function ExaminationsContent({ loggedDoctor }: { loggedDoctor: Doctor }) {
   const { appointments, doctors, materials, updateAppointmentStatus } = useCalendar();
+  const { patients: allPatients } = usePatients();
 
   const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
@@ -157,27 +164,43 @@ function ExaminationsContent({ loggedDoctor }: { loggedDoctor: Doctor }) {
 
   // Filter i sortiranje
   const filteredPatients = useMemo(() => {
-    let list = doctorPatients;
+    const q = norm(searchQuery);
+    let list: DoctorPatient[];
 
-    if (showOnlyToday) {
-      list = list.filter((p) => !!p.todayAppointment);
+    if (q) {
+      // Pretraga ide kroz SVE pacijente ustanove (ne samo one sa terminom kod ovog ljekara),
+      // da ljekar moze otvoriti karton i istoriju bilo kog pacijenta.
+      const moji = new Map(doctorPatients.map((p) => [p.patient_id, p]));
+      const rijeci = q.split(/\s+/).filter(Boolean);
+      const cifre = searchQuery.replace(/\D/g, '');
+      list = allPatients
+        .filter((p) => {
+          const ime = norm(`${p.ime || ''} ${p.prezime || ''}`);
+          if (rijeci.every((r) => ime.includes(r))) return true;
+          return cifre.length >= 3 && (p.telefon || '').replace(/\D/g, '').includes(cifre);
+        })
+        .map((p) => moji.get(p.id) || {
+          patient_id: p.id,
+          ime: p.ime || '',
+          prezime: p.prezime || '',
+          telefon: p.telefon,
+          lastAppointment: '',
+          appointmentCount: 0,
+          bezTerminaKodLjekara: true,
+        });
+    } else {
+      list = showOnlyToday ? doctorPatients.filter((p) => !!p.todayAppointment) : doctorPatients;
     }
 
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase().trim();
-      list = list.filter((p) =>
-        `${p.ime} ${p.prezime}`.toLowerCase().includes(q) ||
-        (p.telefon && p.telefon.includes(q))
-      );
-    }
-
-    // Danas na vrhu, onda po zadnjem terminu
-    return list.sort((a, b) => {
+    // Danas na vrhu, pa pacijenti ovog ljekara po zadnjem terminu, pa ostali abecedno
+    return [...list].sort((a, b) => {
       if (a.todayAppointment && !b.todayAppointment) return -1;
       if (!a.todayAppointment && b.todayAppointment) return 1;
+      if (!!a.bezTerminaKodLjekara !== !!b.bezTerminaKodLjekara) return a.bezTerminaKodLjekara ? 1 : -1;
+      if (a.bezTerminaKodLjekara) return `${a.ime} ${a.prezime}`.localeCompare(`${b.ime} ${b.prezime}`);
       return b.lastAppointment.localeCompare(a.lastAppointment);
     });
-  }, [doctorPatients, searchQuery, showOnlyToday]);
+  }, [doctorPatients, allPatients, searchQuery, showOnlyToday]);
 
   const todayCount = doctorPatients.filter((p) => p.todayAppointment).length;
 
@@ -409,7 +432,7 @@ function ExaminationsContent({ loggedDoctor }: { loggedDoctor: Doctor }) {
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Pretrazi pacijente po imenu ili telefonu..."
+            placeholder="Pretraži sve pacijente po imenu ili telefonu..."
             className="w-full pl-9 pr-3 py-2.5 border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 bg-white"
           />
         </div>
@@ -488,7 +511,7 @@ function ExaminationsContent({ loggedDoctor }: { loggedDoctor: Doctor }) {
       <div className="mb-4 flex items-center gap-2">
         <Users size={16} className="text-gray-500" />
         <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wider">
-          Svi moji pacijenti ({filteredPatients.length})
+          {searchQuery.trim() ? 'Rezultati pretrage — svi pacijenti' : 'Svi moji pacijenti'} ({filteredPatients.length})
         </h3>
         <div className="ml-auto flex items-center gap-1 bg-gray-100 rounded-lg p-0.5">
           <button
@@ -550,7 +573,9 @@ function ExaminationsContent({ loggedDoctor }: { loggedDoctor: Doctor }) {
                     <span className="text-gray-300">—</span>
                   )}
                   <span className="text-gray-400 shrink-0 ml-2">
-                    uk. {dp.appointmentCount} {dp.appointmentCount === 1 ? 'termin' : 'termina'}
+                    {dp.bezTerminaKodLjekara
+                      ? 'bez termina kod vas'
+                      : `uk. ${dp.appointmentCount} ${dp.appointmentCount === 1 ? 'termin' : 'termina'}`}
                   </span>
                 </div>
               </button>

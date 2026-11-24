@@ -377,19 +377,32 @@ function PregledView({
     return <EmptyState icon={<Stethoscope size={40} />} label="Nema aktivnog termina. Izaberi termin iz Istorije posjeta." />;
   }
 
+  const trajanjeMin = selectedAppointment.kraj
+    ? Math.round((parseISO(selectedAppointment.kraj).getTime() - parseISO(selectedAppointment.pocetak).getTime()) / 60000)
+    : 0;
+
   return (
     <div className="px-6 py-5 space-y-5">
-      {/* Termin info + usluge */}
-      <div className="bg-white border border-border rounded-xl p-4">
-        <div className="flex items-center justify-between mb-3">
-          <div>
-            <p className="text-[11px] text-gray-400 uppercase tracking-wider">Termin</p>
-            <p className="text-sm font-semibold text-gray-900">
-              {format(parseISO(selectedAppointment.pocetak), 'EEEE, dd.MM.yyyy. HH:mm', { locale: sr })}
-            </p>
+      {/* Na dnevnom redu — sta je zakazano za ovaj termin (ljekar ne vidi cijene) */}
+      <div className="bg-white border border-border rounded-xl overflow-hidden">
+        <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-gray-100 bg-gray-50/60">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="w-8 h-8 rounded-lg bg-primary-50 text-primary-600 flex items-center justify-center shrink-0">
+              <ClipboardList size={16} />
+            </div>
+            <div className="min-w-0">
+              <h3 className="text-sm font-semibold text-gray-900 leading-tight">Na dnevnom redu</h3>
+              <p className="text-[11px] text-gray-500 truncate">
+                {format(parseISO(selectedAppointment.pocetak), 'EEEE, dd.MM.yyyy.', { locale: sr })}
+                {' · '}
+                {format(parseISO(selectedAppointment.pocetak), 'HH:mm')}
+                {selectedAppointment.kraj && `–${format(parseISO(selectedAppointment.kraj), 'HH:mm')}`}
+                {trajanjeMin > 0 && ` · ${trajanjeMin} min`}
+              </p>
+            </div>
           </div>
           <span
-            className="text-[10px] px-2 py-0.5 rounded-full font-semibold uppercase tracking-wider"
+            className="text-[10px] px-2 py-0.5 rounded-full font-semibold uppercase tracking-wider shrink-0"
             style={{
               backgroundColor: (APPOINTMENT_STATUS_COLORS[selectedAppointment.status] || '#888') + '20',
               color: APPOINTMENT_STATUS_COLORS[selectedAppointment.status] || '#888',
@@ -399,22 +412,33 @@ function PregledView({
           </span>
         </div>
 
-        {aptServices.length > 0 && (
-          <div className="flex items-center justify-between pt-3 border-t border-gray-100">
-            <div className="flex flex-wrap gap-1.5">
-              {aptServices.map((s, i) => (
-                <span key={i} className="text-[11px] px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-100">
-                  {s.naziv}
+        {aptServices.length > 0 ? (
+          <ul className="divide-y divide-gray-100">
+            {aptServices.map((s, i) => (
+              <li key={s.id || i} className="flex items-center gap-3 px-4 py-2.5">
+                <span className="w-6 h-6 rounded-full bg-primary-50 text-primary-700 text-[11px] font-bold flex items-center justify-center shrink-0">
+                  {i + 1}
                 </span>
-              ))}
-            </div>
-          </div>
+                <span className="text-sm font-medium text-gray-900 flex-1 min-w-0">{s.naziv}</span>
+                {s.kolicina > 1 && (
+                  <span className="text-[11px] px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 font-semibold shrink-0">
+                    × {s.kolicina}
+                  </span>
+                )}
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="px-4 py-3 text-xs text-gray-400">Za ovaj termin nije upisana usluga.</p>
         )}
 
         {selectedAppointment.napomena && (
-          <p className="mt-3 pt-3 border-t border-gray-100 text-xs text-gray-600">
-            <strong className="text-gray-900">Napomena termina:</strong> {selectedAppointment.napomena}
-          </p>
+          <div className="px-4 py-2.5 border-t border-amber-100 bg-amber-50 flex items-start gap-2">
+            <AlertCircle size={14} className="text-amber-600 shrink-0 mt-0.5" />
+            <p className="text-xs text-amber-900">
+              <strong>Napomena uz termin:</strong> {selectedAppointment.napomena}
+            </p>
+          </div>
         )}
       </div>
 
@@ -434,8 +458,6 @@ function PregledView({
           initialData={currentExam || undefined}
           onSave={onSaveExam}
           saving={saving}
-          appointmentServices={aptServices}
-          appointmentNapomena={selectedAppointment.napomena ?? undefined}
           doctorId={doctorId}
           previousExam={previousExam}
         />

@@ -533,18 +533,15 @@ function IstorijaView({
 
                     {isOpen && (
                       <div className="mt-3 pt-3 border-t border-border">
-                        {(apt.napomena || exam?.nalaz || exam?.terapija) && (
-                          <div className="bg-gray-50 rounded-lg px-3 py-2 mb-3 text-xs text-gray-700 space-y-1.5">
-                            {apt.napomena && (
-                              <p><strong className="text-gray-900">Napomena:</strong> {apt.napomena}</p>
-                            )}
-                            {exam?.nalaz && (
-                              <p><strong className="text-gray-900">Dijagnoza:</strong> {exam.nalaz}</p>
-                            )}
-                            {exam?.terapija && (
-                              <p><strong className="text-gray-900">Terapija:</strong> {exam.terapija}</p>
-                            )}
+                        {apt.napomena && (
+                          <div className="bg-gray-50 rounded-lg px-3 py-2 mb-3 text-xs text-gray-700">
+                            <p><strong className="text-gray-900">Napomena uz termin:</strong> {apt.napomena}</p>
                           </div>
+                        )}
+                        {exam ? (
+                          <div className="mb-3"><ExamReadOnly exam={exam} /></div>
+                        ) : (
+                          <p className="text-[11px] text-gray-400 mb-3">Za ovaj termin nije upisan pregled.</p>
                         )}
 
                         {apt.services && apt.services.length > 0 && (
@@ -592,11 +589,7 @@ function IstorijaView({
                     </span>
                     <span className="text-[11px] text-gray-400">{doctorLabel}</span>
                   </div>
-                  <div className="text-xs text-gray-700 space-y-1">
-                    {e.razlog_dolaska && <p><strong className="text-gray-900">Razlog dolaska:</strong> {e.razlog_dolaska}</p>}
-                    {e.nalaz && <p><strong className="text-gray-900">Dijagnoza:</strong> {e.nalaz}</p>}
-                    {e.terapija && <p><strong className="text-gray-900">Terapija:</strong> {e.terapija}</p>}
-                  </div>
+                  <ExamReadOnly exam={e} />
                 </div>
               );
             })}
@@ -627,6 +620,39 @@ function IstorijaView({
             ))}
           </div>
         </div>
+      )}
+    </div>
+  );
+}
+
+// ====================================================================
+// Cijeli pregled, samo za citanje (istorija — vide ga svi ljekari, mijenja samo autor)
+// ====================================================================
+function ExamReadOnly({ exam }: { exam: Examination }) {
+  const polja: [string, string | undefined][] = [
+    ['Razlog dolaska / anamneza', exam.razlog_dolaska],
+    ['Klinički nalaz', exam.nalaz],
+    ['Rezultati (laboratorijski i RTG)', exam.rezultati],
+    ['Terapija', exam.terapija],
+    ['Preporuke', exam.preporuke],
+    ['Kontrolni pregled', exam.kontrolni_pregled],
+    ['Napomena', exam.napomena],
+  ];
+  const popunjena = polja.filter(([, v]) => v && v.trim());
+  return (
+    <div className="bg-gray-50 rounded-lg px-3 py-2 text-xs text-gray-700 space-y-1.5">
+      <p className="text-[10px] uppercase tracking-wider font-semibold text-gray-400">
+        {exam.status === 'zavrsen' ? 'Završen pregled' : 'Pregled u toku (nacrt)'}
+        {exam.trajanje_min ? ` · ${exam.trajanje_min} min` : ''}
+      </p>
+      {popunjena.length === 0 ? (
+        <p className="text-gray-400">Pregled nema upisanih podataka.</p>
+      ) : (
+        popunjena.map(([naziv, v]) => (
+          <p key={naziv} className="whitespace-pre-wrap">
+            <strong className="text-gray-900">{naziv}:</strong> {v}
+          </p>
+        ))
       )}
     </div>
   );

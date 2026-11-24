@@ -5,15 +5,16 @@ import Tabs from '../components/ui/Tabs';
 import WeeklyTemplateEditor from '../components/schedule/WeeklyTemplateEditor';
 import DateExceptions from '../components/schedule/DateExceptions';
 import WeekOverview from '../components/schedule/WeekOverview';
+import ShiftPlanner from '../components/schedule/ShiftPlanner';
 import AbsenceList from '../components/schedule/AbsenceList';
 import { useCalendar } from '../contexts/CalendarContext';
 import { loadRaspored, type RasporedPodaci } from '../lib/schedule';
 
-type Tab = 'pregled' | 'radno' | 'odsustva';
+type Tab = 'smjene' | 'pregled' | 'radno' | 'odsustva';
 
 export default function Schedule() {
   const { doctors } = useCalendar();
-  const [tab, setTab] = useState<Tab>('pregled');
+  const [tab, setTab] = useState<Tab>('smjene');
   const [data, setData] = useState<RasporedPodaci>({ schedules: [], odsustva: [] });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -44,6 +45,7 @@ export default function Schedule() {
         active={tab}
         onChange={setTab}
         tabs={[
+          { id: 'smjene', label: 'Smjene' },
           { id: 'pregled', label: 'Sedmični pregled' },
           { id: 'radno', label: 'Radno vrijeme' },
           { id: 'odsustva', label: 'Odsustva', count: data.odsustva.length },
@@ -63,6 +65,8 @@ export default function Schedule() {
           <CalendarClock className="mx-auto text-gray-300 mb-2" size={32} />
           <p className="text-sm text-gray-500">Prvo dodajte osoblje u meniju Osoblje.</p>
         </Card>
+      ) : tab === 'smjene' ? (
+        <ShiftPlanner doctors={doctors} data={data} onSaved={refresh} />
       ) : tab === 'pregled' ? (
         <WeekOverview doctors={doctors} data={data} />
       ) : tab === 'odsustva' ? (

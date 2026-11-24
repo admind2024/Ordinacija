@@ -26,8 +26,6 @@ export default function ExaminationForm({ initialData, onSave, saving, appointme
   const [kontrolniPregled, setKontrolniPregled] = useState(initialData?.kontrolni_pregled || '');
   const [napomena, setNapomena] = useState(initialData?.napomena || '');
 
-  const ukupnaCijena = appointmentServices?.reduce((sum, s) => sum + s.ukupno, 0) || 0;
-
   function getData(): Partial<Examination> {
     return {
       razlog_dolaska: razlogDolaska || undefined,
@@ -63,15 +61,10 @@ export default function ExaminationForm({ initialData, onSave, saving, appointme
           </div>
           <div className="space-y-1">
             {appointmentServices.map((svc) => (
-              <div key={svc.id} className="flex justify-between text-sm">
+              <div key={svc.id} className="text-sm">
                 <span className="text-blue-800">{svc.naziv} {svc.kolicina > 1 ? `x${svc.kolicina}` : ''}</span>
-                <span className="font-medium text-blue-900">{svc.ukupno.toFixed(2)} EUR</span>
               </div>
             ))}
-            <div className="flex justify-between text-sm font-bold border-t border-blue-200 pt-1 mt-1">
-              <span className="text-blue-800">Ukupno</span>
-              <span className="text-blue-900">{ukupnaCijena.toFixed(2)} EUR</span>
-            </div>
           </div>
         </div>
       )}

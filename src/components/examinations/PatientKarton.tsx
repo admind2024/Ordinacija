@@ -92,7 +92,6 @@ export default function PatientKarton(props: PatientKartonProps) {
   const posljednjaPosjeta = sortedAppointments.find((a) => a.status === 'zavrsen');
 
   const aptServices = useMemo(() => selectedAppointment?.services || [], [selectedAppointment]);
-  const aptTotal = useMemo(() => aptServices.reduce((s, svc) => s + svc.ukupno, 0), [aptServices]);
 
   function handleAddMaterialClick() {
     if (!selectedMaterialId) return;
@@ -180,7 +179,6 @@ export default function PatientKarton(props: PatientKartonProps) {
             ['Grad', patient.grad || '—'],
             ['JMBG', patient.jmbg || '—'],
             ['Osiguranje', patient.osiguranje || '—'],
-            ['Popust', patient.popust > 0 ? `${patient.popust}%` : '—'],
           ].map(([k, v]) => (
             <div key={k} className="flex justify-between items-center py-1 text-[11px]">
               <span className="text-white/40">{k}</span>
@@ -296,7 +294,6 @@ export default function PatientKarton(props: PatientKartonProps) {
               selectedAppointment={selectedAppointment}
               currentExam={currentExam}
               aptServices={aptServices}
-              aptTotal={aptTotal}
               saving={saving}
               onSaveExam={onSaveExam}
               doctorId={loggedDoctor.id}
@@ -366,14 +363,13 @@ function KpiCell({ icon, label, value, color }: { icon: React.ReactNode; label: 
 // Pregled view (form za aktivni termin)
 // ====================================================================
 function PregledView({
-  selectedAppointment, currentExam, aptServices, aptTotal, saving, onSaveExam, doctorId, previousExam,
+  selectedAppointment, currentExam, aptServices, saving, onSaveExam, doctorId, previousExam,
 }: {
   doctorId: string;
   previousExam: Examination | null;
   selectedAppointment: Appointment | null;
   currentExam: Examination | null;
   aptServices: any[];
-  aptTotal: number;
   saving: boolean;
   onSaveExam: (data: Partial<Examination>, finish: boolean, print?: boolean) => Promise<void>;
 }) {
@@ -412,7 +408,6 @@ function PregledView({
                 </span>
               ))}
             </div>
-            <span className="text-sm font-bold text-gray-900 whitespace-nowrap ml-3">{aptTotal.toFixed(2)} €</span>
           </div>
         )}
 
@@ -491,7 +486,6 @@ function IstorijaView({
             {byYear[y].map((apt) => {
               const doctor = doctors.find((d) => d.id === apt.doctor_id);
               const exam = exams.find((e) => e.appointment_id === apt.id);
-              const total = apt.services?.reduce((s, svc) => s + svc.ukupno, 0) || 0;
               const isOpen = !!expanded[apt.id];
               const dt = parseISO(apt.pocetak);
               const dan = format(dt, 'dd');
@@ -501,7 +495,7 @@ function IstorijaView({
                 ? apt.services.map((s) => s.naziv).join(', ')
                 : 'Termin';
               const trajanje = exam?.trajanje_min ? ` · ⏱ ${exam.trajanje_min} min` : '';
-              const kratko = `${format(dt, 'HH:mm')} · ${doctorLabel}${total > 0 ? ` · ${total.toFixed(0)} €` : ''}${trajanje}`;
+              const kratko = `${format(dt, 'HH:mm')} · ${doctorLabel}${trajanje}`;
 
               return (
                 <div key={apt.id} className="grid grid-cols-[48px_1fr] gap-3">
@@ -548,7 +542,7 @@ function IstorijaView({
                           <div className="flex flex-wrap gap-1.5 mb-3">
                             {apt.services.map((s, i) => (
                               <span key={i} className="text-[10px] px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-100">
-                                {s.naziv} · {s.ukupno.toFixed(0)} €
+                                {s.naziv}
                               </span>
                             ))}
                           </div>

@@ -493,9 +493,6 @@ function ExaminationsContent({ loggedDoctor }: { loggedDoctor: Doctor }) {
                     )}
                   </div>
                   {/* Iznos */}
-                  {t.total > 0 && (
-                    <span className="text-xs font-bold text-gray-700 shrink-0">{t.total.toFixed(0)} €</span>
-                  )}
                   {/* Status badge — prominentniji za završene */}
                   <span className={`text-[10px] px-2.5 py-1 rounded-full font-bold shrink-0 ${sc.cls}`}>
                     {sc.label}

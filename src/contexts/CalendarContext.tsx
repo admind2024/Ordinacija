@@ -1,9 +1,12 @@
-import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from 'react';
+import { createContext, useContext, useState, useCallback, useEffect, useMemo, type ReactNode } from 'react';
 import { addDays, addWeeks, addMonths, isWithinInterval, parseISO } from 'date-fns';
 import type { Appointment, AppointmentStatus, Doctor, Room, Service, ServiceCategory, Material, Establishment } from '../types';
 import { supabase } from '../lib/supabase';
+import { useAuth } from './AuthContext';
 import { isSmsConfigured, sendSms, stripDiacritics } from '../lib/smsService';
 import { getMessage, loadTemplatesFromDb } from '../lib/messageTemplates';
+
+const LS_JEDINICA = 'moa_aktivna_jedinica';
 
 export type CalendarView = 'day' | 'week' | 'month' | 'agenda';
 export type ColorSource = 'doctor' | 'status' | 'room';
@@ -38,6 +41,16 @@ interface CalendarContextType {
   // Poslovne jedinice (MOA Podgorica, Bolnica...) i kratki naziv jedinice za prikaz
   establishments: Establishment[];
   jedinicaNaziv: (id?: string | null) => string;
+  // Aktivna jedinica: radnik je vezan za svoju, admin je bira u zaglavlju.
+  // appointments/doctors/rooms/services/serviceCategories su UVIJEK samo za aktivnu jedinicu.
+  aktivnaJedinicaId: string;
+  aktivnaJedinica: Establishment | null;
+  mozeBiratiJedinicu: boolean;
+  setAktivnaJedinica: (id: string) => void;
+  // Sve jedinice zajedno — samo za istoriju pacijenta (karton je zajednicki).
+  sviTermini: Appointment[];
+  sviLjekari: Doctor[];
+  sveOrdinacije: Room[];
   loading: boolean;
 
   setSelectedDate: (date: Date) => void;
@@ -92,13 +105,13 @@ const CalendarContext = createContext<CalendarContextType | undefined>(undefined
 export function CalendarProvider({ children }: { children: ReactNode }) {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [view, setView] = useState<CalendarView>('week');
-  const [appointments, setAppointments] = useState<Appointment[]>([]);
-  const [doctors, setDoctors] = useState<Doctor[]>([]);
-  const [rooms, setRooms] = useState<Room[]>([]);
-  const [services, setServices] = useState<Service[]>([]);
+  const [sviTermini, setAppointments] = useState<Appointment[]>([]);
+  const [sviLjekari, setDoctors] = useState<Doctor[]>([]);
+  const [sveOrdinacije, setRooms] = useState<Room[]>([]);
+  const [sveUsluge, setServices] = useState<Service[]>([]);
   const [materials, setMaterials] = useState<Material[]>([]);
   const [establishments, setEstablishments] = useState<Establishment[]>([]);
-  const [serviceCategories, setServiceCategories] = useState<ServiceCategory[]>([]);
+  const [sveKategorije, setServiceCategories] = useState<ServiceCategory[]>([]);
   const [smsLog, setSmsLog] = useState<SmsLogEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState<CalendarFilters>({
@@ -106,6 +119,45 @@ export function CalendarProvider({ children }: { children: ReactNode }) {
     roomIds: [],
     colorSource: 'doctor',
   });
+
+  // ---------------- Poslovne jedinice ----------------
+  // Radnik sa upisanom jedinicom vidi samo nju; korisnik bez jedinice (admin) bira aktivnu.
+  const { user } = useAuth();
+  const [izabranaJedinicaId, setIzabranaJedinicaId] = useState<string>(() => {
+    try { return localStorage.getItem(LS_JEDINICA) || ''; } catch { return ''; }
+  });
+  const maticnaJedinicaId = establishments[0]?.id || '';
+  const korisnikJedinicaId = user?.establishment_id || '';
+  const mozeBiratiJedinicu = !korisnikJedinicaId;
+  const aktivnaJedinicaId = korisnikJedinicaId
+    || (establishments.some((e) => e.id === izabranaJedinicaId) ? izabranaJedinicaId : maticnaJedinicaId);
+  const aktivnaJedinica = establishments.find((e) => e.id === aktivnaJedinicaId) || null;
+
+  const setAktivnaJedinica = useCallback((id: string) => {
+    setIzabranaJedinicaId(id);
+    try { localStorage.setItem(LS_JEDINICA, id); } catch { /* bez pamcenja */ }
+  }, []);
+
+  // Zapis bez jedinice pripada maticnoj (prvoj) ustanovi.
+  const uAktivnoj = useCallback(
+    (x: { establishment_id?: string | null }) => (x.establishment_id || maticnaJedinicaId) === aktivnaJedinicaId,
+    [maticnaJedinicaId, aktivnaJedinicaId],
+  );
+  const appointments = useMemo(() => sviTermini.filter(uAktivnoj), [sviTermini, uAktivnoj]);
+  const doctors = useMemo(() => sviLjekari.filter(uAktivnoj), [sviLjekari, uAktivnoj]);
+  const rooms = useMemo(() => sveOrdinacije.filter(uAktivnoj), [sveOrdinacije, uAktivnoj]);
+  const services = useMemo(() => sveUsluge.filter(uAktivnoj), [sveUsluge, uAktivnoj]);
+  const serviceCategories = useMemo(() => sveKategorije.filter(uAktivnoj), [sveKategorije, uAktivnoj]);
+
+  // Kad se promijeni jedinica (ili njeno osoblje/ordinacije), filter kalendara pokriva sve iz te jedinice.
+  useEffect(() => {
+    setFilters((prev) => ({
+      ...prev,
+      doctorIds: doctors.map((d) => d.id),
+      roomIds: rooms.map((r) => r.id),
+    }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [aktivnaJedinicaId, doctors.length, rooms.length]);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -276,7 +328,7 @@ export function CalendarProvider({ children }: { children: ReactNode }) {
 
     const { data, error } = await supabase
       .from('appointments')
-      .insert(aptData)
+      .insert({ ...aptData, establishment_id: aktivnaJedinicaId || undefined })
       .select()
       .single();
 
@@ -525,7 +577,7 @@ export function CalendarProvider({ children }: { children: ReactNode }) {
 
   // ===== Doctor CRUD =====
   const createDoctor = useCallback(async (doctor: Omit<Doctor, 'id'>) => {
-    const { data, error } = await supabase.from('doctors').insert(doctor).select().single();
+    const { data, error } = await supabase.from('doctors').insert({ ...doctor, establishment_id: aktivnaJedinicaId || undefined }).select().single();
     if (error) { console.error('Greska pri kreiranju ljekara:', error); return null; }
     setDoctors((prev) => [...prev, data as Doctor]);
     return data as Doctor;
@@ -545,7 +597,7 @@ export function CalendarProvider({ children }: { children: ReactNode }) {
 
   // ===== Service CRUD =====
   const createService = useCallback(async (service: Omit<Service, 'id'>) => {
-    const { data, error } = await supabase.from('services').insert(service).select().single();
+    const { data, error } = await supabase.from('services').insert({ ...service, establishment_id: aktivnaJedinicaId || undefined }).select().single();
     if (error) { console.error('Greska pri kreiranju usluge:', error); return null; }
     const svc = { ...data, cijena: Number(data.cijena) || 0 } as Service;
     setServices((prev) => [...prev, svc]);
@@ -586,7 +638,7 @@ export function CalendarProvider({ children }: { children: ReactNode }) {
 
   // ===== Service Category CRUD =====
   const createServiceCategory = useCallback(async (cat: Omit<ServiceCategory, 'id'>) => {
-    const { data, error } = await supabase.from('service_categories').insert(cat).select().single();
+    const { data, error } = await supabase.from('service_categories').insert({ ...cat, establishment_id: aktivnaJedinicaId || undefined }).select().single();
     if (error) { console.error('Greska pri kreiranju kategorije:', error); return null; }
     setServiceCategories((prev) => [...prev, data as ServiceCategory]);
     return data as ServiceCategory;
@@ -618,6 +670,8 @@ export function CalendarProvider({ children }: { children: ReactNode }) {
       value={{
         selectedDate, view, filters, appointments,
         doctors, rooms, services, serviceCategories, materials, establishments, jedinicaNaziv, loading,
+        aktivnaJedinicaId, aktivnaJedinica, mozeBiratiJedinicu, setAktivnaJedinica,
+        sviTermini, sviLjekari, sveOrdinacije,
         setSelectedDate, setView, goToToday, goForward, goBack,
         toggleDoctorFilter, toggleRoomFilter, setColorSource,
         selectAllDoctors, deselectAllDoctors,

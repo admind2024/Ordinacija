@@ -55,7 +55,9 @@ export default function Examinations() {
 }
 
 function ExaminationsContent({ loggedDoctor }: { loggedDoctor: Doctor }) {
-  const { appointments, doctors, materials, updateAppointmentStatus } = useCalendar();
+  const { appointments, doctors, materials, updateAppointmentStatus, sviTermini, sviLjekari, aktivnaJedinica } = useCalendar();
+  // Zaglavlje stampanog nalaza = aktivna poslovna jedinica
+  useEffect(() => { if (aktivnaJedinica) setEstablishment(aktivnaJedinica); }, [aktivnaJedinica]);
   const { patients: allPatients } = usePatients();
 
   const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
@@ -75,10 +77,6 @@ function ExaminationsContent({ loggedDoctor }: { loggedDoctor: Doctor }) {
   const [completedExamAptIds, setCompletedExamAptIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
-    supabase.from('establishments').select('*').order('created_at', { ascending: true }).limit(1).single()
-      .then(({ data }) => {
-        if (data) setEstablishment(data as Establishment);
-      });
     supabase.from('examinations')
       .select('appointment_id')
       .eq('status', 'zavrsen')
@@ -224,8 +222,8 @@ function ExaminationsContent({ loggedDoctor }: { loggedDoctor: Doctor }) {
       .order('datum', { ascending: false });
     setPatientExams((exams || []) as Examination[]);
 
-    // Istorija je kompletna: svi termini ovog pacijenta, kod svih ljekara (bez otkazanih)
-    const aptList = appointments.filter(
+    // Istorija je kompletna: svi termini ovog pacijenta, kod svih ljekara i u svim jedinicama (bez otkazanih)
+    const aptList = sviTermini.filter(
       (a) => a.patient_id === patientId && a.status !== 'otkazan'
     ).sort((a, b) => b.pocetak.localeCompare(a.pocetak));
     setPatientAppointments(aptList);
@@ -248,7 +246,7 @@ function ExaminationsContent({ loggedDoctor }: { loggedDoctor: Doctor }) {
         })));
       }
     }
-  }, [appointments, loggedDoctor.id]);
+  }, [sviTermini, loggedDoctor.id]);
 
   async function handleSave(data: Partial<Examination>, finish: boolean, print: boolean = false) {
     if (!selectedAppointment || !patient) return;
@@ -267,6 +265,7 @@ function ExaminationsContent({ loggedDoctor }: { loggedDoctor: Doctor }) {
       patient_id: patient.id,
       doctor_id: selectedAppointment.doctor_id,
       appointment_id: selectedAppointment.id,
+      establishment_id: selectedAppointment.establishment_id || aktivnaJedinica?.id,
       datum: todayStr,
       status: finish ? 'zavrsen' : 'draft',
       zapoceto_u: zapoceto,
@@ -587,7 +586,7 @@ function ExaminationsContent({ loggedDoctor }: { loggedDoctor: Doctor }) {
         <PatientKarton
           patient={patient}
           loggedDoctor={loggedDoctor}
-          allDoctors={doctors}
+          allDoctors={sviLjekari}
           materials={materials}
           appointments={patientAppointments}
           exams={patientExams}

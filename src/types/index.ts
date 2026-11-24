@@ -13,6 +13,7 @@ export interface User {
   prezime: string;
   uloga: UserRole;
   doctor_id?: string;
+  establishment_id?: string | null; // poslovna jedinica; prazno = sve jedinice (admin)
   aktivan: boolean;
   created_at: string;
 }

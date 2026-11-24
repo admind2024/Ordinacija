@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
-import { Building2, Save, CheckCircle, Loader2 } from 'lucide-react';
+import { Building2, Save, CheckCircle, Loader2, Plus } from 'lucide-react';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
 import PinGate from '../components/ui/PinGate';
 import { supabase } from '../lib/supabase';
+import { useCalendar } from '../contexts/CalendarContext';
 
 type RoomRow = {
   id: string;
@@ -15,6 +16,8 @@ type RoomRow = {
 };
 
 export default function Establishment() {
+  // Ekran prikazuje i mijenja AKTIVNU poslovnu jedinicu (izbor je u zaglavlju).
+  const { aktivnaJedinicaId, refreshData } = useCalendar();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -22,6 +25,7 @@ export default function Establishment() {
 
   const [form, setForm] = useState({
     naziv: '',
+    kratki_naziv: '',
     adresa: '',
     grad: '',
     telefon: '',
@@ -35,11 +39,16 @@ export default function Establishment() {
   const [roomDraft, setRoomDraft] = useState<Record<string, string>>({});
   const [savingRoomId, setSavingRoomId] = useState<string | null>(null);
   const [roomsSavedId, setRoomsSavedId] = useState<string | null>(null);
+  const [novaOrdinacija, setNovaOrdinacija] = useState('');
+  const [noviTip, setNoviTip] = useState<'ordinacija' | 'oprema'>('ordinacija');
+  const [dodaje, setDodaje] = useState(false);
+  const [roomError, setRoomError] = useState('');
 
   async function loadRooms() {
     const { data } = await supabase
       .from('rooms')
       .select('id, naziv, tip, boja, aktivan')
+      .eq('establishment_id', aktivnaJedinicaId)
       .order('naziv');
     const list = (data || []) as RoomRow[];
     setRooms(list);
@@ -47,12 +56,15 @@ export default function Establishment() {
   }
 
   useEffect(() => {
-    supabase.from('establishments').select('*').order('created_at', { ascending: true }).limit(1).single()
+    if (!aktivnaJedinicaId) return; // jedinice se jos ucitavaju
+    setLoading(true);
+    supabase.from('establishments').select('*').eq('id', aktivnaJedinicaId).single()
       .then(({ data }) => {
         if (data) {
           setEstId(data.id);
           setForm({
             naziv: data.naziv || '',
+            kratki_naziv: data.kratki_naziv || '',
             adresa: data.adresa || '',
             grad: data.grad || '',
             telefon: data.telefon || '',
@@ -65,7 +77,21 @@ export default function Establishment() {
         setLoading(false);
       });
     loadRooms();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [aktivnaJedinicaId]);
+
+  async function dodajOrdinaciju() {
+    const naziv = novaOrdinacija.trim();
+    if (!naziv || !aktivnaJedinicaId) return;
+    setDodaje(true);
+    setRoomError('');
+    const { error } = await supabase.from('rooms').insert({ naziv, tip: noviTip, establishment_id: aktivnaJedinicaId });
+    setDodaje(false);
+    if (error) { setRoomError('Nije dodato: ' + error.message); return; }
+    setNovaOrdinacija('');
+    await loadRooms();
+    await refreshData();
+  }
 
   async function saveRoomName(id: string) {
     const naziv = (roomDraft[id] || '').trim();
@@ -101,6 +127,7 @@ export default function Establishment() {
       if (data) setEstId(data.id);
     }
     setSaving(false);
+    await refreshData(); // naziv jedinice se odmah vidi u zaglavlju i istoriji
     setSaved(true);
     setTimeout(() => setSaved(false), 3000);
   }
@@ -125,6 +152,7 @@ export default function Establishment() {
           </div>
           <div className="space-y-4">
             <Input label="Naziv ustanove *" value={form.naziv} onChange={(e) => update('naziv', e.target.value)} />
+            <Input label="Kratki naziv (zaglavlje i istorija posjeta)" value={form.kratki_naziv} onChange={(e) => update('kratki_naziv', e.target.value)} placeholder="npr. MOA Podgorica" />
             <Input label="Adresa" value={form.adresa} onChange={(e) => update('adresa', e.target.value)} />
             <Input label="Grad" value={form.grad} onChange={(e) => update('grad', e.target.value)} />
             <div className="grid grid-cols-2 gap-4">
@@ -189,8 +217,37 @@ export default function Establishment() {
               );
             })}
             {rooms.length === 0 && (
-              <p className="text-sm text-gray-400 py-4 text-center">Nema unijetih ordinacija.</p>
+              <p className="text-sm text-gray-400 py-4 text-center">Ova jedinica još nema ordinacija. Dodaj prvu ispod.</p>
             )}
+          </div>
+
+          {/* Nova ordinacija / oprema za ovu jedinicu */}
+          <div className="mt-4 pt-4 border-t border-border">
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Dodaj ordinaciju ili opremu</p>
+            <div className="flex flex-wrap gap-2">
+              <input
+                type="text"
+                value={novaOrdinacija}
+                onChange={(e) => setNovaOrdinacija(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') dodajOrdinaciju(); }}
+                placeholder="npr. Ordinacija 1"
+                aria-label="Naziv nove ordinacije"
+                className="flex-1 min-w-[10rem] px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+              />
+              <select
+                value={noviTip}
+                onChange={(e) => setNoviTip(e.target.value as 'ordinacija' | 'oprema')}
+                aria-label="Tip"
+                className="px-3 py-2 border border-border rounded-lg text-sm bg-white"
+              >
+                <option value="ordinacija">Ordinacija</option>
+                <option value="oprema">Oprema</option>
+              </select>
+              <Button onClick={dodajOrdinaciju} disabled={!novaOrdinacija.trim() || dodaje} size="sm">
+                {dodaje ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />} Dodaj
+              </Button>
+            </div>
+            {roomError && <p role="alert" className="mt-2 text-sm text-red-600">{roomError}</p>}
           </div>
         </Card>
       </div>

@@ -25,7 +25,7 @@ interface Red {
 
 // Protokol bolesnika: knjiga zavrsenih pregleda sa rednim brojem po godini.
 export default function PatientProtocol() {
-  const { doctors } = useCalendar();
+  const { doctors, aktivnaJedinicaId } = useCalendar();
   const [godina, setGodina] = useState(new Date().getFullYear());
   const [doctorId, setDoctorId] = useState('');
   const [q, setQ] = useState('');
@@ -36,10 +36,12 @@ export default function PatientProtocol() {
     let alive = true;
     (async () => {
       setRows(null);
+      if (!aktivnaJedinicaId) return; // jedinice se jos ucitavaju
       const { data: ex, error: e } = await supabase
         .from('examinations')
         .select('id, datum, doctor_id, appointment_id, razlog_dolaska, nalaz, terapija, kontrolni_pregled, patient:patients(ime, prezime, ime_roditelja, datum_rodjenja, adresa, grad, jmbg)')
         .eq('status', 'zavrsen')
+        .eq('establishment_id', aktivnaJedinicaId)
         .gte('datum', `${godina}-01-01`).lte('datum', `${godina}-12-31`)
         .order('datum').order('created_at');
       if (!alive) return;
@@ -83,7 +85,7 @@ export default function PatientProtocol() {
       setError('');
     })();
     return () => { alive = false; };
-  }, [godina, doctors]);
+  }, [godina, doctors, aktivnaJedinicaId]);
 
   const shown = useMemo(() => {
     const t = q.trim().toLowerCase();

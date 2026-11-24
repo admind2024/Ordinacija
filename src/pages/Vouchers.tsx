@@ -7,6 +7,7 @@ import Modal from '../components/ui/Modal';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { usePatients } from '../contexts/PatientsContext';
+import { useCalendar } from '../contexts/CalendarContext';
 import { eur, METODA_LABELS } from '../lib/payments';
 import { exportToExcel } from '../lib/exportReport';
 import type { Vaucer } from '../types';
@@ -82,6 +83,10 @@ export default function Vouchers() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('aktivan');
   const [q, setQ] = useState('');
   const [ustanova, setUstanova] = useState<{ naziv?: string; adresa?: string; telefon?: string }>({});
+  const { aktivnaJedinica } = useCalendar();
+  useEffect(() => {
+    if (aktivnaJedinica) setUstanova({ naziv: aktivnaJedinica.naziv, adresa: aktivnaJedinica.adresa, telefon: aktivnaJedinica.telefon });
+  }, [aktivnaJedinica]);
 
   const [open, setOpen] = useState(false);
   const [f, setF] = useState(PRAZAN);
@@ -104,8 +109,6 @@ export default function Vouchers() {
 
   useEffect(() => {
     refresh();
-    supabase.from('establishments').select('naziv, adresa, telefon').order('created_at', { ascending: true }).limit(1).maybeSingle()
-      .then(({ data }) => { if (data) setUstanova(data); });
   }, [refresh]);
 
   const ime = (id?: string | null) => {

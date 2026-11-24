@@ -24,7 +24,9 @@ function isLocalToday(isoStr: string): boolean {
 }
 
 export default function Dashboard() {
-  const { appointments, doctors } = useCalendar();
+  const { appointments, doctors, aktivnaJedinica } = useCalendar();
+  // Podaci ustanove na racunima/stampi = aktivna poslovna jedinica
+  useEffect(() => { if (aktivnaJedinica) setEstablishment(aktivnaJedinica); }, [aktivnaJedinica]);
   const { patients } = usePatients();
 
   const todayAppointments = useMemo(
@@ -96,8 +98,6 @@ export default function Dashboard() {
         }));
         setTodayExams(enriched);
       });
-    supabase.from('establishments').select('*').order('created_at', { ascending: true }).limit(1).single()
-      .then(({ data }) => { if (data) setEstablishment(data as Establishment); });
 
     // Ucitaj uplate + fiskalne detalje iz payments tabele
     supabase

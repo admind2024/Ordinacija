@@ -1,5 +1,6 @@
 import { useAuth } from '../../contexts/AuthContext';
-import { LogOut, User, Menu, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
+import { useCalendar } from '../../contexts/CalendarContext';
+import { LogOut, User, Menu, PanelLeftClose, PanelLeftOpen, Building2 } from 'lucide-react';
 
 interface HeaderProps {
   sectionName?: string;
@@ -10,6 +11,7 @@ interface HeaderProps {
 
 export default function Header({ sectionName = 'MOA', onOpenMenu, collapsed, onToggleCollapsed }: HeaderProps) {
   const { user, signOut } = useAuth();
+  const { establishments, aktivnaJedinicaId, aktivnaJedinica, mozeBiratiJedinicu, setAktivnaJedinica } = useCalendar();
 
   if (!user) return null;
 
@@ -47,6 +49,30 @@ export default function Header({ sectionName = 'MOA', onOpenMenu, collapsed, onT
       </div>
 
       <div className="flex items-center gap-1 xs:gap-2 md:gap-4 shrink-0">
+        {/* Poslovna jedinica: admin bira, radnik samo vidi svoju */}
+        {establishments.length > 1 && (
+          mozeBiratiJedinicu ? (
+            <label className="flex items-center gap-1.5 text-sm">
+              <Building2 size={16} className="text-accent-600 shrink-0 hidden xs:block" aria-hidden="true" />
+              <span className="sr-only">Poslovna jedinica</span>
+              <select
+                value={aktivnaJedinicaId}
+                onChange={(e) => setAktivnaJedinica(e.target.value)}
+                className="py-1.5 pl-2.5 border border-accent-200 bg-accent-50 text-accent-900 font-medium rounded-lg text-sm max-w-[9.5rem] xs:max-w-[12rem] focus:outline-none focus:ring-2 focus:ring-accent-400"
+              >
+                {establishments.map((e) => (
+                  <option key={e.id} value={e.id}>{e.kratki_naziv || e.naziv}</option>
+                ))}
+              </select>
+            </label>
+          ) : (
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-accent-200 bg-accent-50 text-accent-900 text-sm font-medium max-w-[12rem] truncate">
+              <Building2 size={15} className="text-accent-600 shrink-0" aria-hidden="true" />
+              {aktivnaJedinica?.kratki_naziv || aktivnaJedinica?.naziv}
+            </span>
+          )
+        )}
+
         {/* Desktop: puno ime + uloga */}
         <div className="hidden md:flex items-center gap-2 text-sm">
           <div className="w-8 h-8 bg-primary-100 text-primary-700 rounded-full flex items-center justify-center">

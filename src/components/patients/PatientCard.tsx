@@ -49,7 +49,8 @@ interface ExamRow {
 }
 
 export default function PatientCard({ patient, appointments, onBack, onEdit, onDelete }: PatientCardProps) {
-  const { doctors, rooms, jedinicaNaziv } = useCalendar();
+  // Karton je zajednicki za sve jedinice: istorija koristi termine, ljekare i ordinacije SVIH jedinica.
+  const { sviLjekari: doctors, sveOrdinacije: rooms, sviTermini, jedinicaNaziv } = useCalendar();
   const { debtsByPatient, paidByPatient } = usePatients();
   const [tab, setTab] = useState<TabKey>('info');
   // Alergije/rizici/dijagnoze — ucitavamo odmah zbog upozorenja na vrhu kartona
@@ -67,10 +68,10 @@ export default function PatientCard({ patient, appointments, onBack, onEdit, onD
   const [exams, setExams] = useState<ExamRow[]>([]);
 
   const patientAppointments = useMemo(() =>
-    appointments
+    (sviTermini.length ? sviTermini : appointments)
       .filter((a) => a.patient_id === patient.id)
       .sort((a, b) => parseISO(b.pocetak).getTime() - parseISO(a.pocetak).getTime()),
-    [appointments, patient.id],
+    [sviTermini, appointments, patient.id],
   );
 
   const totalUsluga = useMemo(() =>

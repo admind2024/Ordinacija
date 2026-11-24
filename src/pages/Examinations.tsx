@@ -201,9 +201,9 @@ function ExaminationsContent({ loggedDoctor }: { loggedDoctor: Doctor }) {
       .order('datum', { ascending: false });
     setPatientExams((exams || []) as Examination[]);
 
-    // Ucitaj sve termine ovog pacijenta kod ovog doktora
+    // Istorija je kompletna: svi termini ovog pacijenta, kod svih ljekara (bez otkazanih)
     const aptList = appointments.filter(
-      (a) => a.patient_id === patientId && a.doctor_id === loggedDoctor.id && a.status !== 'otkazan'
+      (a) => a.patient_id === patientId && a.status !== 'otkazan'
     ).sort((a, b) => b.pocetak.localeCompare(a.pocetak));
     setPatientAppointments(aptList);
 

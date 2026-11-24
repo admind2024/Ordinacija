@@ -2,7 +2,7 @@ import { useMemo, useState, useEffect } from 'react';
 import { format, parseISO } from 'date-fns';
 import { srLatn as sr } from 'date-fns/locale';
 import {
-  ArrowLeft, Phone, Mail, MapPin, Calendar, Clock, FileText, Wallet,
+  ArrowLeft, Phone, Mail, MapPin, Calendar, Clock, FileText,
   AlertCircle, Printer, Plus, Trash2, Pill, ClipboardList, History,
   Package, Stethoscope,
 } from 'lucide-react';
@@ -41,6 +41,15 @@ interface PatientKartonProps {
   onRemoveMaterial: (usageId: string) => void;
 }
 
+// Ranija evidencija procedura (uvezena prije prelaska na MOA) — samo medicinski dio, bez cijena
+interface RanijaProcedura {
+  id: string;
+  datum: string | null;
+  procedura: string | null;
+  doctor_name: string | null;
+  napomena: string | null;
+}
+
 type NavKey = 'pregled' | 'istorija' | 'dijagnoze' | 'terapija' | 'materijali' | 'napomene';
 
 const NAV_ITEMS: { id: NavKey; label: string; icon: typeof History; dot: string }[] = [
@@ -51,15 +60,6 @@ const NAV_ITEMS: { id: NavKey; label: string; icon: typeof History; dot: string 
   { id: 'materijali', label: 'Materijali',       icon: Package,       dot: 'bg-purple-400' },
   { id: 'napomene',   label: 'Napomene',         icon: FileText,      dot: 'bg-gray-400' },
 ];
-
-interface DebtRow {
-  id: string;
-  iznos: number;
-  preostalo: number;
-  opis: string | null;
-  datum_nastanka: string;
-  status: string;
-}
 
 export default function PatientKarton(props: PatientKartonProps) {
   const {
@@ -73,24 +73,6 @@ export default function PatientKarton(props: PatientKartonProps) {
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [selectedMaterialId, setSelectedMaterialId] = useState('');
   const [materialQty, setMaterialQty] = useState('1');
-  const [debts, setDebts] = useState<DebtRow[]>([]);
-  const [debtsLoaded, setDebtsLoaded] = useState(false);
-
-  // Lazy load dugovanja za ovog pacijenta (za sidebar "saldo" indikator)
-  useEffect(() => {
-    if (!debtsLoaded) {
-      supabase
-        .from('dugovanja')
-        .select('id, iznos, preostalo, opis, datum_nastanka, status')
-        .eq('patient_id', patient.id)
-        .eq('status', 'aktivan')
-        .then(({ data }) => {
-          setDebts((data || []) as DebtRow[]);
-          setDebtsLoaded(true);
-        });
-    }
-  }, [patient.id, debtsLoaded]);
-
   const godine = patient.datum_rodjenja
     ? Math.floor((Date.now() - new Date(patient.datum_rodjenja).getTime()) / (365.25 * 24 * 3600 * 1000))
     : null;
@@ -98,17 +80,16 @@ export default function PatientKarton(props: PatientKartonProps) {
   const initials = `${patient.ime?.[0] || ''}${patient.prezime?.[0] || ''}`.toUpperCase();
   const polLabel = patient.pol === 'muski' ? 'M' : patient.pol === 'zenski' ? 'Ž' : '—';
 
-  const dugTotal = debts.reduce((sum, d) => sum + Number(d.preostalo || 0), 0);
-
   // Appointments sortirani desc
   const sortedAppointments = useMemo(() =>
     [...appointments].sort((a, b) => parseISO(b.pocetak).getTime() - parseISO(a.pocetak).getTime()),
     [appointments],
   );
 
-  // Stats
+  // Stats (ljekar vidi istoriju, ne finansije — dug se ovdje namjerno ne prikazuje)
   const brojPosjeta = appointments.filter((a) => a.status === 'zavrsen').length;
   const brojZakazanih = appointments.filter((a) => a.status === 'zakazan' || a.status === 'potvrdjen').length;
+  const posljednjaPosjeta = sortedAppointments.find((a) => a.status === 'zavrsen');
 
   const aptServices = useMemo(() => selectedAppointment?.services || [], [selectedAppointment]);
   const aptTotal = useMemo(() => aptServices.reduce((s, svc) => s + svc.ukupno, 0), [aptServices]);
@@ -123,6 +104,19 @@ export default function PatientKarton(props: PatientKartonProps) {
   }
 
   const activeNavLabel = NAV_ITEMS.find((n) => n.id === nav)?.label || '';
+
+  // Ranije procedure pacijenta iz stare evidencije — dio istorije koji ljekar treba da vidi
+  const [ranije, setRanije] = useState<RanijaProcedura[]>([]);
+  useEffect(() => {
+    let alive = true;
+    supabase
+      .from('procedure_log')
+      .select('id, datum, procedura, doctor_name, napomena')
+      .eq('patient_id', patient.id)
+      .order('datum', { ascending: false })
+      .then(({ data }) => { if (alive) setRanije((data || []) as RanijaProcedura[]); });
+    return () => { alive = false; };
+  }, [patient.id]);
 
   // Alergije i faktori rizika — ljekar ih mora vidjeti prije procedure
   const [zdravlje, setZdravlje] = useState<ZdravstveniPodaci | null>(null);
@@ -174,17 +168,6 @@ export default function PatientKarton(props: PatientKartonProps) {
             <div className="min-w-0">
               <p className="text-[10px] uppercase tracking-wider font-semibold text-amber-300 mb-0.5">Napomena</p>
               <p className="text-[11px] text-amber-100 leading-snug">{patient.napomena}</p>
-            </div>
-          </div>
-        )}
-
-        {/* Dug warning */}
-        {dugTotal > 0 && (
-          <div className="mx-3 mt-2 px-3 py-2 bg-red-500/15 border border-red-500/20 rounded-lg flex items-center gap-2">
-            <Wallet size={14} className="text-red-400 shrink-0" />
-            <div className="flex-1 min-w-0">
-              <p className="text-[10px] uppercase tracking-wider font-semibold text-red-300">Dug</p>
-              <p className="text-xs font-bold text-red-200">{dugTotal.toFixed(0)} €</p>
             </div>
           </div>
         )}
@@ -278,7 +261,7 @@ export default function PatientKarton(props: PatientKartonProps) {
               {nav === 'pregled' && (selectedAppointment
                 ? `Termin ${format(parseISO(selectedAppointment.pocetak), 'dd.MM.yyyy. HH:mm')}`
                 : 'Nema odabranog termina')}
-              {nav === 'istorija' && `${appointments.length} termina`}
+              {nav === 'istorija' && `${appointments.length} termina${ranije.length ? ` · ${ranije.length} iz ranije evidencije` : ''}`}
               {nav === 'dijagnoze' && `${exams.filter((e) => e.nalaz).length} dijagnoza`}
               {nav === 'terapija' && `${exams.filter((e) => e.terapija).length} terapija`}
               {nav === 'materijali' && `${usedMaterials.length} utrosenih`}
@@ -299,7 +282,7 @@ export default function PatientKarton(props: PatientKartonProps) {
           <KpiCell icon={<Calendar size={14} className="text-blue-600" />} label="Posjeta" value={brojPosjeta} />
           <KpiCell icon={<Clock size={14} className="text-amber-600" />} label="Zakazano" value={brojZakazanih} />
           <KpiCell icon={<ClipboardList size={14} className="text-primary-600" />} label="Dijagnoza" value={exams.filter((e) => e.nalaz).length} />
-          <KpiCell icon={<Wallet size={14} className={dugTotal > 0 ? 'text-red-600' : 'text-gray-400'} />} label="Dug" value={`${dugTotal.toFixed(0)} €`} color={dugTotal > 0 ? 'text-red-700' : 'text-gray-900'} />
+          <KpiCell icon={<History size={14} className="text-indigo-600" />} label="Posljednja posjeta" value={posljednjaPosjeta ? format(parseISO(posljednjaPosjeta.pocetak), 'dd.MM.yyyy.') : '—'} />
         </div>
 
         {zdravlje && (zdravlje.alergije.length > 0 || zdravlje.rizici.some((r) => r.aktivan)) && (
@@ -329,6 +312,8 @@ export default function PatientKarton(props: PatientKartonProps) {
             <IstorijaView
               appointments={sortedAppointments}
               exams={exams}
+              ranije={ranije}
+              loggedDoctorId={loggedDoctor.id}
               doctors={allDoctors}
               expanded={expanded}
               setExpanded={setExpanded}
@@ -468,17 +453,23 @@ function PregledView({
 // Istorija view (grupisano po godinama)
 // ====================================================================
 function IstorijaView({
-  appointments, exams, doctors, expanded, setExpanded, onSelectAppointment,
+  appointments, exams, ranije, loggedDoctorId, doctors, expanded, setExpanded, onSelectAppointment,
 }: {
   appointments: Appointment[];
   exams: Examination[];
+  ranije: RanijaProcedura[];
+  loggedDoctorId: string;
   doctors: Doctor[];
   expanded: Record<string, boolean>;
   setExpanded: React.Dispatch<React.SetStateAction<Record<string, boolean>>>;
   onSelectAppointment: (apt: Appointment) => void;
 }) {
-  if (appointments.length === 0) {
-    return <EmptyState icon={<Calendar size={40} />} label="Nema termina za ovog pacijenta" />;
+  // Pregledi koji nisu vezani ni za jedan prikazani termin — i oni su dio istorije
+  const aptIds = new Set(appointments.map((a) => a.id));
+  const preglediBezTermina = exams.filter((e) => !e.appointment_id || !aptIds.has(e.appointment_id));
+
+  if (appointments.length === 0 && preglediBezTermina.length === 0 && ranije.length === 0) {
+    return <EmptyState icon={<Calendar size={40} />} label="Nema istorije za ovog pacijenta" />;
   }
 
   const byYear = appointments.reduce<Record<string, Appointment[]>>((acc, a) => {
@@ -566,12 +557,14 @@ function IstorijaView({
                           </div>
                         )}
 
-                        <button
-                          onClick={(e) => { e.stopPropagation(); onSelectAppointment(apt); }}
-                          className="text-xs font-semibold text-primary-600 hover:text-primary-700 inline-flex items-center gap-1"
-                        >
-                          Otvori pregled za ovaj termin →
-                        </button>
+                        {apt.doctor_id === loggedDoctorId && (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); onSelectAppointment(apt); }}
+                            className="text-xs font-semibold text-primary-600 hover:text-primary-700 inline-flex items-center gap-1"
+                          >
+                            Otvori pregled za ovaj termin →
+                          </button>
+                        )}
                       </div>
                     )}
                   </div>
@@ -581,6 +574,60 @@ function IstorijaView({
           </div>
         </div>
       ))}
+
+      {preglediBezTermina.length > 0 && (
+        <div className="mb-6">
+          <div className="text-[11px] uppercase tracking-[0.08em] text-gray-400 font-semibold pb-2 mb-3 border-b border-border">
+            Pregledi bez termina
+          </div>
+          <div className="space-y-2.5">
+            {preglediBezTermina.map((e) => {
+              const doctor = doctors.find((d) => d.id === e.doctor_id);
+              const doctorLabel = doctor ? `${doctor.titula || ''} ${doctor.ime} ${doctor.prezime}`.trim() : '—';
+              return (
+                <div key={e.id} className="bg-white border border-gray-200 rounded-xl px-4 py-3">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="text-sm font-semibold text-gray-900">
+                      {e.datum ? format(parseISO(e.datum), 'dd.MM.yyyy.') : '—'}
+                    </span>
+                    <span className="text-[11px] text-gray-400">{doctorLabel}</span>
+                  </div>
+                  <div className="text-xs text-gray-700 space-y-1">
+                    {e.razlog_dolaska && <p><strong className="text-gray-900">Razlog dolaska:</strong> {e.razlog_dolaska}</p>}
+                    {e.nalaz && <p><strong className="text-gray-900">Dijagnoza:</strong> {e.nalaz}</p>}
+                    {e.terapija && <p><strong className="text-gray-900">Terapija:</strong> {e.terapija}</p>}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {ranije.length > 0 && (
+        <div className="mb-6">
+          <div className="text-[11px] uppercase tracking-[0.08em] text-gray-400 font-semibold pb-2 mb-3 border-b border-border">
+            Ranija evidencija ({ranije.length})
+          </div>
+          <div className="space-y-2">
+            {ranije.map((r) => (
+              <div key={r.id} className="bg-white border border-gray-200 rounded-xl px-4 py-2.5">
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-sm font-semibold text-gray-900">{r.procedura || 'Procedura'}</span>
+                  <span className="text-[11px] text-gray-500 whitespace-nowrap">
+                    {r.datum ? format(parseISO(r.datum), 'dd.MM.yyyy.') : '—'}
+                  </span>
+                </div>
+                {(r.doctor_name || r.napomena) && (
+                  <p className="text-[11px] text-gray-500 mt-0.5">
+                    {[r.doctor_name, r.napomena].filter(Boolean).join(' · ')}
+                  </p>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

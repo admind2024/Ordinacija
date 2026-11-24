@@ -21,6 +21,7 @@ export interface User {
 export interface Establishment {
   id: string;
   naziv: string;
+  kratki_naziv?: string | null; // npr. "MOA Podgorica", "Bolnica"
   adresa: string;
   grad: string;
   telefon: string;
@@ -44,6 +45,7 @@ export interface Room {
 // Ljekar / specijalista
 export interface Doctor {
   id: string;
+  establishment_id?: string | null; // poslovna jedinica kojoj pripada
   user_id: string;
   ime: string;
   prezime: string;
@@ -86,6 +88,7 @@ export interface Patient {
 // Kategorija usluga
 export interface ServiceCategory {
   id: string;
+  establishment_id?: string | null; // poslovna jedinica kojoj pripada
   naziv: string;
   redoslijed: number;
 }
@@ -93,6 +96,7 @@ export interface ServiceCategory {
 // Usluga iz kataloga
 export interface Service {
   id: string;
+  establishment_id?: string | null; // poslovna jedinica kojoj pripada
   kategorija_id: string;
   naziv: string;
   cijena: number;
@@ -123,6 +127,7 @@ export type AppointmentStatus =
 // Termin
 export interface Appointment {
   id: string;
+  establishment_id?: string | null; // poslovna jedinica kojoj pripada
   patient_id: string;
   doctor_id: string;
   room_id: string;
@@ -309,6 +314,7 @@ export type ExaminationStatus = 'draft' | 'zavrsen';
 
 export interface Examination {
   id: string;
+  establishment_id?: string | null; // poslovna jedinica kojoj pripada
   appointment_id?: string;
   patient_id: string;
   doctor_id: string;

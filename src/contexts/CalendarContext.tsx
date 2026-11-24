@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from 'react';
 import { addDays, addWeeks, addMonths, isWithinInterval, parseISO } from 'date-fns';
-import type { Appointment, AppointmentStatus, Doctor, Room, Service, ServiceCategory, Material } from '../types';
+import type { Appointment, AppointmentStatus, Doctor, Room, Service, ServiceCategory, Material, Establishment } from '../types';
 import { supabase } from '../lib/supabase';
 import { isSmsConfigured, sendSms, stripDiacritics } from '../lib/smsService';
 import { getMessage, loadTemplatesFromDb } from '../lib/messageTemplates';
@@ -35,6 +35,9 @@ interface CalendarContextType {
   services: Service[];
   serviceCategories: ServiceCategory[];
   materials: Material[];
+  // Poslovne jedinice (MOA Podgorica, Bolnica...) i kratki naziv jedinice za prikaz
+  establishments: Establishment[];
+  jedinicaNaziv: (id?: string | null) => string;
   loading: boolean;
 
   setSelectedDate: (date: Date) => void;
@@ -94,6 +97,7 @@ export function CalendarProvider({ children }: { children: ReactNode }) {
   const [rooms, setRooms] = useState<Room[]>([]);
   const [services, setServices] = useState<Service[]>([]);
   const [materials, setMaterials] = useState<Material[]>([]);
+  const [establishments, setEstablishments] = useState<Establishment[]>([]);
   const [serviceCategories, setServiceCategories] = useState<ServiceCategory[]>([]);
   const [smsLog, setSmsLog] = useState<SmsLogEntry[]>([]);
   const [loading, setLoading] = useState(true);
@@ -106,7 +110,7 @@ export function CalendarProvider({ children }: { children: ReactNode }) {
   const fetchData = useCallback(async () => {
     setLoading(true);
 
-    const [doctorsRes, roomsRes, servicesRes, categoriesRes, appointmentsRes, smsLogRes, materialsRes] = await Promise.all([
+    const [doctorsRes, roomsRes, servicesRes, categoriesRes, appointmentsRes, smsLogRes, materialsRes, establishmentsRes] = await Promise.all([
       supabase.from('doctors').select('*').eq('aktivan', true),
       supabase.from('rooms').select('*').eq('aktivan', true),
       supabase.from('services').select('*').eq('aktivan', true),
@@ -114,6 +118,7 @@ export function CalendarProvider({ children }: { children: ReactNode }) {
       supabase.from('appointments').select('*, appointment_services(*), patient:patients(ime, prezime, telefon)').order('pocetak', { ascending: true }),
       supabase.from('notifications').select('*').order('datum_slanja', { ascending: false }).limit(500),
       supabase.from('materials').select('*').eq('aktivan', true).order('naziv'),
+      supabase.from('establishments').select('*').order('created_at', { ascending: true }),
     ]);
 
     // Stalan redoslijed (baza ga ne garantuje): prvo ljekari, pa ostalo osoblje, abecedno po imenu.
@@ -124,6 +129,7 @@ export function CalendarProvider({ children }: { children: ReactNode }) {
     });
     const fetchedRooms = (roomsRes.data || []) as Room[];
 
+    setEstablishments((establishmentsRes.data || []) as Establishment[]);
     setDoctors(fetchedDoctors);
     setRooms(fetchedRooms);
     setServices((servicesRes.data || []).map((s: any) => ({
@@ -601,11 +607,17 @@ export function CalendarProvider({ children }: { children: ReactNode }) {
   // Automatski SMS podsjetnici rade preko Supabase Edge Function
   // (send-reminders) + pg_cron, ne iz browsera.
 
+  // Kratki naziv jedinice; zapis bez jedinice pripada prvoj (maticnoj) ustanovi.
+  const jedinicaNaziv = useCallback((id?: string | null) => {
+    const e = establishments.find((x) => x.id === id) || establishments[0];
+    return e ? (e.kratki_naziv || e.naziv) : '';
+  }, [establishments]);
+
   return (
     <CalendarContext.Provider
       value={{
         selectedDate, view, filters, appointments,
-        doctors, rooms, services, serviceCategories, materials, loading,
+        doctors, rooms, services, serviceCategories, materials, establishments, jedinicaNaziv, loading,
         setSelectedDate, setView, goToToday, goForward, goBack,
         toggleDoctorFilter, toggleRoomFilter, setColorSource,
         selectAllDoctors, deselectAllDoctors,

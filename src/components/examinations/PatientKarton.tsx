@@ -10,6 +10,7 @@ import type { Patient, Appointment, Doctor, Examination, Material } from '../../
 import { APPOINTMENT_STATUS_LABELS, APPOINTMENT_STATUS_COLORS } from '../../types';
 import { supabase } from '../../lib/supabase';
 import ExaminationForm from './ExaminationForm';
+import { useCalendar } from '../../contexts/CalendarContext';
 import Button from '../ui/Button';
 import HealthAlert from '../patients/HealthAlert';
 import { loadZdravlje, type ZdravstveniPodaci } from '../../lib/karton';
@@ -67,6 +68,8 @@ export default function PatientKarton(props: PatientKartonProps) {
     selectedAppointment, currentExam, usedMaterials, saving,
     onBack, onSelectAppointment, onSaveExam, onPrintExam, onAddMaterial, onRemoveMaterial,
   } = props;
+
+  const { jedinicaNaziv } = useCalendar();
 
   // Default nav: ako postoji selektovan termin (obicno danas), otvori pregled; inace istorija
   const [nav, setNav] = useState<NavKey>(selectedAppointment ? 'pregled' : 'istorija');
@@ -310,6 +313,7 @@ export default function PatientKarton(props: PatientKartonProps) {
               appointments={sortedAppointments}
               exams={exams}
               ranije={ranije}
+              jedinicaNaziv={jedinicaNaziv}
               loggedDoctorId={loggedDoctor.id}
               doctors={allDoctors}
               expanded={expanded}
@@ -540,8 +544,9 @@ function PregledView({
 // Istorija view (grupisano po godinama)
 // ====================================================================
 function IstorijaView({
-  appointments, exams, ranije, loggedDoctorId, doctors, expanded, setExpanded, onSelectAppointment,
+  appointments, exams, ranije, jedinicaNaziv, loggedDoctorId, doctors, expanded, setExpanded, onSelectAppointment,
 }: {
+  jedinicaNaziv: (id?: string | null) => string;
   appointments: Appointment[];
   exams: Examination[];
   ranije: RanijaProcedura[];
@@ -612,7 +617,12 @@ function IstorijaView({
                       >
                         {APPOINTMENT_STATUS_LABELS[apt.status]}
                       </span>
-                      <span className="text-[11px] text-gray-400">{doctorLabel}</span>
+                      <span className="flex items-center gap-2 text-[11px] text-gray-400">
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-accent-50 text-accent-800 border border-accent-200 font-medium">
+                          <MapPin size={10} /> {jedinicaNaziv(apt.establishment_id)}
+                        </span>
+                        {doctorLabel}
+                      </span>
                     </div>
                     <div className="text-sm font-semibold text-gray-900 mb-1">{naslov}</div>
                     <div className="text-[11px] text-gray-500">{kratko}</div>
@@ -673,7 +683,12 @@ function IstorijaView({
                     <span className="text-sm font-semibold text-gray-900">
                       {e.datum ? format(parseISO(e.datum), 'dd.MM.yyyy.') : '—'}
                     </span>
-                    <span className="text-[11px] text-gray-400">{doctorLabel}</span>
+                    <span className="flex items-center gap-2 text-[11px] text-gray-400">
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-accent-50 text-accent-800 border border-accent-200 font-medium">
+                        <MapPin size={10} /> {jedinicaNaziv(e.establishment_id)}
+                      </span>
+                      {doctorLabel}
+                    </span>
                   </div>
                   <ExamReadOnly exam={e} />
                 </div>

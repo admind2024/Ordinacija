@@ -49,7 +49,7 @@ interface ExamRow {
 }
 
 export default function PatientCard({ patient, appointments, onBack, onEdit, onDelete }: PatientCardProps) {
-  const { doctors, rooms } = useCalendar();
+  const { doctors, rooms, jedinicaNaziv } = useCalendar();
   const { debtsByPatient, paidByPatient } = usePatients();
   const [tab, setTab] = useState<TabKey>('info');
   // Alergije/rizici/dijagnoze — ucitavamo odmah zbog upozorenja na vrhu kartona
@@ -376,6 +376,9 @@ export default function PatientCard({ patient, appointments, onBack, onEdit, onD
                         </span>
                       )}
                       {room && <span>· {room.naziv}</span>}
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-accent-50 text-accent-800 border border-accent-200 font-medium text-[11px]">
+                        <MapPin size={10} /> {jedinicaNaziv(apt.establishment_id)}
+                      </span>
                       {total > 0 && (
                         <span className="ml-auto font-semibold text-gray-700">{total.toFixed(2)} €</span>
                       )}

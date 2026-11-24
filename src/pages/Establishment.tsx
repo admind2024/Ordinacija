@@ -47,7 +47,7 @@ export default function Establishment() {
   }
 
   useEffect(() => {
-    supabase.from('establishments').select('*').limit(1).single()
+    supabase.from('establishments').select('*').order('created_at', { ascending: true }).limit(1).single()
       .then(({ data }) => {
         if (data) {
           setEstId(data.id);

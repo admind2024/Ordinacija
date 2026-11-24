@@ -75,7 +75,7 @@ function ExaminationsContent({ loggedDoctor }: { loggedDoctor: Doctor }) {
   const [completedExamAptIds, setCompletedExamAptIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
-    supabase.from('establishments').select('*').limit(1).single()
+    supabase.from('establishments').select('*').order('created_at', { ascending: true }).limit(1).single()
       .then(({ data }) => {
         if (data) setEstablishment(data as Establishment);
       });

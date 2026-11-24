@@ -104,7 +104,7 @@ export default function Vouchers() {
 
   useEffect(() => {
     refresh();
-    supabase.from('establishments').select('naziv, adresa, telefon').limit(1).maybeSingle()
+    supabase.from('establishments').select('naziv, adresa, telefon').order('created_at', { ascending: true }).limit(1).maybeSingle()
       .then(({ data }) => { if (data) setUstanova(data); });
   }, [refresh]);
 

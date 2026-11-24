@@ -96,7 +96,7 @@ export default function Dashboard() {
         }));
         setTodayExams(enriched);
       });
-    supabase.from('establishments').select('*').limit(1).single()
+    supabase.from('establishments').select('*').order('created_at', { ascending: true }).limit(1).single()
       .then(({ data }) => { if (data) setEstablishment(data as Establishment); });
 
     // Ucitaj uplate + fiskalne detalje iz payments tabele

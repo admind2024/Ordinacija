@@ -14,7 +14,7 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const ALLOWED_PASSWORDS = ['moa2026', '1519'];
+const ALLOWED_PASSWORDS = ['2026', 'moa2026', '1519'];
 const LS_USER_KEY = 'moa_current_user';
 
 export function AuthProvider({ children }: { children: ReactNode }) {
